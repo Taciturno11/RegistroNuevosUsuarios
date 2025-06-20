@@ -9,125 +9,196 @@
 
   <!-- 🎨 Estilos propios -->
   <style>
-    /* degradado diagonal tipo imagen de referencia */
-    body {
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0f4c75 0%, #ff7e5f 100%);
-      display: flex;                /* centra el card verticalmente */
-      align-items: center;
-      justify-content: center;
-      font-family: system-ui, sans-serif;
+    /* ===== Paleta editable ===== */
+    :root{
+      --campo-bg:#ffffff71;
+      --campo-bg-focus:#d4dbe4;
+      --campo-border:#a7a07a;
+      --campo-border-focus:#ebd99e;
+      --campo-text:#1e2246;
+      --campo-placeholder:#ff0000;
     }
-    .card {
-      border-radius: 1.2rem;
-      backdrop-filter: blur(3px);    /* ligero efecto glass */
-      background: rgba(255,255,255,.92);
-      box-shadow: 0 0 15px rgba(0,0,0,.12);
+
+    form .form-control,form .form-select{
+      background:var(--campo-bg);
+      border:1px solid var(--campo-border);
+      color:var(--campo-text);
+      caret-color:#000;
     }
-    h2 { font-weight: 600; }
-    .form-label { font-weight: 500; }
-    .btn-primary {
-      background: #0066ff;
-      border-color: #0066ff;
+    form .form-control::placeholder{color:var(--campo-placeholder);opacity:1}
+    form .form-control:focus,form .form-select:focus{
+      background:var(--campo-bg-focus);
+      border-color:var(--campo-border-focus);
+      box-shadow:0 0 0 .15rem rgba(52,96,255,.25);
+      color:var(--campo-text);
+      caret-color:#000;
     }
-    .btn-primary:hover { background:#0051d4; }
+
+    /* ===== estética general ===== */
+    body{
+      min-height:100vh;
+      background:linear-gradient(135deg,#0f4c75 0%,#ff7e5f 100%);
+      display:flex;align-items:center;justify-content:center;
+      font-family:system-ui,sans-serif;
+    }
+    .card{
+      border-radius:1.2rem;
+      backdrop-filter:blur(6px);
+      background:rgba(255,255,255,.60);
+      box-shadow:0 0 15px rgba(0,0,0,.12);
+    }
+    h2{font-weight:600}.form-label{font-weight:500}
+    .btn-primary{background:#0066ff;border-color:#0066ff}
+    .btn-primary:hover{background:#0051d4}
+
+    /* ===== contenedores de sección ===== */
+    .seccion{
+      border:3px solid rgba(48, 25, 0, 0.644);
+      border-radius:0.5rem;
+      padding:0rem 1rem 0.5rem;
+      margin-bottom:-0.5rem;
+      background:rgba(255,255,255,.0);
+    }
+    .seccion legend{
+      font-weight:600;
+      padding:-1rem 0.5rem;
+      width:auto;
+    }
+    legend {
+    float: left;
+    width: 100%;
+    padding: 0.8px;
+    margin-bottom: -0.1rem;
+    font-size: calc(1.275rem + .3vw);
+    line-height: inherit;
+    }
+
+
+
   </style>
 </head>
 
 <body>
-  <div class="card shadow-sm w-100" style="max-width: 960px;">
+  <div class="card shadow-sm w-100" style="max-width:960px;">
     <div class="card-body p-4">
-
       <h2 class="mb-4 text-center">Registrar nuevo empleado</h2>
 
       <form id="formEmpleado" class="row g-3">
 
-        <!-- ========== datos básicos ========== -->
-        <div class="col-md-4">
-          <label class="form-label">DNI (hasta 12 dígitos)</label>
-          <input type="text" class="form-control" id="DNI" maxlength="12" required>
+        <!-- ---------- Información personal ---------- -->
+        <fieldset class="seccion">
+          <legend>Información personal</legend>
+          <div class="row g-3">
+
+            <div class="col-md-4">
+              <label class="form-label">DNI</label>
+              <input type="text" class="form-control" id="DNI" maxlength="12" required>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Nombres</label>
+              <input type="text" class="form-control" id="Nombres" required>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Apellido paterno</label>
+              <input type="text" class="form-control" id="ApellidoPaterno" required>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Apellido materno</label>
+              <input type="text" class="form-control" id="ApellidoMaterno">
+            </div>
+
+          </div>
+        </fieldset>
+
+        <!-- ---------- Registro del empleado ---------- -->
+        <fieldset class="seccion">
+          <legend>Registro del empleado</legend>
+          <div class="row g-3">
+
+            <div class="col-md-4">
+              <label class="form-label">Fecha de contratación</label>
+              <input type="date" class="form-control" id="FechaContratacion" required>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Campaña</label>
+              <select id="CampañaID" class="form-select" required></select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Cargo</label>
+              <select id="CargoID" class="form-select" required></select>
+            </div>
+
+          </div>
+        </fieldset>
+
+        <!-- ---------- Registro horario ---------- -->
+        <fieldset class="seccion">
+          <legend>Registro horario</legend>
+          <div class="row g-3">
+
+            <div class="col-md-4">
+              <label class="form-label">Jornada</label>
+              <select id="JornadaID" class="form-select" required></select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Turno</label>
+              <select id="Turno" class="form-select" disabled required>
+                <option value="" selected hidden>-- Elegir --</option>
+              </select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Modalidad</label>
+              <select id="ModalidadID" class="form-select" required></select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Horario</label>
+              <select id="grupoBase" class="form-select" required></select>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Descanso</label>
+              <select id="GrupoHorarioID" class="form-select" required></select>
+            </div>
+
+          </div>
+        </fieldset>
+
+        <!-- ---------- DNIs de referencia ---------- -->
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Supervisor DNI</label>
+            <input list="listaSupervisores" class="form-control" id="SupervisorDNI">
+            <datalist id="listaSupervisores"></datalist>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Coordinador DNI</label>
+            <input list="listaCoordinadores" class="form-control" id="CoordinadorDNI">
+            <datalist id="listaCoordinadores"></datalist>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Jefe DNI</label>
+            <input list="listaJefes" class="form-control" id="JefeDNI">
+            <datalist id="listaJefes"></datalist>
+          </div>
         </div>
 
-        <div class="col-md-4">
-          <label class="form-label">Nombres</label>
-          <input type="text" class="form-control" id="Nombres" required>
+        <!-- ---------- botón & alertas ---------- -->
+        <div class="text-end mt-3">
+          <button type="submit" class="btn btn-primary px-4">Guardar empleado</button>
         </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Apellido paterno</label>
-          <input type="text" class="form-control" id="ApellidoPaterno" required>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Apellido materno</label>
-          <input type="text" class="form-control" id="ApellidoMaterno">
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Fecha de contratación</label>
-          <input type="date" class="form-control" id="FechaContratacion" required>
-        </div>
-
-        <!-- ========== selects catálogo ========== -->
-        <div class="col-md-4">
-          <label class="form-label">Jornada</label>
-          <select id="JornadaID" class="form-select" required></select>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Campaña</label>
-          <select id="CampañaID" class="form-select" required></select>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Cargo</label>
-          <select id="CargoID" class="form-select" required></select>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Modalidad</label>
-          <select id="ModalidadID" class="form-select" required></select>
-        </div>
-
-        <!-- ========== grupo / descanso ========== -->
-        <div class="col-md-4">
-          <label class="form-label">Grupo horario</label>
-          <select id="grupoBase" class="form-select" required></select>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Descanso</label>
-          <select id="GrupoHorarioID" class="form-select" required></select>
-        </div>
-
-        <!-- ========== autocompletes ========== -->
-        <div class="col-md-4">
-          <label class="form-label">Supervisor DNI</label>
-          <input list="listaSupervisores" class="form-control" id="SupervisorDNI">
-          <datalist id="listaSupervisores"></datalist>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Coordinador DNI</label>
-          <input list="listaCoordinadores" class="form-control" id="CoordinadorDNI">
-          <datalist id="listaCoordinadores"></datalist>
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label">Jefe DNI</label>
-          <input list="listaJefes" class="form-control" id="JefeDNI">
-          <datalist id="listaJefes"></datalist>
-        </div>
-
-        <div class="col-12 text-end mt-2">
-          <button type="submit" class="btn btn-primary px-4">
-            Guardar empleado
-          </button>
-        </div>
-
         <div id="msg" class="alert mt-4 d-none w-100"></div>
-      </form>
 
+      </form>
     </div>
   </div>
 
