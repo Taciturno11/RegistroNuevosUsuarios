@@ -2,6 +2,21 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const os = require('os');
+
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (let name in interfaces) {
+    for (let iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal && iface.address.startsWith('10.')) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+
 
 
 const app = express();
@@ -20,6 +35,17 @@ app.use('/grupos', require('./routes/grupos.routes'));
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// justo debajo de las otras rutas
+
+app.use('/cese', require('./routes/cese.routes'));
+
+// y luego sigue sirviendo el HTML:
+app.get('/cese.html', (req, res) => {
+  res.sendFile(__dirname + '/public/cese.html');
+});
+
+
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 API corriendo en http://${HOST === '0.0.0.0' ? '10.8.6.51' : HOST}:${PORT}`);
+  console.log(`🚀 API corriendo en http://${getLocalIP()}:${PORT}`);
+
 });
