@@ -40,9 +40,18 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.use('/cese', require('./routes/cese.routes'));
 
 // y luego sigue sirviendo el HTML:
-app.get('/cese.html', (req, res) => {
+app.get('/cese', (req, res) => {
   res.sendFile(__dirname + '/public/cese.html');
 });
+
+
+
+app.use('/justificaciones', require('./routes/justificaciones.routes'));
+
+app.get('/justificaciones', (req, res) => {
+  res.sendFile(__dirname + '/public/justificaciones.html');
+});
+
 
 
 app.listen(PORT, HOST, () => {

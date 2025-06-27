@@ -172,3 +172,4 @@ function mostrarMsg(ok,obj){
 /* ============ 8. INICIO ============ */
 cargarCatalogos();
 precargarGruposHoras();        // ← carga cache una vez
+
