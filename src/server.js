@@ -44,13 +44,28 @@ app.get('/cese', (req, res) => {
   res.sendFile(__dirname + '/public/cese.html');
 });
 
-
-
 app.use('/justificaciones', require('./routes/justificaciones.routes'));
-
 app.get('/justificaciones', (req, res) => {
   res.sendFile(__dirname + '/public/justificaciones.html');
 });
+
+// servir nueva vista
+app.use('/ojt', require('./routes/ojt.routes'));
+app.get('/ojt', (req, res) => {
+  res.sendFile(__dirname + '/public/ojt.html');
+});
+
+
+
+
+
+
+app.get('/martin', (req, res) => {
+  res.sendFile(__dirname + '/public/martin.html');
+});
+
+
+
 
 
 

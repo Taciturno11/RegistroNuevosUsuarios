@@ -1,66 +1,101 @@
+<!-- public/ojt.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>OJT / CIC</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  >
+  <meta charset="utf-8">
+  <title>Registro OJT / CIC</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- 🎨 Sólo estilos (estética) añadidos -->
   <style>
-    body {
-      min-height: 100vh;
-      background: linear-gradient(135deg,#614385,#516395);
-      display:flex; align-items:center; justify-content:center;
+    /* degradado y alineación al centro, mismo look & feel */
+    body{
+      min-height:100vh;
+      background:linear-gradient(135deg,#614385,#516395);
+      display:flex;align-items:center;justify-content:center;
       font-family:system-ui,sans-serif;
     }
-    .card {
-      border-radius:1.2rem; padding:2rem;
-      background:rgba(255,255,255,.95); max-width:600px; width:100%;
+    /* tarjeta blanca semitransparente */
+    .ojt-card{
+      background:rgba(255,255,255,.95);
+      border-radius:1.2rem;
+      padding:2rem;
+      max-width:720px;
+      width:100%;
     }
-    h2 { text-align:center; margin-bottom:1.5rem; }
+    h3{font-weight:600;text-align:center;margin-bottom:1.5rem;}
   </style>
 </head>
 <body>
-  <div class="card shadow">
-    <h2>Registro OJT / CIC</h2>
-    <form id="formOJT" class="row g-3">
-      <!-- 1. Usuario CIC -->
+
+  <!-- 1. contenedor principal -->
+  <div class="ojt-card shadow">
+
+    <!-- 1. VALIDAR DNI -->
+    <h3>Registro OJT / CIC</h3>
+
+    <div class="row g-3 align-items-end mb-4">
+      <div class="col-md-8">
+        <label class="form-label">DNI</label>
+        <input id="dni" class="form-control" placeholder="Ingrese DNI">
+      </div>
+      <div class="col-md-4 text-end">
+        <button id="btnValidar" class="btn btn-success w-100">Validar</button>
+      </div>
+    </div>
+
+    <!-- 2. HISTORIAL -->
+    <div id="historialBox" class="d-none">
+      <h5>Historial</h5>
+      <table class="table table-sm table-bordered">
+        <thead class="table-secondary">
+          <tr><th>ID</th><th>Usuario CIC</th><th>Inicio</th><th>Fin</th><th></th></tr>
+        </thead>
+        <tbody id="tablaHistorial"></tbody>
+      </table>
+    </div>
+
+    <!-- 3. BOTONES -->
+    <div id="accionesBox" class="mt-3 d-none">
+      <button id="btnNuevo"  class="btn btn-outline-primary me-2">➕ Nuevo registro</button>
+      <button id="btnEditar" class="btn btn-outline-warning d-none">✏️ Modificar registro</button>
+    </div>
+
+    <!-- 4. FORMULARIO (alta / edición) -->
+    <form id="formOJT" class="row g-3 mt-4 d-none">
+      <input type="hidden" id="UsoCICID">
+
       <div class="col-12">
-        <label for="usuarioCIC" class="form-label">Usuario CIC</label>
-        <input type="text" id="usuarioCIC" class="form-control" required>
+        <label class="form-label">Usuario CIC</label>
+        <input id="UsuarioCIC" class="form-control" required>
       </div>
-      <!-- 2. DNI Empleado (autocomplete) -->
+
+      <div class="col-md-6">
+        <label class="form-label">Fecha-Hora Inicio</label>
+        <input id="FechaHoraInicio" type="datetime-local" class="form-control" required>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">Fecha-Hora Fin <small class="text-muted">(opcional)</small></label>
+        <input id="FechaHoraFin" type="datetime-local" class="form-control">
+      </div>
+
       <div class="col-12">
-        <label for="dniEmpl" class="form-label">DNI Empleado</label>
-        <input
-          type="text"
-          id="dniEmpl"
-          list="listaDNIEmpl"
-          class="form-control"
-          placeholder="Ingrese DNI"
-          required
-        >
-        <datalist id="listaDNIEmpl"></datalist>
+        <label class="form-label">Observaciones</label>
+        <textarea id="Observaciones" class="form-control" rows="2" maxlength="200"></textarea>
       </div>
-      <!-- 3. FechaHoraInicio -->
-      <div class="col-md-6">
-        <label for="fechaIni" class="form-label">Fecha-Hora Inicio</label>
-        <input type="datetime-local" id="fechaIni" class="form-control" required>
-      </div>
-      <!-- 4. FechaHoraFin -->
-      <div class="col-md-6">
-        <label for="fechaFin" class="form-label">Fecha-Hora Fin</label>
-        <input type="datetime-local" id="fechaFin" class="form-control">
-        <small class="text-muted">Déjalo en blanco si sigue activo</small>
-      </div>
-      <!-- 5. Botón -->
+
       <div class="col-12 text-end">
-        <button type="submit" class="btn btn-success">Guardar OJT/CIC</button>
+        <button class="btn btn-success">💾 Guardar</button>
       </div>
     </form>
-    <div id="msgOJT" class="alert mt-3 d-none"></div>
-  </div>
+
+    <!-- 5. Mensajes -->
+    <div id="msg" class="alert d-none mt-3"></div>
+
+  </div><!-- /.ojt-card -->
 
   <script src="/ojt.js"></script>
 </body>
