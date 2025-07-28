@@ -9,6 +9,24 @@ const sql      = require('mssql');
    - En SQL convertimos con estilo 120 (yyyy-mm-dd hh:mi:ss)
    =============================================================*/
 
+/* 0. Lista de DNIs de empleados activos */
+async function listarDNIsOJT(req, res) {
+  try {
+    const result = await (await pool).request().query(`
+      SELECT DNI
+      FROM PRI.Empleados
+      WHERE FechaCese IS NULL
+      ORDER BY DNI
+    `);
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error al listar DNIs OJT:', err);
+    res.status(500).json({ error: 'Error al listar DNIs' });
+  }
+}
+
+
+
 /* ═════ 1) HISTORIAL POR DNI ═══════════════════════════════ */
 async function listarHistorial (req, res) {
   const { dni } = req.params;
@@ -110,6 +128,7 @@ async function actualizarOJT (req, res) {
 
 /* ──────── EXPORTS ──────── */
 module.exports = {
+  listarDNIsOJT,
   listarHistorial,
   crearOJT,
   actualizarOJT,
