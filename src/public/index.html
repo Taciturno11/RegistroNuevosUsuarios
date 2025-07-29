@@ -6,6 +6,7 @@
 
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
   <!-- 🎨 Estilos propios -->
   <style>
@@ -37,19 +38,48 @@
     /* ===== estética general ===== */
     body{
       min-height:100vh;
-      background:linear-gradient(135deg,#0f4c75 0%,#ff7e5f 100%);
+      background:linear-gradient(135deg, #297373 0%, #FE7F2D 100%);
       display:flex;align-items:center;justify-content:center;
       font-family:system-ui,sans-serif;
     }
     .card{
       border-radius:1.2rem;
-      backdrop-filter:blur(6px);
-      background:rgba(255,255,255,.60);
-      box-shadow:0 0 15px rgba(0,0,0,.12);
+      backdrop-filter:blur(10px);
+      background:rgba(255,255,255,.95);
+      box-shadow:0 8px 32px rgba(0,0,0,.15);
+      border: 1px solid rgba(255,255,255,.2);
     }
-    h2{font-weight:600}.form-label{font-weight:500}
+    h2{font-weight:600; color:#2c3e50;}.form-label{font-weight:500}
     .btn-primary{background:#0066ff;border-color:#0066ff}
     .btn-primary:hover{background:#0051d4}
+    
+    /* Estilos para las tarjetas */
+    .hover-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .hover-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+    
+    .icon-container {
+      display: inline-block;
+      padding: 1rem;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+    }
+    
+    .card-title {
+      font-size: 1.25rem;
+    }
+    
+    .card-text {
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
 
     /* ===== contenedores de sección ===== */
     .seccion{
@@ -79,136 +109,124 @@
 </head>
 
 <body>
-  <div class="card shadow-sm w-100" style="max-width:960px;">
-    <div class="card-body p-4">
-      <h2 class="mb-4 text-center">Registrar nuevo empleado</h2>
+    <div class="card shadow-sm w-100" style="max-width:1200px;">
+    <!-- Menú superior con fondo gris -->
+    <div class="bg-light px-5 py-3 rounded-top" style="background-color: #e5e7eb !important;">
+      <div class="d-flex justify-content-between align-items-center">
+        <div id="greeting"></div>
+        <div id="userInfo"></div>
+      </div>
+    </div>
+    
+    <!-- Contenido principal con fondo blanco -->
+    <div class="bg-white px-5 py-4 rounded-bottom">
+      <!-- Título del sistema -->
+      <div class="text-center mb-5">
+        <h2 class="mb-1">Sistema de Gestión de Empleados</h2>
+        <p class="text-muted mb-0">Panel de control y administración</p>
+      </div>
 
-      <form id="formEmpleado" class="row g-3">
-
-        <!-- ---------- Información personal ---------- -->
-        <fieldset class="seccion">
-          <legend>Información personal</legend>
-          <div class="row g-3">
-
-            <div class="col-md-4">
-              <label class="form-label">DNI</label>
-              <input type="text" class="form-control" id="DNI" maxlength="12" required>
+      <!-- Línea divisoria -->
+      <hr class="my-4">
+      
+      <!-- Dashboard con botones de navegación -->
+      <div class="row g-4">
+                    <!-- Registrar Empleado -->
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <div class="card-body text-center text-white p-4">
+                <div class="mb-4">
+                  <div class="icon-container">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  </div>
+                </div>
+                <h5 class="card-title mb-3 fw-bold">Registrar Empleado</h5>
+                <p class="card-text mb-4 opacity-75">Agregar nuevos empleados al sistema</p>
+                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/registrar-empleado'">
+                  Ir a Registrar
+                </button>
+              </div>
             </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Nombres</label>
-              <input type="text" class="form-control" id="Nombres" required>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Apellido paterno</label>
-              <input type="text" class="form-control" id="ApellidoPaterno" required>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Apellido materno</label>
-              <input type="text" class="form-control" id="ApellidoMaterno">
-            </div>
-
-          </div>
-        </fieldset>
-
-        <!-- ---------- Registro del empleado ---------- -->
-        <fieldset class="seccion">
-          <legend>Registro del empleado</legend>
-          <div class="row g-3">
-
-            <div class="col-md-4">
-              <label class="form-label">Fecha de contratación</label>
-              <input type="date" class="form-control" id="FechaContratacion" required>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Campaña</label>
-              <select id="CampañaID" class="form-select" required></select>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Cargo</label>
-              <select id="CargoID" class="form-select" required></select>
-            </div>
-
-          </div>
-        </fieldset>
-
-        <!-- ---------- Registro horario ---------- -->
-        <fieldset class="seccion">
-          <legend>Registro horario</legend>
-          <div class="row g-3">
-
-            <div class="col-md-4">
-              <label class="form-label">Jornada</label>
-              <select id="JornadaID" class="form-select" required></select>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Turno</label>
-              <select id="Turno" class="form-select" disabled required>
-                <option value="" selected hidden>-- Elegir --</option>
-              </select>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Modalidad</label>
-              <select id="ModalidadID" class="form-select" required></select>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Horario</label>
-              <select id="grupoBase" class="form-select" required></select>
-            </div>
-
-            <div class="col-md-4">
-              <label class="form-label">Descanso</label>
-              <select id="GrupoHorarioID" class="form-select" required></select>
-            </div>
-
-          </div>
-        </fieldset>
-
-        <!-- ---------- DNIs de referencia ---------- -->
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">Supervisor DNI</label>
-            <input list="listaSupervisores" class="form-control" id="SupervisorDNI">
-            <datalist id="listaSupervisores"></datalist>
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label">Coordinador DNI</label>
-            <input list="listaCoordinadores" class="form-control" id="CoordinadorDNI">
-            <datalist id="listaCoordinadores"></datalist>
+                            <!-- Cese de Empleado -->
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+              <div class="card-body text-center text-white p-4">
+                <div class="mb-4">
+                  <div class="icon-container">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </div>
+                </div>
+                <h5 class="card-title mb-3 fw-bold">Cese de Empleado</h5>
+                <p class="card-text mb-4 opacity-75">Registrar terminación laboral</p>
+                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/cese'">
+                  Ir a Cese
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div class="col-md-4">
-            <label class="form-label">Jefe DNI</label>
-            <input list="listaJefes" class="form-control" id="JefeDNI">
-            <datalist id="listaJefes"></datalist>
+                            <!-- Justificaciones -->
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+              <div class="card-body text-center text-white p-4">
+                <div class="mb-4">
+                  <div class="icon-container">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                  </div>
+                </div>
+                <h5 class="card-title mb-3 fw-bold">Justificaciones</h5>
+                <p class="card-text mb-4 opacity-75">Gestionar justificaciones de empleados</p>
+                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/justificaciones'">
+                  Ir a Justificaciones
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <!-- ---------- botón & alertas ---------- -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
-          <a href="/cese" class="btn btn-outline-dark">Cese Empleado</a>
-          <a href="/justificaciones" class="btn text-white" style="background-color:#5fb27b;">
-            Justificación Empleado
-          </a>
-          <a href="/ojt" class="btn btn-outline-dark ms-2">OJT / CIC</a>
+          <!-- OJT / CIC -->
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+              <div class="card-body text-center text-white p-4">
+                <div class="mb-4">
+                  <div class="icon-container">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
+                </div>
+                <h5 class="card-title mb-3 fw-bold">OJT / CIC</h5>
+                <p class="card-text mb-4 opacity-75">Gestión de usuarios CIC y OJT</p>
+                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/ojt'">
+                  Ir a OJT/CIC
+                </button>
+              </div>
+            </div>
+          </div>
 
 
-          <button type="submit" class="btn btn-primary px-4">Guardar empleado</button>
-        </div>
-        <div id="msg" class="alert mt-4 d-none w-100"></div>
-
-      </form>
+      </div>
     </div>
   </div>
 
+  <script src="auth.js"></script>
   <script src="app.js"></script>
+  <script>
+    // Verificar autenticación al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      if (auth.checkAuthImmediate()) {
+        // Mostrar información del usuario y saludo
+        auth.displayUserInfo();
+        auth.displayGreeting();
+      }
+    });
+  </script>
 </body>
 </html>

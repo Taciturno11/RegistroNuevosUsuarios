@@ -172,6 +172,7 @@ function mostrarMsg(ok,obj){
 /* ============ 8. INICIO ============ */
 // Verificar autenticación antes de cargar datos
 auth.checkAuth().then(() => {
+  cargarCatalogos();
+  precargarGruposHoras();        // ← carga cache una vez
   auth.displayUserInfo();         // Mostrar info del usuario
-});
-
+}); 

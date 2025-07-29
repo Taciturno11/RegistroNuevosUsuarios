@@ -22,7 +22,15 @@ function getLocalIP() {
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Redirigir la raíz al login si no está autenticado
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
 app.use(express.static('src/public'));   // sirve /index.html y demás
+
+// Rutas de autenticación
+app.use('/api', require('./routes/auth.routes'));
 
 // Rutas
 app.use('/catalogos', require('./routes/catalogos.routes'));
@@ -62,6 +70,16 @@ app.get('/ojt', (req, res) => {
 
 app.get('/martin', (req, res) => {
   res.sendFile(__dirname + '/public/martin.html');
+});
+
+// Ruta de login
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/public/login.html');
+});
+
+// Ruta para registrar empleado
+app.get('/registrar-empleado', (req, res) => {
+  res.sendFile(__dirname + '/public/registrar-empleado.html');
 });
 
 
