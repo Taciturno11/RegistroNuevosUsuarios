@@ -82,6 +82,11 @@ app.get('/registrar-empleado', (req, res) => {
   res.sendFile(__dirname + '/public/registrar-empleado.html');
 });
 
+// Ruta para actualizar empleado
+app.get('/actualizar-empleado', (req, res) => {
+  res.sendFile(__dirname + '/public/actualizar-empleado.html');
+});
+
 
 
 

@@ -36,6 +36,71 @@ exports.lookupEmpleados = async (req, res) => {
   }
 };
 
+// Obtener empleado por DNI
+exports.obtenerEmpleado = async (req, res) => {
+  const { dni } = req.params;
+  
+  try {
+    const conn = await pool;
+    const result = await conn.request()
+      .input('DNI', sql.VarChar(12), dni)
+      .query(`
+        SELECT DNI, Nombres, ApellidoPaterno, ApellidoMaterno,
+               FechaContratacion, FechaCese, EstadoEmpleado,
+               JornadaID, CampañaID, CargoID, ModalidadID, GrupoHorarioID,
+               SupervisorDNI, CoordinadorDNI, JefeDNI
+        FROM PRI.Empleados 
+        WHERE DNI = @DNI
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Empleado no encontrado' });
+    }
+
+    const empleado = result.recordset[0];
+    
+    // Convertir fecha a formato ISO para el input date
+    if (empleado.FechaContratacion) {
+      empleado.FechaContratacion = empleado.FechaContratacion.toISOString().split('T')[0];
+    }
+
+    res.json(empleado);
+  } catch (err) {
+    console.error('Error obteniendo empleado:', err);
+    res.status(500).json({ error: 'Error al obtener empleado' });
+  }
+};
+
+// Obtener horario del empleado
+exports.obtenerHorarioEmpleado = async (req, res) => {
+  const { dni } = req.params;
+  
+  try {
+    const conn = await pool;
+    const result = await conn.request()
+      .input('DNI', sql.VarChar(12), dni)
+      .query(`
+        SELECT g.NombreGrupo, 
+               LEFT(g.NombreGrupo, 
+                    CASE WHEN CHARINDEX(' (Desc.', g.NombreGrupo) > 0
+                         THEN CHARINDEX(' (Desc.', g.NombreGrupo) - 1
+                         ELSE LEN(g.NombreGrupo)
+                    END) AS NombreBase
+        FROM PRI.Empleados e
+        JOIN dbo.GruposDeHorario g ON g.GrupoID = e.GrupoHorarioID
+        WHERE e.DNI = @DNI
+      `);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ error: 'Horario no encontrado' });
+    }
+
+    res.json(result.recordset[0]);
+  } catch (err) {
+    console.error('Error obteniendo horario:', err);
+    res.status(500).json({ error: 'Error al obtener horario' });
+  }
+};
 
 // Crear nuevo empleado
 exports.crearEmpleado = async (req, res) => {
@@ -94,5 +159,70 @@ exports.crearEmpleado = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al insertar empleado' });
+  }
+};
+
+// Actualizar empleado existente
+exports.actualizarEmpleado = async (req, res) => {
+  // 1. Validaciones de express-validator
+  const errores = validationResult(req);
+  if (!errores.isEmpty()) return res.status(400).json({ errores: errores.array() });
+
+  const { dni } = req.params;
+  const {
+    Nombres, ApellidoPaterno, ApellidoMaterno = '',
+    FechaContratacion,
+    JornadaID, CampañaID, CargoID, ModalidadID,
+    GrupoHorarioID,
+    SupervisorDNI = null, CoordinadorDNI = null, JefeDNI = null
+  } = req.body;
+
+  try {
+    const conn = await pool;
+    
+    // 2. Verificar que el empleado existe
+    const existe = await conn.request()
+      .input('DNI', sql.VarChar, dni)
+      .query('SELECT 1 FROM PRI.Empleados WHERE DNI = @DNI');
+    if (existe.recordset.length === 0) {
+      return res.status(404).json({ error: 'Empleado no encontrado' });
+    }
+
+    // 3. Update con parámetros
+    await conn.request()
+      .input('DNI',               sql.VarChar, dni)
+      .input('Nombres',           sql.VarChar, Nombres)
+      .input('ApellidoPaterno',   sql.VarChar, ApellidoPaterno)
+      .input('ApellidoMaterno',   sql.VarChar, ApellidoMaterno)
+      .input('FechaContratacion', sql.Date,    FechaContratacion)
+      .input('JornadaID',         sql.Int,    JornadaID)
+      .input('CampañaID',         sql.Int,    CampañaID)
+      .input('CargoID',           sql.Int,    CargoID)
+      .input('ModalidadID',       sql.Int,    ModalidadID)
+      .input('GrupoHorarioID',    sql.Int,    GrupoHorarioID)
+      .input('SupervisorDNI',     sql.VarChar, SupervisorDNI)
+      .input('CoordinadorDNI',    sql.VarChar, CoordinadorDNI)
+      .input('JefeDNI',           sql.VarChar, JefeDNI)
+      .query(`
+        UPDATE PRI.Empleados
+        SET Nombres = @Nombres,
+            ApellidoPaterno = @ApellidoPaterno,
+            ApellidoMaterno = @ApellidoMaterno,
+            FechaContratacion = @FechaContratacion,
+            JornadaID = @JornadaID,
+            CampañaID = @CampañaID,
+            CargoID = @CargoID,
+            ModalidadID = @ModalidadID,
+            GrupoHorarioID = @GrupoHorarioID,
+            SupervisorDNI = @SupervisorDNI,
+            CoordinadorDNI = @CoordinadorDNI,
+            JefeDNI = @JefeDNI
+        WHERE DNI = @DNI
+      `);
+
+    res.json({ mensaje: 'Empleado actualizado correctamente' });
+  } catch (err) {
+    console.error('Error actualizando empleado:', err);
+    res.status(500).json({ error: 'Error al actualizar empleado' });
   }
 };

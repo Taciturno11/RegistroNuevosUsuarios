@@ -2,230 +2,357 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Alta de Empleados</title>
+  <title>Sistema de Gestión de Empleados</title>
 
   <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
   <!-- 🎨 Estilos propios -->
   <style>
-    /* ===== Paleta editable ===== */
-    :root{
-      --campo-bg:#ffffff71;
-      --campo-bg-focus:#d4dbe4;
-      --campo-border:#a7a07a;
-      --campo-border-focus:#ebd99e;
-      --campo-text:#1e2246;
-      --campo-placeholder:#ff0000;
+    /* ===== Variables CSS ===== */
+    :root {
+      --primary-color: #1e40af;      /* Azul corporativo */
+      --secondary-color: #475569;    /* Gris azulado */
+      --success-color: #059669;      /* Verde profesional */
+      --warning-color: #d97706;      /* Naranja */
+      --danger-color: #dc2626;       /* Rojo */
+      --info-color: #0891b2;         /* Azul claro */
+      --light-bg: #f8fafc;           /* Gris muy claro */
+      --card-bg: #ffffff;            /* Blanco puro */
+      --border-color: #e2e8f0;       /* Gris claro */
+      --text-primary: #1e293b;       /* Gris oscuro */
+      --text-secondary: #64748b;     /* Gris medio */
+      --header-bg: #1e293b;          /* Gris muy oscuro para headers */
     }
 
-    form .form-control,form .form-select{
-      background:var(--campo-bg);
-      border:1px solid var(--campo-border);
-      color:var(--campo-text);
-      caret-color:#000;
-    }
-    form .form-control::placeholder{color:var(--campo-placeholder);opacity:1}
-    form .form-control:focus,form .form-select:focus{
-      background:var(--campo-bg-focus);
-      border-color:var(--campo-border-focus);
-      box-shadow:0 0 0 .15rem rgba(52,96,255,.25);
-      color:var(--campo-text);
-      caret-color:#000;
+    /* ===== Estética general ===== */
+    body {
+      min-height: 100vh;
+      background: #f1f5f9;           /* Gris muy claro, sin gradientes */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-primary);
     }
 
-    /* ===== estética general ===== */
-    body{
-      min-height:100vh;
-      background:linear-gradient(135deg, #297373 0%, #FE7F2D 100%);
-      display:flex;align-items:center;justify-content:center;
-      font-family:system-ui,sans-serif;
+    .main-container {
+      padding: 2rem 1rem;
+      max-width: 1400px;
+      margin: 0 auto;
     }
-    .card{
-      border-radius:1.2rem;
-      backdrop-filter:blur(10px);
-      background:rgba(255,255,255,.95);
-      box-shadow:0 8px 32px rgba(0,0,0,.15);
-      border: 1px solid rgba(255,255,255,.2);
+
+    .card {
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;         /* Bordes menos redondeados */
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      background: var(--card-bg);
+      margin-bottom: 2rem;
     }
-    h2{font-weight:600; color:#2c3e50;}.form-label{font-weight:500}
-    .btn-primary{background:#0066ff;border-color:#0066ff}
-    .btn-primary:hover{background:#0051d4}
-    
-    /* Estilos para las tarjetas */
-    .hover-card {
-      transition: all 0.3s ease;
-      cursor: pointer;
+
+    .card-header {
+      background: var(--header-bg);  /* Gris oscuro sólido */
+      color: white;
+      border-radius: 0.5rem 0.5rem 0 0 !important;
+      padding: 1.25rem 1.5rem;
+      border: none;
     }
-    
-    .hover-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+
+    .card-body {
+      padding: 1.5rem;
     }
-    
-    .icon-container {
-      display: inline-block;
-      padding: 1rem;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
+
+    /* ===== Sección de búsqueda ===== */
+    .search-section {
+      background: var(--card-bg);    /* Blanco sólido */
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      color: var(--text-primary);
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
-    
-    .card-title {
+
+    .search-input {
+      background: var(--light-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+    }
+
+    .search-btn {
+      background: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      color: white;
+      border-radius: 0.375rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .search-btn:hover {
+      background: #1e3a8a;           /* Azul más oscuro */
+      border-color: #1e3a8a;
+      color: white;
+      transform: none;               /* Sin animación excesiva */
+    }
+
+    /* ===== Información del empleado ===== */
+    .employee-info {
+      display: none;
+      background: var(--light-bg);   /* Gris claro sólido */
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      color: var(--text-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .employee-name {
       font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--primary-color);
     }
-    
-    .card-text {
+
+    .employee-details {
+      font-size: 1rem;
+      color: var(--text-secondary);
+    }
+
+    /* ===== Opciones de acción ===== */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .action-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .action-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      text-decoration: none;
+      color: var(--text-primary);
+      border-color: var(--primary-color);
+    }
+
+    .action-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 0.375rem;       /* Menos redondeado */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+      color: white;
+    }
+
+    .action-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .action-description {
       font-size: 0.9rem;
+      color: var(--text-secondary);
       line-height: 1.4;
     }
 
-    /* ===== contenedores de sección ===== */
-    .seccion{
-      border:3px solid rgba(48, 25, 0, 0.644);
-      border-radius:0.5rem;
-      padding:0rem 1rem 0.5rem;
-      margin-bottom:-0.5rem;
-      background:rgba(255,255,255,.0);
-    }
-    .seccion legend{
-      font-weight:600;
-      padding:-1rem 0.5rem;
-      width:auto;
-    }
-    legend {
-    float: left;
-    width: 100%;
-    padding: 0.8px;
-    margin-bottom: -0.1rem;
-    font-size: calc(1.275rem + .3vw);
-    line-height: inherit;
+    /* ===== Colores de las acciones ===== */
+    .action-actualizar { background: var(--primary-color); }
+    .action-cese { background: var(--danger-color); }
+    .action-justificaciones { background: var(--success-color); }
+    .action-ojt { background: var(--info-color); }
+
+    /* ===== Sección de registro nuevo ===== */
+    .new-employee-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      color: var(--text-primary);
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
+    .new-employee-btn {
+      background: var(--success-color);
+      border: 1px solid var(--success-color);
+      color: white;
+      border-radius: 0.375rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
 
+    .new-employee-btn:hover {
+      background: #047857;           /* Verde más oscuro */
+      border-color: #047857;
+      color: white;
+      transform: none;
+      text-decoration: none;
+    }
 
+    /* ===== Animaciones ===== */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 1rem;
+      }
+      
+      .actions-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 
 <body>
-    <div class="card shadow-sm w-100" style="max-width:1200px;">
-    <!-- Menú superior con fondo gris -->
-    <div class="bg-light px-5 py-3 rounded-top" style="background-color: #e5e7eb !important;">
-      <div class="d-flex justify-content-between align-items-center">
-        <div id="greeting"></div>
-        <div id="userInfo"></div>
+  <div class="main-container">
+    <!-- Header con información del usuario -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2 class="mb-0">
+            <i class="fas fa-users me-2"></i>
+            Sistema de Gestión de Empleados
+          </h2>
+          <div id="userInfo"></div>
+        </div>
       </div>
     </div>
-    
-    <!-- Contenido principal con fondo blanco -->
-    <div class="bg-white px-5 py-4 rounded-bottom">
-      <!-- Título del sistema -->
-      <div class="text-center mb-5">
-        <h2 class="mb-1">Sistema de Gestión de Empleados</h2>
-        <p class="text-muted mb-0">Panel de control y administración</p>
-      </div>
 
-      <!-- Línea divisoria -->
-      <hr class="my-4">
-      
-      <!-- Dashboard con botones de navegación -->
-      <div class="row g-4">
-                    <!-- Registrar Empleado -->
-          <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-              <div class="card-body text-center text-white p-4">
-                <div class="mb-4">
-                  <div class="icon-container">
-                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    </svg>
-                  </div>
-                </div>
-                <h5 class="card-title mb-3 fw-bold">Registrar Empleado</h5>
-                <p class="card-text mb-4 opacity-75">Agregar nuevos empleados al sistema</p>
-                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/registrar-empleado'">
-                  Ir a Registrar
-                </button>
-              </div>
-            </div>
+    <!-- Sección de búsqueda de empleado -->
+    <div class="search-section">
+      <h3 class="mb-4">
+        <i class="fas fa-search me-2"></i>
+        Buscar Empleado
+      </h3>
+      <div class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="input-group">
+            <input type="text" 
+                   class="form-control search-input" 
+                   id="dniBuscar" 
+                   maxlength="12" 
+                   placeholder="Ingrese el DNI del empleado">
+            <button type="button" 
+                    class="btn search-btn" 
+                    id="btnBuscar">
+              <i class="fas fa-search me-2"></i>
+              Buscar
+            </button>
           </div>
-
-                            <!-- Cese de Empleado -->
-          <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-              <div class="card-body text-center text-white p-4">
-                <div class="mb-4">
-                  <div class="icon-container">
-                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </div>
-                </div>
-                <h5 class="card-title mb-3 fw-bold">Cese de Empleado</h5>
-                <p class="card-text mb-4 opacity-75">Registrar terminación laboral</p>
-                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/cese'">
-                  Ir a Cese
-                </button>
-              </div>
-            </div>
-          </div>
-
-                            <!-- Justificaciones -->
-          <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-              <div class="card-body text-center text-white p-4">
-                <div class="mb-4">
-                  <div class="icon-container">
-                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                  </div>
-                </div>
-                <h5 class="card-title mb-3 fw-bold">Justificaciones</h5>
-                <p class="card-text mb-4 opacity-75">Gestionar justificaciones de empleados</p>
-                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/justificaciones'">
-                  Ir a Justificaciones
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- OJT / CIC -->
-          <div class="col-md-6 col-lg-4">
-            <div class="card h-100 border-0 shadow-lg hover-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-              <div class="card-body text-center text-white p-4">
-                <div class="mb-4">
-                  <div class="icon-container">
-                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  </div>
-                </div>
-                <h5 class="card-title mb-3 fw-bold">OJT / CIC</h5>
-                <p class="card-text mb-4 opacity-75">Gestión de usuarios CIC y OJT</p>
-                <button class="btn btn-light w-100 fw-semibold" onclick="window.location.href='/ojt'">
-                  Ir a OJT/CIC
-                </button>
-              </div>
-            </div>
-          </div>
-
-
+        </div>
       </div>
     </div>
+
+    <!-- Información del empleado encontrado -->
+    <div id="employeeInfo" class="employee-info">
+      <div class="employee-name" id="employeeName">-</div>
+      <div class="employee-details" id="employeeDetails">-</div>
+    </div>
+
+    <!-- Opciones de acción para el empleado -->
+    <div id="actionsSection" class="d-none">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="mb-0">
+            <i class="fas fa-tools me-2"></i>
+            Acciones Disponibles
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="actions-grid">
+            <!-- Actualizar Empleado -->
+            <div class="action-card" onclick="ejecutarAccion('actualizar')">
+              <div class="action-icon action-actualizar">
+                <i class="fas fa-edit"></i>
+              </div>
+              <div class="action-title">Actualizar Datos</div>
+              <div class="action-description">Modificar información personal y laboral del empleado</div>
+            </div>
+
+            <!-- Cese de Empleado -->
+            <div class="action-card" onclick="ejecutarAccion('cese')">
+              <div class="action-icon action-cese">
+                <i class="fas fa-user-times"></i>
+              </div>
+              <div class="action-title">Registrar Cese</div>
+              <div class="action-description">Registrar terminación laboral del empleado</div>
+            </div>
+
+            <!-- Justificaciones -->
+            <div class="action-card" onclick="ejecutarAccion('justificaciones')">
+              <div class="action-icon action-justificaciones">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="action-title">Justificaciones</div>
+              <div class="action-description">Gestionar justificaciones de ausencia</div>
+            </div>
+
+            <!-- OJT / CIC -->
+            <div class="action-card" onclick="ejecutarAccion('ojt')">
+              <div class="action-icon action-ojt">
+                <i class="fas fa-star"></i>
+              </div>
+              <div class="action-title">OJT / CIC</div>
+              <div class="action-description">Gestión de usuarios CIC y OJT</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección para registrar nuevo empleado -->
+    <div class="new-employee-section">
+      <h3 class="mb-4">
+        <i class="fas fa-user-plus me-2"></i>
+        ¿Necesitas registrar un nuevo empleado?
+      </h3>
+      <p class="mb-4 opacity-75">Accede al formulario de registro para agregar nuevos empleados al sistema</p>
+      <a href="/registrar-empleado" class="new-employee-btn">
+        <i class="fas fa-plus me-2"></i>
+        Registrar Nuevo Empleado
+      </a>
+    </div>
+
+    <!-- Mensajes de alerta -->
+    <div id="msg" class="alert mt-4 d-none"></div>
   </div>
 
   <script src="auth.js"></script>
-  <script src="app.js"></script>
+  <script src="dashboard.js"></script>
   <script>
-    // Verificar autenticación al cargar la página
     document.addEventListener('DOMContentLoaded', () => {
-      if (auth.checkAuthImmediate()) {
-        // Mostrar información del usuario y saludo
-        auth.displayUserInfo();
-        auth.displayGreeting();
-      }
+      auth.checkAuthImmediate();
     });
   </script>
 </body>

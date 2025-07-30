@@ -1,150 +1,200 @@
-/* public/ojt.js */
-const $ = id => document.getElementById(id);
+const API = "";
 
-let DNI_ACTUAL   = "";      // DNI que se está trabajando
-let REGISTRO_SEL = null;    // UsoCICID que se está editando (o null si es alta)
+// Obtener DNI del localStorage
+const dni = localStorage.getItem('empleadoDNI');
+const nombreEmpleado = localStorage.getItem('empleadoNombre');
 
-/* ===== 0. UTILIDADES ===== */
-const fmt = iso =>
-  new Date(iso).toLocaleString('es-PE', { hour12: false });
+// Variables globales
+let historial = [];
+let registroEditando = null;
 
-function toInputDate(txt) {
-  // “27/6/2025, 13:00:00” → “2025-06-27T13:00”
-  const [d, m, y, h, mi] = txt.match(/(\d+)\/(\d+)\/(\d+), (\d+):(\d+)/).slice(1);
-  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T${h.padStart(2,'0')}:${mi}`;
-}
+/* ============ 1. INICIALIZACIÓN ============ */
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!dni) {
+    mostrarMsg(false, { error: "No se ha seleccionado un empleado. Regrese al dashboard." });
+    return;
+  }
 
-// Normaliza “2025-06-27T20:00” → “2025-06-27 20:00:00”
-const normalizar = s => s ? s.replace('T', ' ') + ':00' : null;
+  // Mostrar información del empleado
+  document.getElementById("employeeName").textContent = nombreEmpleado || "Empleado";
+  document.getElementById("employeeDNI").textContent = `DNI: ${dni}`;
 
-/* ==== 0. CARGAR DNIs para autocomplete ==== */
-async function cargarDNIs() {
+  // Cargar historial
+  await cargarHistorial();
+  
+  // Configurar eventos
+  configurarEventos();
+});
+
+/* ============ 2. CARGAR HISTORIAL ============ */
+async function cargarHistorial() {
   try {
-    const res  = await fetch('/ojt/dnis');
-    const data = await res.json();               // [{ DNI: "00123456" }, …]
-    $('listaDNI').innerHTML =
-      data.map(d => `<option value="${d.DNI}">`).join('');
-  } catch (err) {
-    console.error('Error cargando DNIs OJT:', err);
+    const res = await auth.fetchWithAuth(`${API}/ojt/${dni}/historial`);
+    if (res.ok) {
+      historial = await res.json();
+      mostrarHistorial();
+    }
+  } catch (error) {
+    console.error("Error cargando historial:", error);
   }
 }
 
-/* ==== 1. VALIDAR DNI ==== */
-function validarDNI() {
-  DNI_ACTUAL = $('dni').value.trim();
-  if (!DNI_ACTUAL) {
-    alert('Ingrese un DNI');
+/* ============ 3. MOSTRAR HISTORIAL ============ */
+function mostrarHistorial() {
+  const tbody = document.getElementById("tablaHistorial");
+  
+  if (historial.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay registros</td></tr>';
     return;
   }
-
-  fetch(`/ojt/${DNI_ACTUAL}/historial`)
-    .then(res => {
-      if (!res.ok) throw new Error('Error al consultar historial');
-      return res.json();
-    })
-    .then(data => {
-      pintarTabla(data);
-      $('historialBox').classList.remove('d-none');
-      $('accionesBox').classList.remove('d-none');
-      $('btnEditar').classList.add('d-none');
-    })
-    .catch(err => alert(err.message));
-}
-
-/* ==== 2. PINTAR TABLA ==== */
-function pintarTabla(arr) {
-  const tbody = $('tablaHistorial');
-  if (!arr.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sin registros</td></tr>';
-    return;
-  }
-  tbody.innerHTML = arr.map(r => `
+  
+  tbody.innerHTML = historial.map(reg => `
     <tr>
-      <td>${r.UsoCICID}</td>
-      <td>${r.NombreUsuarioCIC}</td>
-      <td>${fmt(r.FechaHoraInicio)}</td>
-      <td>${r.FechaHoraFin ? fmt(r.FechaHoraFin) : '<em>Activo</em>'}</td>
+      <td>${reg.UsoCICID}</td>
+      <td>${reg.NombreUsuarioCIC || reg.UsuarioCIC}</td>
+      <td>${formatearFecha(reg.FechaHoraInicio)}</td>
+      <td>${reg.FechaHoraFin ? formatearFecha(reg.FechaHoraFin) : '<em>Activo</em>'}</td>
       <td>
-        <button class="btn btn-sm btn-link" onclick="seleccionar(${r.UsoCICID})">Editar</button>
+        <button class="btn btn-sm btn-outline-warning" onclick="editarRegistro(${reg.UsoCICID})">
+          <i class="fas fa-edit"></i>
+        </button>
       </td>
     </tr>
-  `).join('');
+  `).join("");
 }
 
-/* ==== 3. NUEVO REGISTRO ==== */
-function nuevoRegistro() {
-  REGISTRO_SEL = null;
-  $('formOJT').reset();
-  $('UsoCICID').value      = "";
-  $('FechaHoraFin').value   = "";
-  mostrarForm(true);
-  $('btnEditar').classList.add('d-none');
+/* ============ 4. CONFIGURAR EVENTOS ============ */
+function configurarEventos() {
+  // Botón nuevo registro
+  document.getElementById("btnNuevo").addEventListener("click", () => {
+    registroEditando = null;
+    mostrarFormulario();
+    limpiarFormulario();
+  });
+  
+  // Botón editar
+  document.getElementById("btnEditar").addEventListener("click", () => {
+    if (registroEditando) {
+      mostrarFormulario();
+    }
+  });
+  
+  // Envío del formulario
+  document.getElementById("formOJT").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await guardarRegistro();
+  });
 }
 
-/* ==== 4. EDITAR ==== */
-window.seleccionar = id => {
-  const fila = [...document.querySelectorAll('#tablaHistorial tr')]
-    .find(tr => tr.firstElementChild.textContent == id);
-  if (!fila) return;
-
-  REGISTRO_SEL               = id;
-  $('UsoCICID').value        = id;
-  $('UsuarioCIC').value      = fila.children[1].textContent;
-  $('FechaHoraInicio').value = toInputDate(fila.children[2].textContent);
-  $('FechaHoraFin').value    = fila.children[3].textContent.startsWith('Activo')
-    ? "" : toInputDate(fila.children[3].textContent);
-  $('Observaciones').value   = "";
-  mostrarForm(true);
-  $('btnEditar').classList.remove('d-none');
-};
-
-function mostrarForm(show) {
-  $('formOJT').classList.toggle('d-none', !show);
+/* ============ 5. EDITAR REGISTRO ============ */
+function editarRegistro(id) {
+  const registro = historial.find(r => r.UsoCICID === id);
+  if (!registro) return;
+  
+  registroEditando = registro;
+  mostrarFormulario();
+  llenarFormulario(registro);
+  document.getElementById("btnEditar").classList.remove("d-none");
 }
 
-/* ==== 5. ENVIAR FORMULARIO ==== */
-function enviarForm(e) {
-  e.preventDefault();
+/* ============ 6. MOSTRAR/OCULTAR FORMULARIO ============ */
+function mostrarFormulario() {
+  document.getElementById("formOJT").classList.remove("d-none");
+  document.getElementById("btnEditar").classList.remove("d-none");
+}
 
+function ocultarFormulario() {
+  document.getElementById("formOJT").classList.add("d-none");
+  document.getElementById("btnEditar").classList.add("d-none");
+  registroEditando = null;
+}
+
+/* ============ 7. LLENAR FORMULARIO ============ */
+function llenarFormulario(registro) {
+  document.getElementById("UsoCICID").value = registro.UsoCICID;
+  document.getElementById("UsuarioCIC").value = registro.NombreUsuarioCIC || registro.UsuarioCIC;
+  document.getElementById("FechaHoraInicio").value = toInputDate(registro.FechaHoraInicio);
+  document.getElementById("FechaHoraFin").value = registro.FechaHoraFin ? toInputDate(registro.FechaHoraFin) : '';
+  document.getElementById("Observaciones").value = registro.Observaciones || '';
+}
+
+/* ============ 8. LIMPIAR FORMULARIO ============ */
+function limpiarFormulario() {
+  document.getElementById("UsoCICID").value = '';
+  document.getElementById("UsuarioCIC").value = '';
+  document.getElementById("FechaHoraInicio").value = '';
+  document.getElementById("FechaHoraFin").value = '';
+  document.getElementById("Observaciones").value = '';
+}
+
+/* ============ 9. GUARDAR REGISTRO ============ */
+async function guardarRegistro() {
   const payload = {
-    UsuarioCIC      : $('UsuarioCIC').value.trim(),
-    DNIEmpleado     : DNI_ACTUAL,
-    FechaHoraInicio : normalizar($('FechaHoraInicio').value),
-    FechaHoraFin    : normalizar($('FechaHoraFin').value),
-    Observaciones   : $('Observaciones').value.trim() || null
+    DNI: dni,
+    UsuarioCIC: document.getElementById("UsuarioCIC").value,
+    FechaHoraInicio: normalizar(document.getElementById("FechaHoraInicio").value),
+    FechaHoraFin: normalizar(document.getElementById("FechaHoraFin").value),
+    Observaciones: document.getElementById("Observaciones").value
   };
 
-  const url    = REGISTRO_SEL ? `/ojt/${REGISTRO_SEL}` : '/ojt';
-  const method = REGISTRO_SEL ? 'PATCH' : 'POST';
+  try {
+    const url = registroEditando 
+      ? `${API}/ojt/${registroEditando.UsoCICID}`
+      : `${API}/ojt`;
+    
+    const method = registroEditando ? "PATCH" : "POST";
+    
+    const res = await auth.fetchWithAuth(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  fetch(url, {
-    method,
-    headers: { 'Content-Type':'application/json' },
-    body   : JSON.stringify(payload)
-  })
-    .then(res => res.json().then(json => ({ ok: res.ok, json })))
-    .then(({ok, json}) => {
-      mostrarMsg(ok, json.mensaje || json.error);
-      if (ok) {
-        mostrarForm(false);
-        $('btnValidar').click(); // refresca historial
-      }
-    })
-    .catch(err => mostrarMsg(false, err.message));
+    const result = await res.json();
+    mostrarMsg(res.ok, result);
+    
+    if (res.ok) {
+      // Recargar historial
+      await cargarHistorial();
+      
+      // Ocultar formulario
+      ocultarFormulario();
+      
+      // Limpiar formulario
+      limpiarFormulario();
+    }
+    
+  } catch (error) {
+    console.error("Error guardando registro:", error);
+    mostrarMsg(false, { error: "Error al guardar registro" });
+  }
 }
 
-/* ==== 6. MENSAJES ==== */
-function mostrarMsg(ok, msg) {
-  const div = $('msg');
-  div.textContent = msg;
-  div.className   = `alert mt-3 alert-${ok ? 'success' : 'danger'}`;
-  div.classList.remove('d-none');
+/* ============ 10. FUNCIONES UTILITARIAS ============ */
+function formatearFecha(fecha) {
+  if (!fecha) return '-';
+  return new Date(fecha).toLocaleString('es-ES', { hour12: false });
 }
 
-/* ==== INICIALIZACIÓN ==== */
-document.addEventListener('DOMContentLoaded', () => {
-  cargarDNIs();
-  $('btnValidar').onclick = validarDNI;
-  $('btnNuevo').onclick   = nuevoRegistro;
-  $('formOJT').onsubmit   = enviarForm;
-});
+function toInputDate(txt) {
+  // Convertir fecha para input datetime-local
+  const date = new Date(txt);
+  return date.toISOString().slice(0, 16);
+}
+
+function normalizar(s) {
+  // Normaliza "2025-06-27T20:00" → "2025-06-27 20:00:00"
+  return s ? s.replace('T', ' ') + ':00' : null;
+}
+
+function mostrarMsg(ok, obj) {
+  const div = document.getElementById("msg");
+  div.className = `alert alert-${ok ? "success" : "danger"} mt-3`;
+  div.textContent = ok ? (obj.mensaje || "Operación exitosa") : (obj.error || "Error desconocido");
+  div.classList.remove("d-none");
+  
+  // Auto-ocultar mensaje después de 5 segundos
+  setTimeout(() => {
+    div.classList.add("d-none");
+  }, 5000);
+}

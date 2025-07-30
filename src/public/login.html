@@ -3,126 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <title>Login - Sistema de Empleados</title>
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     body {
+      background: #f1f5f9;           /* Gris muy claro, sin gradientes */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1e293b;
       min-height: 100vh;
-      background: linear-gradient(135deg, #297373 0%, #FE7F2D 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: system-ui, sans-serif;
     }
-    
+
     .login-card {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      padding: 3rem;
-      border-radius: 1.5rem;
-      width: 400px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-      color: white;
-    }
-    
-    .logo-container {
-      width: 96px;
-      height: 96px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 50%;
-      margin: 0 auto 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .form-control {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: white;
-      border-radius: 1rem;
-      padding: 0.75rem 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    .form-control::placeholder {
-      color: rgba(255, 255, 255, 0.8);
-    }
-    
-    .form-control:focus {
-      background: rgba(255, 255, 255, 0.25);
-      border-color: #FE7F2D;
-      box-shadow: 0 0 0 0.2rem rgba(254, 127, 45, 0.25);
-      color: white;
-    }
-    
-    .btn-login {
-      background: linear-gradient(45deg, #297373, #FE7F2D);
-      border: none;
-      border-radius: 2rem;
-      padding: 0.75rem;
-      font-weight: 600;
-      color: white;
-      width: 100%;
-      transition: opacity 0.3s;
-    }
-    
-    .btn-login:hover {
-      opacity: 0.9;
-      color: white;
-    }
-    
-    .btn-login:disabled {
-      opacity: 0.6;
-    }
-    
-    .password-container {
-      position: relative;
-    }
-    
-    .toggle-password {
-      position: absolute;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-    }
-    
-    .toggle-password:hover {
-      color: white;
-    }
-    
-    .error-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    
-    .error-card {
-      background: white;
-      border-radius: 1.5rem;
-      padding: 1.5rem;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      padding: 2rem;
       max-width: 400px;
-      width: 90%;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+      width: 100%;
+    }
+
+    .login-header {
+      background: #1e293b;
+      color: white;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin: -2rem -2rem 2rem -2rem;
+      text-align: center;
+    }
+
+    .form-control {
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      padding: 0.75rem;
+      background: #f8fafc;
+    }
+
+    .form-control:focus {
+      border-color: #1e40af;
+      box-shadow: 0 0 0 0.2rem rgba(30, 64, 175, 0.25);
+    }
+
+    .btn {
+      border-radius: 0.375rem;
+      font-weight: 500;
+      padding: 0.75rem 1.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #1e40af;
+      border-color: #1e40af;
+    }
+
+    .btn-primary:hover {
+      background: #1e3a8a;
+      border-color: #1e3a8a;
+    }
+
+    .input-group-text {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+      color: #64748b;
     }
   </style>
 </head>
 <body>
   <div class="login-card">
-    <!-- Logo + título -->
-    <div class="text-center mb-4">
-      <div class="logo-container">
+    <!-- Header -->
+    <div class="login-header">
+      <div class="text-center mb-2">
         <img src="/partner.svg" alt="Logo Partner" width="48" height="48">
       </div>
       <h2 class="h3 mb-0">Iniciar Sesión</h2>
@@ -130,59 +86,72 @@
     
     <!-- Formulario -->
     <form id="loginForm">
-      <input
-        type="text"
-        class="form-control"
-        id="usuario"
-        placeholder="Usuario"
-        required
-        autofocus
-      />
-      
-      <div class="password-container">
+      <div class="mb-3">
+        <label for="usuario" class="form-label">Usuario</label>
         <input
-          type="password"
+          type="text"
           class="form-control"
-          id="contrasena"
-          placeholder="Contraseña"
+          id="usuario"
+          placeholder="Ingrese su DNI"
           required
+          autofocus
         />
-        <button
-          type="button"
-          class="toggle-password"
-          id="togglePassword"
-          tabindex="-1"
-        >
-          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm-3 9c-4.5 0-8.31-3.5-10-7.5 1.69-4 5.5-7.5 10-7.5s8.31 3.5 10 7.5c-1.69 4-5.5 7.5-10 7.5z"/>
-          </svg>
-        </button>
+      </div>
+      
+      <div class="mb-4">
+        <label for="contrasena" class="form-label">Contraseña</label>
+        <div class="input-group">
+          <input
+            type="password"
+            class="form-control"
+            id="contrasena"
+            placeholder="Ingrese su contraseña"
+            required
+          />
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            id="togglePassword"
+            tabindex="-1"
+          >
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
       </div>
       
       <button
         type="submit"
-        class="btn btn-login"
+        class="btn btn-primary w-100"
         id="btnLogin"
       >
+        <i class="fas fa-sign-in-alt me-2"></i>
         Ingresar
       </button>
     </form>
   </div>
   
   <!-- Modal de error -->
-  <div id="errorModal" class="error-modal d-none">
-    <div class="error-card">
-      <h3 class="h5 text-dark mb-2">Error de autenticación</h3>
-      <p class="text-muted mb-3" id="errorMessage"></p>
-      <button
-        class="btn btn-primary w-100"
-        onclick="closeErrorModal()"
-      >
-        Entendido
-      </button>
+  <div id="errorModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Error de autenticación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p id="errorMessage"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+            Entendido
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="login.js"></script>
 </body>
 </html> 
