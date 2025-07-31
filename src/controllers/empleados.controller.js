@@ -226,3 +226,36 @@ exports.actualizarEmpleado = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar empleado' });
   }
 };
+
+// Buscar empleados por DNI o nombre (para autocompletar)
+exports.buscarEmpleados = async (req, res) => {
+  const { search = "" } = req.query;
+  
+  if (!search || search.length < 2) {
+    return res.json([]);
+  }
+
+  try {
+    const conn = await pool;
+    const result = await conn.request()
+      .input('search', sql.VarChar, `%${search}%`)
+      .query(`
+        SELECT TOP 10
+               DNI,
+               Nombres + ' ' + ApellidoPaterno + ' ' + ISNULL(ApellidoMaterno, '') AS NombreCompleto,
+               EstadoEmpleado
+        FROM PRI.Empleados
+        WHERE (DNI LIKE @search OR 
+               Nombres + ' ' + ApellidoPaterno + ' ' + ISNULL(ApellidoMaterno, '') LIKE @search)
+          AND EstadoEmpleado = 'Activo'
+        ORDER BY 
+          CASE WHEN DNI LIKE @search THEN 1 ELSE 2 END,
+          DNI
+      `);
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error buscando empleados:', err);
+    res.status(500).json({ error: 'Error al buscar empleados' });
+  }
+};

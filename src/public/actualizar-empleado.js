@@ -91,9 +91,15 @@ async function mostrarDatosEmpleado(empleado) {
   
   // Formatear fechas
   const fechaContratacion = empleado.FechaContratacion ? 
-    new Date(empleado.FechaContratacion).toLocaleDateString('es-ES') : "No especificada";
+    (empleado.FechaContratacion.includes('T') ? 
+      new Date(empleado.FechaContratacion).toLocaleDateString('es-ES') : 
+      empleado.FechaContratacion.split('-').reverse().join('/')
+    ) : "No especificada";
   const fechaCese = empleado.FechaCese ? 
-    new Date(empleado.FechaCese).toLocaleDateString('es-ES') : "No especificada";
+    (empleado.FechaCese.includes('T') ? 
+      new Date(empleado.FechaCese).toLocaleDateString('es-ES') : 
+      empleado.FechaCese.split('-').reverse().join('/')
+    ) : "No especificada";
   
   document.getElementById("displayFechaContratacion").textContent = fechaContratacion;
   document.getElementById("displayFechaCese").textContent = fechaCese;

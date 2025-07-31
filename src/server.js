@@ -35,32 +35,37 @@ app.use('/api', require('./routes/auth.routes'));
 // Rutas
 app.use('/catalogos', require('./routes/catalogos.routes'));
 app.use('/empleados', require('./routes/empleados.routes'));
-// debajo de los otros app.use(...)
 app.use('/grupos', require('./routes/grupos.routes'));
+app.use('/cese', require('./routes/cese.routes'));
+app.use('/justificaciones', require('./routes/justificaciones.routes'));
+app.use('/ojt', require('./routes/ojt.routes'));
 
+// API Routes
+const excepcionesRoutes = require('./routes/excepciones.routes');
+const ojtRoutes = require('./routes/ojt.routes');
+
+app.use('/api/excepciones', excepcionesRoutes);
+app.use('/api/ojt', ojtRoutes);
 
 // Arranque
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// justo debajo de las otras rutas
-
-app.use('/cese', require('./routes/cese.routes'));
-
-// y luego sigue sirviendo el HTML:
+// HTML Routes
 app.get('/cese', (req, res) => {
   res.sendFile(__dirname + '/public/cese.html');
 });
 
-app.use('/justificaciones', require('./routes/justificaciones.routes'));
 app.get('/justificaciones', (req, res) => {
   res.sendFile(__dirname + '/public/justificaciones.html');
 });
 
-// servir nueva vista
-app.use('/ojt', require('./routes/ojt.routes'));
 app.get('/ojt', (req, res) => {
   res.sendFile(__dirname + '/public/ojt.html');
+});
+
+app.get('/excepciones', (req, res) => {
+  res.sendFile(__dirname + '/public/excepciones.html');
 });
 
 
@@ -86,6 +91,8 @@ app.get('/registrar-empleado', (req, res) => {
 app.get('/actualizar-empleado', (req, res) => {
   res.sendFile(__dirname + '/public/actualizar-empleado.html');
 });
+
+
 
 
 

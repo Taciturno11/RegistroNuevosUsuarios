@@ -1,10 +1,13 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
-const { crearEmpleado, lookupEmpleados, obtenerEmpleado, actualizarEmpleado, obtenerHorarioEmpleado } = require('../controllers/empleados.controller');
+const { crearEmpleado, lookupEmpleados, obtenerEmpleado, actualizarEmpleado, obtenerHorarioEmpleado, buscarEmpleados } = require('../controllers/empleados.controller');
 const router = Router();
 
 // Autocompletar: /empleados/lookup?cargo=5&search=7156
 router.get('/lookup', lookupEmpleados);
+
+// Buscar empleados por DNI o nombre: /empleados/buscar?search=texto
+router.get('/buscar', buscarEmpleados);
 
 // Obtener empleado por DNI
 router.get('/:dni', obtenerEmpleado);
