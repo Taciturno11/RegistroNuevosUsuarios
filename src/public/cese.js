@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Cargar información del empleado
   await cargarEmpleado();
+
+  // Event listener para anular cese
+  document.getElementById("btnAnularCese").addEventListener("click", anularCese);
 });
 
 /* ============ 2. CARGAR INFORMACIÓN DEL EMPLEADO ============ */
@@ -35,8 +38,10 @@ async function cargarEmpleado() {
     
     // Verificar si el empleado ya está cesado
     if (empleado.EstadoEmpleado === 'Cesado') {
-      mostrarMsg(false, { error: "Este empleado ya está cesado" });
+      // No mostrar error, solo cambiar la interfaz
       document.getElementById("formCese").style.display = "none";
+      document.getElementById("anularCeseSection").style.display = "block";
+      document.getElementById("employeeDNI").textContent = `DNI: ${dni} | Estado: Cesado`;
       return;
     }
 
@@ -64,7 +69,7 @@ document.getElementById("formCese").addEventListener("submit", async (e) => {
 
   try {
     const res = await auth.fetchWithAuth(`${API}/cese/${dni}`, {
-      method: "POST",
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fechaCese })
     });
@@ -79,10 +84,14 @@ document.getElementById("formCese").addEventListener("submit", async (e) => {
       // Actualizar estado visual
       document.getElementById("employeeDNI").textContent = `DNI: ${dni} | Estado: Cesado`;
       
-      // Ocultar formulario después de un tiempo
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 2000);
+      // Ocultar formulario y mostrar botón de anular
+      document.getElementById("formCese").style.display = "none";
+      document.getElementById("anularCeseSection").style.display = "block";
+      
+      // Ocultar formulario después de un tiempo (REMOVED)
+      // setTimeout(() => {
+      //   window.location.href = "/";
+      // }, 2000);
     }
     
   } catch (error) {
@@ -91,6 +100,39 @@ document.getElementById("formCese").addEventListener("submit", async (e) => {
   }
 });
 
+/* ============ 4. ANULAR CESE ============ */
+async function anularCese() {
+  if (!confirm("¿Está seguro que desea anular el cese de este empleado?")) {
+    return;
+  }
+
+  try {
+    const res = await auth.fetchWithAuth(`${API}/cese/${dni}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const result = await res.json();
+    mostrarMsg(res.ok, result);
+    
+    if (res.ok) {
+      // Actualizar estado visual
+      document.getElementById("employeeDNI").textContent = `DNI: ${dni} | Estado: Activo`;
+      
+      // Mostrar formulario de cese y ocultar botón de anular
+      document.getElementById("formCese").style.display = "flex";
+      document.getElementById("anularCeseSection").style.display = "none";
+      
+      // Limpiar fecha de cese
+      document.getElementById("fechaCese").value = "";
+    }
+    
+  } catch (error) {
+    console.error("Error anulando cese:", error);
+    mostrarMsg(false, { error: "Error al anular cese" });
+  }
+}
+
 /* ============ 4. FUNCIONES UTILITARIAS ============ */
 function mostrarMsg(ok, obj) {
   const div = document.getElementById("msg");
@@ -98,8 +140,5 @@ function mostrarMsg(ok, obj) {
   div.textContent = ok ? obj.mensaje : (obj.error || "Error desconocido");
   div.classList.remove("d-none");
   
-  // Auto-ocultar mensaje después de 5 segundos
-  setTimeout(() => {
-    div.classList.add("d-none");
-  }, 5000);
+  // El mensaje permanecerá visible hasta que se recargue la página o se muestre otro mensaje
 }

@@ -126,10 +126,34 @@ async function actualizarOJT (req, res) {
   }
 }
 
+/* ═════ 4) ELIMINAR REGISTRO ═══════════════════════════════ */
+async function eliminarOJT (req, res) {
+  const { id } = req.params;
+
+  try {
+    const result = await (await pool).request()
+      .input('id', sql.Int, id)
+      .query(`
+        DELETE FROM PRI.UsoUsuarioCIC
+        WHERE UsoCICID = @id
+      `);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ error: 'Registro OJT no encontrado' });
+    }
+
+    res.json({ mensaje: 'Registro OJT eliminado correctamente' });
+  } catch (err) {
+    console.error('❌ Error eliminar OJT:', err);
+    res.status(500).json({ error: 'Error al eliminar OJT' });
+  }
+}
+
 /* ──────── EXPORTS ──────── */
 module.exports = {
   listarDNIsOJT,
   listarHistorial,
   crearOJT,
   actualizarOJT,
+  eliminarOJT,
 };

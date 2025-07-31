@@ -172,6 +172,6 @@ function mostrarMsg(ok,obj){
 /* ============ 8. INICIO ============ */
 // Verificar autenticación antes de cargar datos
 auth.checkAuth().then(() => {
-  auth.displayUserInfo();         // Mostrar info del usuario
+  // auth.displayUserInfo();         // Mostrar info del usuario (REMOVED - Solo cerrar sesión desde dashboard)
 });
 

@@ -83,6 +83,16 @@
       border-color: #b91c1c;
     }
 
+    .btn-success {
+      background: #059669;
+      border-color: #059669;
+    }
+
+    .btn-success:hover {
+      background: #047857;
+      border-color: #047857;
+    }
+
     .card-header {
       background: var(--header-bg);
       color: white;
@@ -152,6 +162,16 @@
         </button>
       </div>
     </form>
+
+    <!-- Botón anular cese (se muestra cuando el empleado está cesado) -->
+    <div id="anularCeseSection" class="row g-3" style="display: none;">
+      <div class="col-12 text-center">
+        <button type="button" id="btnAnularCese" class="btn btn-success px-4">
+          <i class="fas fa-user-check me-2"></i>
+          Anular Cese
+        </button>
+      </div>
+    </div>
 
     <!-- Mensajes -->
     <div id="msg" class="alert mt-3 d-none"></div>

@@ -55,8 +55,11 @@ function mostrarHistorial() {
       <td>${formatearFecha(reg.FechaHoraInicio)}</td>
       <td>${reg.FechaHoraFin ? formatearFecha(reg.FechaHoraFin) : '<em>Activo</em>'}</td>
       <td>
-        <button class="btn btn-sm btn-outline-warning" onclick="editarRegistro(${reg.UsoCICID})">
+        <button class="btn btn-sm btn-outline-warning me-1" onclick="editarRegistro(${reg.UsoCICID})" title="Editar">
           <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" onclick="eliminarRegistro(${reg.UsoCICID})" title="Eliminar">
+          <i class="fas fa-trash"></i>
         </button>
       </td>
     </tr>
@@ -130,7 +133,7 @@ function limpiarFormulario() {
 /* ============ 9. GUARDAR REGISTRO ============ */
 async function guardarRegistro() {
   const payload = {
-    DNI: dni,
+    DNIEmpleado: dni,
     UsuarioCIC: document.getElementById("UsuarioCIC").value,
     FechaHoraInicio: normalizar(document.getElementById("FechaHoraInicio").value),
     FechaHoraFin: normalizar(document.getElementById("FechaHoraFin").value),
@@ -193,8 +196,31 @@ function mostrarMsg(ok, obj) {
   div.textContent = ok ? (obj.mensaje || "Operación exitosa") : (obj.error || "Error desconocido");
   div.classList.remove("d-none");
   
-  // Auto-ocultar mensaje después de 5 segundos
-  setTimeout(() => {
-    div.classList.add("d-none");
-  }, 5000);
+  // El mensaje permanecerá visible hasta que se recargue la página o se muestre otro mensaje
+}
+
+/* ============ 11. ELIMINAR REGISTRO ============ */
+async function eliminarRegistro(id) {
+  if (!confirm("¿Está seguro que desea eliminar este registro?")) {
+    return;
+  }
+
+  try {
+    const res = await auth.fetchWithAuth(`${API}/ojt/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const result = await res.json();
+    mostrarMsg(res.ok, result);
+    
+    if (res.ok) {
+      // Recargar historial
+      await cargarHistorial();
+    }
+    
+  } catch (error) {
+    console.error("Error eliminando registro:", error);
+    mostrarMsg(false, { error: "Error al eliminar registro" });
+  }
 }

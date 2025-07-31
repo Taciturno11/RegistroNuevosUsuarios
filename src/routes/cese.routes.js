@@ -3,7 +3,8 @@ const { Router } = require('express');
 const {
   listarDNIsActivos,
   obtenerPorDNI,
-  registrarCese
+  registrarCese,
+  anularCese
 } = require('../controllers/cese.controller');
 
 const router = Router();
@@ -12,5 +13,6 @@ const router = Router();
 router.get('/dnis', listarDNIsActivos);     // GET /cese/dnis
 router.get('/:dni', obtenerPorDNI);         // GET /cese/:dni
 router.put('/:dni', registrarCese);         // PUT /cese/:dni
+router.delete('/:dni', anularCese);         // DELETE /cese/:dni
 
 module.exports = router;

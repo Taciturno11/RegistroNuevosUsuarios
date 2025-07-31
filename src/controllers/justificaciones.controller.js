@@ -120,10 +120,59 @@ async function registrarJustificacion(req, res) {
   }
 }
 
+// GET /justificaciones/:dni - Obtener justificaciones de un empleado
+async function obtenerJustificacionesEmpleado(req, res) {
+  const { dni } = req.params;
+  
+  try {
+    const conn = await pool;
+    const result = await conn.request()
+      .input('DNI', sql.VarChar(12), dni)
+      .query(`
+        SELECT JustificacionID, EmpleadoDNI, Fecha, TipoJustificacion, 
+               Motivo, Estado, AprobadorDNI
+        FROM Partner.dbo.Justificaciones
+        WHERE EmpleadoDNI = @DNI
+        ORDER BY Fecha DESC
+      `);
+
+    res.json(result.recordset);
+  } catch (err) {
+    console.error('Error al obtener justificaciones:', err);
+    res.status(500).json({ error: 'Error al obtener justificaciones' });
+  }
+}
+
+// DELETE /justificaciones/:id - Eliminar justificación
+async function eliminarJustificacion(req, res) {
+  const { id } = req.params;
+  
+  try {
+    const conn = await pool;
+    const result = await conn.request()
+      .input('JustificacionID', sql.Int, id)
+      .query(`
+        DELETE FROM Partner.dbo.Justificaciones
+        WHERE JustificacionID = @JustificacionID
+      `);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ error: 'Justificación no encontrada' });
+    }
+
+    res.json({ mensaje: 'Justificación eliminada correctamente' });
+  } catch (err) {
+    console.error('Error al eliminar justificación:', err);
+    res.status(500).json({ error: 'Error al eliminar justificación' });
+  }
+}
+
 module.exports = {
   listarDNIsJustificacion,
   obtenerEmpleadoJustificacion,
   listarTiposJustificacion,
   obtenerJefeDirecto,
-  registrarJustificacion
+  registrarJustificacion,
+  obtenerJustificacionesEmpleado,
+  eliminarJustificacion
 };

@@ -64,8 +64,30 @@ async function registrarCese(req, res) {
   }
 }
 
+// 4. Anular cese
+async function anularCese(req, res) {
+  const { dni } = req.params;
+  try {
+    const conn = await pool;                             // ✅
+    await conn
+      .request()
+      .input('dni', sql.VarChar(12), dni)
+      .query(`
+        UPDATE PRI.Empleados
+        SET FechaCese = NULL,
+            EstadoEmpleado = 'Activo'
+        WHERE DNI = @dni
+      `);
+    res.json({ mensaje: 'Cese anulado correctamente' });
+  } catch (err) {
+    console.error('ERROR anularCese:', err);
+    res.status(500).json({ error: 'Error al anular cese' });
+  }
+}
+
 module.exports = {
   listarDNIsActivos,
   obtenerPorDNI,
-  registrarCese
+  registrarCese,
+  anularCese
 };

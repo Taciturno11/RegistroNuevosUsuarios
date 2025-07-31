@@ -174,5 +174,5 @@ function mostrarMsg(ok,obj){
 auth.checkAuth().then(() => {
   cargarCatalogos();
   precargarGruposHoras();        // ← carga cache una vez
-  auth.displayUserInfo();         // Mostrar info del usuario
+      // auth.displayUserInfo();         // Mostrar info del usuario (REMOVED - Solo cerrar sesión desde dashboard)
 }); 

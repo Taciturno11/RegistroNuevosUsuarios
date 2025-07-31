@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Verificar autenticación
     await auth.checkAuth();
-    auth.displayUserInfo();
 
     // Cargar información del empleado
     await cargarEmpleado();

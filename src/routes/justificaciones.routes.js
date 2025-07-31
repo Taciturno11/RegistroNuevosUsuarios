@@ -4,7 +4,9 @@ const {
   obtenerEmpleadoJustificacion,
   listarTiposJustificacion,
   obtenerJefeDirecto,
-  registrarJustificacion
+  registrarJustificacion,
+  obtenerJustificacionesEmpleado,
+  eliminarJustificacion
 } = require('../controllers/justificaciones.controller');
 
 const router = Router();
@@ -13,7 +15,8 @@ const router = Router();
 router.get('/dnis', listarDNIsJustificacion);
 router.get('/tipos', listarTiposJustificacion);
 router.get('/:dni/jefe', obtenerJefeDirecto);
-router.get('/:dni', obtenerEmpleadoJustificacion);
+router.get('/:dni', obtenerJustificacionesEmpleado);
 router.post('/', registrarJustificacion);
+router.delete('/:id', eliminarJustificacion);
 
 module.exports = router;
