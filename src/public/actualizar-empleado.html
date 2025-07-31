@@ -214,6 +214,36 @@
       color: white;
     }
 
+    /* ===== Botón de cerrar sesión ===== */
+    .btn-logout {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-logout:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+      color: white;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-logout:active {
+      transform: translateY(0);
+    }
+
+    .btn-logout i {
+      transition: transform 0.3s ease;
+    }
+
+    .btn-logout:hover i {
+      transform: translateX(2px);
+    }
+
     /* ===== Animaciones ===== */
     .fade-in {
       animation: fadeIn 0.5s ease-in;

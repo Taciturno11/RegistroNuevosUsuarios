@@ -110,7 +110,8 @@ function displayUserInfo() {
   
   if (userInfoElement && user.nombres) {
     userInfoElement.innerHTML = `
-      <button class="btn btn-sm btn-outline-dark" onclick="logout()">
+      <button class="btn btn-sm btn-logout" onclick="logout()">
+        <i class="fas fa-sign-out-alt me-1"></i>
         Cerrar Sesión
       </button>
     `;
