@@ -85,9 +85,16 @@ exports.obtenerHorarioEmpleado = async (req, res) => {
                     CASE WHEN CHARINDEX(' (Desc.', g.NombreGrupo) > 0
                          THEN CHARINDEX(' (Desc.', g.NombreGrupo) - 1
                          ELSE LEN(g.NombreGrupo)
-                    END) AS NombreBase
+                    END) AS NombreBase,
+               hb.HoraEntrada,
+               hb.HoraSalida
         FROM PRI.Empleados e
         JOIN dbo.GruposDeHorario g ON g.GrupoID = e.GrupoHorarioID
+        LEFT JOIN dbo.Horarios_Base hb ON hb.NombreHorario = LEFT(g.NombreGrupo, 
+                    CASE WHEN CHARINDEX(' (Desc.', g.NombreGrupo) > 0
+                         THEN CHARINDEX(' (Desc.', g.NombreGrupo) - 1
+                         ELSE LEN(g.NombreGrupo)
+                    END)
         WHERE e.DNI = @DNI
       `);
 

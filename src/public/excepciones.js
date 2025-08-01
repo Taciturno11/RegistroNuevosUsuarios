@@ -83,8 +83,19 @@ async function mostrarHorarioBase(dni) {
     
     if (res.ok) {
       const horario = await res.json();
-      document.getElementById("employeeHorario").textContent = horario.NombreBase || "No especificado";
-      console.log("Horario base cargado:", horario.NombreBase);
+      
+      // Formatear el texto del horario base con rango horario
+      let horarioTexto = horario.NombreBase || "No especificado";
+      
+      // Si hay horas de entrada y salida, agregar el rango
+      if (horario.HoraEntrada && horario.HoraSalida) {
+        const horaEntrada = formatearHora(horario.HoraEntrada);
+        const horaSalida = formatearHora(horario.HoraSalida);
+        horarioTexto += ` (${horaEntrada} - ${horaSalida})`;
+      }
+      
+      document.getElementById("employeeHorario").textContent = horarioTexto;
+      console.log("Horario base cargado:", horarioTexto);
     } else {
       document.getElementById("employeeHorario").textContent = "No especificado";
       console.log("No se pudo cargar el horario base");

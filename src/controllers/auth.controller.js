@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const { pool, sql } = require('../db');
 
 // DNIs autorizados
-const DNIS_AUTORIZADOS = ['72548769', '73766815', '71936801', '44991089'];
+const DNIS_AUTORIZADOS = ['72548769', '73766815', '71936801', '44991089', '72880558'];
 
 // Login de usuario
 exports.login = async (req, res) => {
