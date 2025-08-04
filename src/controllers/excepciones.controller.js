@@ -100,13 +100,14 @@ exports.crearExcepcion = async (req, res) => {
       return res.status(409).json({ error: 'Ya existe una excepción para esta fecha' });
     }
 
-    // Verificar que la fecha no sea pasada
+    // Verificar que la fecha no sea muy antigua (más de 1 mes)
     const fechaActual = new Date();
-    fechaActual.setHours(0, 0, 0, 0);
+    const fechaUnMesAtras = new Date();
+    fechaUnMesAtras.setMonth(fechaUnMesAtras.getMonth() - 1);
     const fechaExcepcion = new Date(Fecha);
     
-    if (fechaExcepcion < fechaActual) {
-      return res.status(400).json({ error: 'No se pueden crear excepciones para fechas pasadas' });
+    if (fechaExcepcion < fechaUnMesAtras) {
+      return res.status(400).json({ error: 'No se pueden crear excepciones para fechas anteriores a 1 mes' });
     }
 
     // Insertar la excepción

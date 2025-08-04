@@ -333,18 +333,18 @@ function configurarEventos() {
   console.log("Campo de fecha encontrado:", fechaInput);
   
   if (fechaInput) {
-    // Configurar fecha mínima (hoy)
+    // Configurar fecha mínima (permitir fechas pasadas - 1 mes atrás)
+    const unMesAtras = new Date();
+    unMesAtras.setMonth(unMesAtras.getMonth() - 1);
+    const fechaUnMesAtras = unMesAtras.toISOString().split('T')[0];
+    fechaInput.setAttribute("min", fechaUnMesAtras);
+    console.log("Fecha mínima configurada (1 mes atrás):", fechaUnMesAtras);
+    
+    // Configurar fecha por defecto (hoy)
     const hoy = new Date();
     const fechaHoy = hoy.toISOString().split('T')[0];
-    fechaInput.setAttribute("min", fechaHoy);
-    console.log("Fecha mínima configurada:", fechaHoy);
-    
-    // Configurar fecha por defecto (mañana)
-    const manana = new Date();
-    manana.setDate(manana.getDate() + 1);
-    const fechaManana = manana.toISOString().split('T')[0];
-    fechaInput.value = fechaManana;
-    console.log("Fecha por defecto configurada:", fechaManana);
+    fechaInput.value = fechaHoy;
+    console.log("Fecha por defecto configurada (hoy):", fechaHoy);
     
     // Forzar la actualización del campo
     fechaInput.dispatchEvent(new Event('change'));
@@ -378,18 +378,6 @@ function validarFecha() {
   
   if (!fechaInput || !fechaInput.value) {
     console.log("Campo de fecha vacío o no encontrado");
-    return false;
-  }
-  
-  const fechaSeleccionada = new Date(fechaInput.value);
-  const fechaActual = new Date();
-  fechaActual.setHours(0, 0, 0, 0);
-  
-  console.log("Validando fecha:", fechaInput.value, "Fecha seleccionada:", fechaSeleccionada, "Fecha actual:", fechaActual);
-  
-  if (fechaSeleccionada < fechaActual) {
-    mostrarMsg(false, { error: "No se pueden crear excepciones para fechas pasadas" });
-    fechaInput.value = "";
     return false;
   }
   
