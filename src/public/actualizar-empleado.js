@@ -158,13 +158,13 @@ async function obtenerHorarioEmpleado(dni) {
 /* ============ 7. CONFIGURAR EVENTOS ============ */
 function configurarEventos() {
   // Botón editar
-  document.getElementById("btnEditar").addEventListener("click", () => {
+  document.getElementById("btnEditar").addEventListener("click", async () => {
     if (!window.empleadoActual) {
       mostrarMsg(false, { error: "No hay empleado seleccionado" });
       return;
     }
     
-    llenarFormulario(window.empleadoActual);
+    await llenarFormulario(window.empleadoActual);
     
     // Ocultar visualización y mostrar formulario
     document.getElementById("dataDisplay").style.display = "none";
@@ -184,10 +184,88 @@ function configurarEventos() {
     e.preventDefault();
     await actualizarEmpleado();
   });
+
+  // Eventos para cambios dinámicos de horarios (LÓGICA SIMPLE)
+  const selJornada = document.getElementById("JornadaID");
+  const selTurno = document.getElementById("Turno");
+  const selBase = document.getElementById("grupoBase");
+  const selDesc = document.getElementById("GrupoHorarioID");
+
+  // 1. Al cambiar Jornada
+  selJornada.addEventListener("change", () => {
+    const prefijo = prefijoJornada[selJornada.value] || "";
+
+    // Limpia Turno, Horario, Descanso
+    selTurno.innerHTML = '<option value="">-- Elegir --</option>';
+    selTurno.disabled = !prefijo;
+    selBase.innerHTML = '<option value="">-- Elegir --</option>';
+    selDesc.innerHTML = '<option value="">-- Elegir descanso --</option>';
+
+    if (!prefijo) return;
+
+    // ¿existe Mañana? ¿existe Tarde?
+    const hayManana = gruposHorasCache.some(g => g.NombreBase.startsWith(prefijo + " Mañana"));
+    const hayTarde = gruposHorasCache.some(g => g.NombreBase.startsWith(prefijo + " Tarde"));
+
+    if (hayManana) selTurno.innerHTML += '<option value="Mañana">Mañana</option>';
+    if (hayTarde) selTurno.innerHTML += '<option value="Tarde">Tarde</option>';
+  });
+
+  // 2. Al cambiar Turno → llena Horario
+  selTurno.addEventListener("change", () => {
+    const prefijo = prefijoJornada[selJornada.value] || "";
+    const turno = selTurno.value;           // Mañana / Tarde
+    
+    selBase.innerHTML = '<option value="" selected hidden>-- Elegir --</option>';
+    selDesc.innerHTML = '<option value="" selected hidden>-- Elegir descanso --</option>';
+
+    if (!turno) return;
+
+    const filtrados = gruposHorasCache.filter(g =>
+      g.NombreBase.startsWith(`${prefijo} ${turno}`));
+
+    selBase.innerHTML += filtrados.map(g =>
+      `<option value="${g.NombreBase}">
+         ${g.HoraIni} - ${g.HoraFin}
+       </option>`
+    ).join("");
+  });
+
+  // 3. Al cambiar Horario → carga Descansos
+  selBase.addEventListener("change", async (e) => {
+    const base = e.target.value;
+    const selDesc = document.getElementById("GrupoHorarioID");
+    selDesc.innerHTML = '';
+
+    if (!base) return;
+
+    try {
+      const res = await auth.fetchWithAuth(`/grupos/${encodeURIComponent(base)}`);
+      const desc = await res.json();
+
+      // Mapa Día → objeto
+      const map = desc.reduce((acc, d) => {
+        const dia = d.NombreGrupo.match(/\(Desc\. ([^)]+)\)/i)?.[1] || d.NombreGrupo;
+        acc[dia] = { id: d.GrupoID, texto: dia };
+        return acc;
+      }, {});
+
+      // Orden deseado
+      const orden = ["Dom","Sab","Lun","Mar","Mie","Jue","Vie"];
+
+      // Genera las opciones en ese orden
+      selDesc.innerHTML = '<option value="">-- Elegir descanso --</option>' +
+        orden.filter(d => map[d])
+             .map(d => `<option value="${map[d].id}">${map[d].texto}</option>`)
+             .join("");
+    } catch (error) {
+      console.error("Error cargando descansos:", error);
+    }
+  });
 }
 
 /* ============ 8. LLENAR FORMULARIO CON DATOS EXISTENTES ============ */
-function llenarFormulario(empleado) {
+async function llenarFormulario(empleado) {
   // Información personal
   document.getElementById("DNI").value = empleado.DNI;
   document.getElementById("Nombres").value = empleado.Nombres;
@@ -209,18 +287,18 @@ function llenarFormulario(empleado) {
   document.getElementById("CoordinadorDNI").value = empleado.CoordinadorDNI || "";
   document.getElementById("JefeDNI").value = empleado.JefeDNI || "";
   
-  // Configurar horarios dinámicamente
-  configurarHorarios(empleado.JornadaID, empleado.GrupoHorarioID);
+  // Configurar horarios iniciales
+  await configurarHorariosIniciales(empleado.JornadaID, empleado.GrupoHorarioID);
 }
 
-/* ============ 9. CONFIGURAR HORARIOS DINÁMICAMENTE ============ */
-async function configurarHorarios(jornadaID, grupoHorarioID) {
+/* ============ 9. CONFIGURAR HORARIOS INICIALES ============ */
+async function configurarHorariosIniciales(jornadaID, grupoHorarioID) {
   const selJornada = document.getElementById("JornadaID");
   const selTurno = document.getElementById("Turno");
   const selBase = document.getElementById("grupoBase");
   const selDesc = document.getElementById("GrupoHorarioID");
   
-  // Configurar turnos
+  // Configurar turnos según jornada
   const prefijo = prefijoJornada[jornadaID] || "";
   selTurno.innerHTML = '<option value="">-- Elegir --</option>';
   selTurno.disabled = !prefijo;
@@ -239,6 +317,7 @@ async function configurarHorarios(jornadaID, grupoHorarioID) {
       const res = await auth.fetchWithAuth(`${API}/empleados/${document.getElementById("DNI").value}/horario`);
       if (res.ok) {
         const horario = await res.json();
+        
         if (horario.NombreBase) {
           // Determinar turno
           if (horario.NombreBase.includes("Mañana")) {
@@ -248,7 +327,43 @@ async function configurarHorarios(jornadaID, grupoHorarioID) {
           }
           
           // Configurar horario base
-          configurarHorarioBase(horario.NombreBase);
+          const prefijo = prefijoJornada[jornadaID] || "";
+          const turno = selTurno.value;
+          
+          if (prefijo && turno) {
+            const filtrados = gruposHorasCache.filter(g =>
+              g.NombreBase.startsWith(`${prefijo} ${turno}`));
+            
+            selBase.innerHTML = '<option value="" selected hidden>-- Elegir --</option>' +
+              filtrados.map(g =>
+                `<option value="${g.NombreBase}" ${g.NombreBase === horario.NombreBase ? 'selected' : ''}>
+                   ${g.HoraIni} - ${g.HoraFin}
+                 </option>`
+              ).join("");
+            
+            // Cargar descansos
+            if (horario.NombreBase) {
+              try {
+                const resDesc = await auth.fetchWithAuth(`/grupos/${encodeURIComponent(horario.NombreBase)}`);
+                const desc = await resDesc.json();
+                
+                const map = desc.reduce((acc, d) => {
+                  const dia = d.NombreGrupo.match(/\(Desc\. ([^)]+)\)/i)?.[1] || d.NombreGrupo;
+                  acc[dia] = { id: d.GrupoID, texto: dia };
+                  return acc;
+                }, {});
+                
+                const orden = ["Dom","Sab","Lun","Mar","Mie","Jue","Vie"];
+                
+                selDesc.innerHTML = '<option value="">-- Elegir descanso --</option>' +
+                  orden.filter(d => map[d])
+                       .map(d => `<option value="${map[d].id}" ${map[d].id === grupoHorarioID ? 'selected' : ''}>${map[d].texto}</option>`)
+                       .join("");
+              } catch (error) {
+                console.error("Error cargando descansos iniciales:", error);
+              }
+            }
+          }
         }
       }
     } catch (error) {
@@ -257,82 +372,7 @@ async function configurarHorarios(jornadaID, grupoHorarioID) {
   }
 }
 
-/* ============ 10. CONFIGURAR HORARIO BASE ============ */
-function configurarHorarioBase(nombreBase) {
-  const selBase = document.getElementById("grupoBase");
-  const selDesc = document.getElementById("GrupoHorarioID");
-  
-  selBase.innerHTML = '<option value="" selected hidden>-- Elegir --</option>';
-  selDesc.innerHTML = '<option value="" selected hidden>-- Elegir descanso --</option>';
-  
-  if (!nombreBase) return;
-  
-  const filtrados = gruposHorasCache.filter(g => g.NombreBase === nombreBase);
-  
-  selBase.innerHTML += filtrados.map(g =>
-    `<option value="${g.NombreBase}" selected>
-       ${g.HoraIni} - ${g.HoraFin}
-     </option>`
-  ).join("");
-  
-  // Cargar descansos
-  cargarDescansos(nombreBase);
-}
-
-/* ============ 11. CARGAR DESCANSO ACTUAL ============ */
-async function cargarDescansos(base) {
-  const selDesc = document.getElementById("GrupoHorarioID");
-  selDesc.innerHTML = '';
-  
-  if (!base) return;
-  
-  try {
-    const res = await auth.fetchWithAuth(`/grupos/${encodeURIComponent(base)}`);
-    const desc = await res.json();
-    
-    // Mapa Día → objeto
-    const map = desc.reduce((acc, d) => {
-      const dia = d.NombreGrupo.match(/\(Desc\. ([^)]+)\)/i)?.[1] || d.NombreGrupo;
-      acc[dia] = { id: d.GrupoID, texto: dia };
-      return acc;
-    }, {});
-    
-    // Orden deseado
-    const orden = ["Dom","Sab","Lun","Mar","Mie","Jue","Vie"];
-    
-    // Genera las opciones en ese orden
-    selDesc.innerHTML = '<option value="">-- Elegir descanso --</option>' +
-      orden.filter(d => map[d])
-           .map(d => `<option value="${map[d].id}">${map[d].texto}</option>`)
-           .join("");
-    
-    // Seleccionar el descanso actual si existe
-    const empleadoActual = await obtenerEmpleadoActual();
-    if (empleadoActual && empleadoActual.GrupoHorarioID) {
-      selDesc.value = empleadoActual.GrupoHorarioID;
-    }
-  } catch (error) {
-    console.error("Error cargando descansos:", error);
-  }
-}
-
-/* ============ 12. OBTENER EMPLEADO ACTUAL ============ */
-async function obtenerEmpleadoActual() {
-  const dni = document.getElementById("DNI").value;
-  if (!dni) return null;
-  
-  try {
-    const res = await auth.fetchWithAuth(`${API}/empleados/${dni}`);
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (error) {
-    console.error("Error obteniendo empleado actual:", error);
-  }
-  return null;
-}
-
-/* ============ 13. AUTOCOMPLETES ============ */
+/* ============ 10. AUTOCOMPLETES ============ */
 async function cargarDatalist(cargoID, datalistId, search = "") {
   const res  = await auth.fetchWithAuth(`${API}/empleados/lookup?cargo=${cargoID}&search=${search}`);
   const data = await res.json();
@@ -351,7 +391,7 @@ async function cargarDatalist(cargoID, datalistId, search = "") {
   });
 });
 
-/* ============ 14. ACTUALIZAR EMPLEADO ============ */
+/* ============ 11. ACTUALIZAR EMPLEADO ============ */
 async function actualizarEmpleado() {
   const payload = {
     DNI:               val("DNI"),
