@@ -4,6 +4,19 @@ const API = "";
 const dni = localStorage.getItem('empleadoDNI');
 const nombreEmpleado = localStorage.getItem('empleadoNombre');
 
+// Variables globales para autocompletado del aprobador
+let sugerenciasAprobador = [];
+let indiceSeleccionadoAprobador = -1;
+let timeoutBusquedaAprobador = null;
+
+// Variables globales para paginación y filtros
+let todasLasJustificaciones = [];
+let justificacionesFiltradas = [];
+let paginaActual = 1;
+let elementosPorPagina = 8;
+let filtroMes = "";
+let filtroAnio = "";
+
 /* ============ 1. INICIALIZACIÓN ============ */
 document.addEventListener('DOMContentLoaded', async () => {
   if (!dni) {
@@ -29,6 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (userInfo.dni) {
     document.getElementById("aprobadorDNI").value = userInfo.dni;
   }
+
+  // Inicializar autocompletado del aprobador
+  inicializarAutocompletadoAprobador();
+
+  // Inicializar filtros y paginación
+  inicializarFiltrosYPaginacion();
 });
 
 /* ============ 2. CARGAR TIPOS DE JUSTIFICACIÓN ============ */
@@ -57,63 +76,14 @@ async function cargarJustificacionesExistentes() {
       return;
     }
     
-    const justificaciones = await res.json();
-    mostrarJustificaciones(justificaciones);
+    todasLasJustificaciones = await res.json();
+    
+    // Aplicar filtros y paginación
+    aplicarFiltrosYPaginacion();
     
   } catch (error) {
     console.error("Error cargando justificaciones:", error);
   }
-}
-
-function mostrarJustificaciones(justificaciones) {
-  const tbody = document.getElementById("justificacionesTable");
-  
-  if (!justificaciones || justificaciones.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center text-muted">
-          <i class="fas fa-info-circle me-2"></i>
-          No hay justificaciones registradas
-        </td>
-      </tr>
-    `;
-    return;
-  }
-  
-  tbody.innerHTML = justificaciones.map(justificacion => {
-    const fechaFormateada = formatearFecha(justificacion.Fecha);
-    const estadoClass = justificacion.Estado === 'Aprobado' ? 'estado-aprobado' : 'estado-desaprobado';
-    
-    return `
-      <tr>
-        <td>
-          <i class="fas fa-calendar me-2"></i>
-          ${fechaFormateada}
-        </td>
-        <td>
-          <i class="fas fa-tag me-2"></i>
-          ${justificacion.TipoJustificacion || "No especificado"}
-        </td>
-        <td>
-          <i class="fas fa-comment me-2"></i>
-          ${justificacion.Motivo || "Sin motivo especificado"}
-        </td>
-        <td>
-          <i class="fas fa-check-circle me-2"></i>
-          <span class="${estadoClass}">${justificacion.Estado}</span>
-        </td>
-        <td>
-          <i class="fas fa-user me-2"></i>
-          ${justificacion.AprobadorDNI || "No especificado"}
-        </td>
-        <td>
-          <button class="btn btn-danger btn-sm" onclick="eliminarJustificacion(${justificacion.JustificacionID})">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `;
-  }).join("");
 }
 
 /* ============ 3. ENVÍO DEL FORMULARIO ============ */
@@ -242,7 +212,7 @@ async function eliminarJustificacion(justificacionID) {
     
     mostrarMsg(true, { mensaje: "Justificación eliminada exitosamente" });
     
-    // Recargar justificaciones
+    // Recargar justificaciones y aplicar filtros/paginación
     await cargarJustificacionesExistentes();
     
     // Restaurar la posición del scroll después de un breve delay
@@ -282,4 +252,350 @@ function formatearFecha(fecha) {
     console.error("Error formateando fecha:", error);
     return fecha;
   }
+}
+
+/* ============ 7. CALCULAR ESTADÍSTICAS DE JUSTIFICACIONES ============ */
+function calcularEstadisticasJustificaciones(justificaciones) {
+  if (!justificaciones || !Array.isArray(justificaciones)) {
+    // Si no hay justificaciones, mostrar ceros
+    document.getElementById("totalJustificaciones").textContent = "0";
+    document.getElementById("justificacionesAprobadas").textContent = "0";
+    document.getElementById("justificacionesDesaprobadas").textContent = "0";
+    return;
+  }
+
+  // Calcular estadísticas
+  const total = justificaciones.length;
+  const aprobadas = justificaciones.filter(j => j.Estado === 'Aprobado').length;
+  const desaprobadas = justificaciones.filter(j => j.Estado === 'Desaprobado').length;
+
+  // Actualizar indicadores
+  document.getElementById("totalJustificaciones").textContent = total.toString();
+  document.getElementById("justificacionesAprobadas").textContent = aprobadas.toString();
+  document.getElementById("justificacionesDesaprobadas").textContent = desaprobadas.toString();
+}
+
+/* ============ 8. AUTOCOMPLETADO DEL APROBADOR ============ */
+function inicializarAutocompletadoAprobador() {
+  const inputAprobador = document.getElementById("aprobadorDNI");
+  
+  // Evento de input para búsqueda en tiempo real
+  inputAprobador.addEventListener("input", (e) => {
+    const valor = e.target.value.trim();
+    
+    // Limpiar timeout anterior
+    if (timeoutBusquedaAprobador) {
+      clearTimeout(timeoutBusquedaAprobador);
+    }
+    
+    // Ocultar sugerencias si el campo está vacío
+    if (!valor || valor.length < 2) {
+      ocultarSugerenciasAprobador();
+      return;
+    }
+    
+    // Buscar después de 300ms de inactividad
+    timeoutBusquedaAprobador = setTimeout(() => {
+      buscarSugerenciasAprobador(valor);
+    }, 300);
+  });
+
+  // Eventos de teclado para navegar sugerencias
+  inputAprobador.addEventListener("keydown", (e) => {
+    const dropdown = document.getElementById("aprobadorSuggestionsDropdown");
+    
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        navegarSugerenciasAprobador(1);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        navegarSugerenciasAprobador(-1);
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (indiceSeleccionadoAprobador >= 0 && sugerenciasAprobador[indiceSeleccionadoAprobador]) {
+          seleccionarSugerenciaAprobador(sugerenciasAprobador[indiceSeleccionadoAprobador]);
+        }
+        break;
+      case "Escape":
+        ocultarSugerenciasAprobador();
+        break;
+    }
+  });
+
+  // Cerrar sugerencias al hacer clic fuera
+  document.addEventListener("click", (e) => {
+    const container = document.querySelector(".suggestions-container");
+    const dropdown = document.getElementById("aprobadorSuggestionsDropdown");
+    
+    if (container && dropdown && !container.contains(e.target)) {
+      ocultarSugerenciasAprobador();
+    }
+  });
+}
+
+async function buscarSugerenciasAprobador(search) {
+  try {
+    const res = await auth.fetchWithAuth(`${API}/empleados/buscar?search=${encodeURIComponent(search)}`);
+    
+    if (!res.ok) {
+      console.error("Error buscando sugerencias de aprobador");
+      return;
+    }
+    
+    sugerenciasAprobador = await res.json();
+    mostrarSugerenciasAprobador();
+    
+  } catch (error) {
+    console.error("Error buscando sugerencias de aprobador:", error);
+  }
+}
+
+function mostrarSugerenciasAprobador() {
+  const dropdown = document.getElementById("aprobadorSuggestionsDropdown");
+  
+  if (sugerenciasAprobador.length === 0) {
+    dropdown.style.display = "none";
+    return;
+  }
+  
+  dropdown.innerHTML = sugerenciasAprobador.map((emp, index) => `
+    <div class="suggestion-item ${index === indiceSeleccionadoAprobador ? 'selected' : ''}" 
+         onclick="seleccionarSugerenciaAprobador(${JSON.stringify(emp).replace(/"/g, '&quot;')})">
+      <div>
+        <div class="suggestion-dni">${emp.DNI}</div>
+        <div class="suggestion-name">${emp.NombreCompleto}</div>
+      </div>
+    </div>
+  `).join("");
+  
+  dropdown.style.display = "block";
+}
+
+function ocultarSugerenciasAprobador() {
+  const dropdown = document.getElementById("aprobadorSuggestionsDropdown");
+  dropdown.style.display = "none";
+  indiceSeleccionadoAprobador = -1;
+}
+
+function navegarSugerenciasAprobador(direccion) {
+  const dropdown = document.getElementById("aprobadorSuggestionsDropdown");
+  const items = dropdown.querySelectorAll(".suggestion-item");
+  
+  if (items.length === 0) return;
+  
+  // Remover selección anterior
+  if (indiceSeleccionadoAprobador >= 0 && items[indiceSeleccionadoAprobador]) {
+    items[indiceSeleccionadoAprobador].classList.remove("selected");
+  }
+  
+  // Calcular nuevo índice
+  indiceSeleccionadoAprobador += direccion;
+  
+  if (indiceSeleccionadoAprobador >= items.length) {
+    indiceSeleccionadoAprobador = 0;
+  } else if (indiceSeleccionadoAprobador < 0) {
+    indiceSeleccionadoAprobador = items.length - 1;
+  }
+  
+  // Aplicar nueva selección
+  if (items[indiceSeleccionadoAprobador]) {
+    items[indiceSeleccionadoAprobador].classList.add("selected");
+    items[indiceSeleccionadoAprobador].scrollIntoView({ block: "nearest" });
+  }
+}
+
+function seleccionarSugerenciaAprobador(empleado) {
+  document.getElementById("aprobadorDNI").value = empleado.DNI;
+  ocultarSugerenciasAprobador();
+}
+
+/* ============ 9. FILTROS Y PAGINACIÓN ============ */
+function inicializarFiltrosYPaginacion() {
+  // Cargar años disponibles
+  cargarAniosDisponibles();
+  
+  // Eventos para filtros
+  document.getElementById("filtroMes").addEventListener("change", aplicarFiltrosYPaginacion);
+  document.getElementById("filtroAnio").addEventListener("change", aplicarFiltrosYPaginacion);
+  document.getElementById("btnLimpiarFiltros").addEventListener("click", limpiarFiltros);
+  
+  // Eventos para paginación
+  document.getElementById("btnAnterior").addEventListener("click", () => cambiarPagina(-1));
+  document.getElementById("btnSiguiente").addEventListener("click", () => cambiarPagina(1));
+}
+
+function cargarAniosDisponibles() {
+  const selectAnio = document.getElementById("filtroAnio");
+  const anioActual = new Date().getFullYear();
+  
+  // Limpiar opciones existentes (mantener "Todos los años")
+  selectAnio.innerHTML = '<option value="">Todos los años</option>';
+  
+  // Agregar años desde 2020 hasta el año actual + 1
+  for (let anio = anioActual + 1; anio >= 2020; anio--) {
+    const option = document.createElement("option");
+    option.value = anio;
+    option.textContent = anio;
+    selectAnio.appendChild(option);
+  }
+}
+
+function aplicarFiltrosYPaginacion() {
+  // Obtener valores de filtros
+  filtroMes = document.getElementById("filtroMes").value;
+  filtroAnio = document.getElementById("filtroAnio").value;
+  
+  // Filtrar justificaciones
+  justificacionesFiltradas = todasLasJustificaciones.filter(justificacion => {
+    let fecha;
+    
+    // Manejar diferentes formatos de fecha
+    if (typeof justificacion.Fecha === 'string') {
+      // Si es una fecha ISO (ej: "2025-08-02T00:00:00.000Z")
+      if (justificacion.Fecha.includes('T')) {
+        fecha = new Date(justificacion.Fecha);
+      } else if (justificacion.Fecha.includes('-')) {
+        // Si es formato YYYY-MM-DD
+        fecha = new Date(justificacion.Fecha + 'T00:00:00');
+      } else {
+        // Otros formatos
+        fecha = new Date(justificacion.Fecha);
+      }
+    } else {
+      fecha = new Date(justificacion.Fecha);
+    }
+    
+    // Verificar si la fecha es válida
+    if (isNaN(fecha.getTime())) {
+      return false;
+    }
+    
+    const mes = fecha.getMonth() + 1; // getMonth() devuelve 0-11, convertimos a 1-12
+    const anio = fecha.getFullYear();
+    
+    // Aplicar filtro de mes (solo si hay filtro activo)
+    if (filtroMes && filtroMes !== '') {
+      const mesFiltro = parseInt(filtroMes, 10);
+      if (mes !== mesFiltro) {
+        return false;
+      }
+    }
+    
+    // Aplicar filtro de año (solo si hay filtro activo)
+    if (filtroAnio && filtroAnio !== '') {
+      const anioFiltro = parseInt(filtroAnio, 10);
+      if (anio !== anioFiltro) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+  
+  // Resetear a la primera página
+  paginaActual = 1;
+  
+  // Mostrar justificaciones paginadas
+  mostrarJustificacionesPaginadas();
+  
+  // Actualizar estadísticas con las justificaciones filtradas
+  calcularEstadisticasJustificaciones(justificacionesFiltradas);
+  
+  // Actualizar controles de paginación
+  actualizarControlesPaginacion();
+}
+
+function mostrarJustificacionesPaginadas() {
+  const tbody = document.getElementById("justificacionesTable");
+  
+  if (!justificacionesFiltradas || justificacionesFiltradas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center text-muted">
+          <i class="fas fa-info-circle me-2"></i>
+          ${todasLasJustificaciones.length === 0 ? 'No hay justificaciones registradas' : 'No hay justificaciones que coincidan con los filtros aplicados'}
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  // Calcular índices para la página actual
+  const inicio = (paginaActual - 1) * elementosPorPagina;
+  const fin = inicio + elementosPorPagina;
+  const justificacionesPagina = justificacionesFiltradas.slice(inicio, fin);
+  
+  tbody.innerHTML = justificacionesPagina.map(justificacion => {
+    const fechaFormateada = formatearFecha(justificacion.Fecha);
+    const estadoClass = justificacion.Estado === 'Aprobado' ? 'estado-aprobado' : 'estado-desaprobado';
+    
+    return `
+      <tr>
+        <td>
+          <i class="fas fa-calendar me-2"></i>
+          ${fechaFormateada}
+        </td>
+        <td>
+          <i class="fas fa-tag me-2"></i>
+          ${justificacion.TipoJustificacion || "No especificado"}
+        </td>
+        <td>
+          <i class="fas fa-comment me-2"></i>
+          ${justificacion.Motivo || "Sin motivo especificado"}
+        </td>
+        <td>
+          <i class="fas fa-check-circle me-2"></i>
+          <span class="${estadoClass}">${justificacion.Estado}</span>
+        </td>
+        <td>
+          <i class="fas fa-user me-2"></i>
+          ${justificacion.AprobadorDNI || "No especificado"}
+        </td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="eliminarJustificacion(${justificacion.JustificacionID})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function actualizarControlesPaginacion() {
+  const totalJustificaciones = justificacionesFiltradas.length;
+  const totalPaginas = Math.ceil(totalJustificaciones / elementosPorPagina);
+  
+  // Actualizar información de paginación
+  const inicio = (paginaActual - 1) * elementosPorPagina + 1;
+  const fin = Math.min(paginaActual * elementosPorPagina, totalJustificaciones);
+  
+  document.getElementById("infoPaginacion").textContent = 
+    `Mostrando ${inicio} a ${fin} de ${totalJustificaciones} justificaciones`;
+  
+  document.getElementById("paginaActual").textContent = paginaActual;
+  document.getElementById("totalPaginas").textContent = totalPaginas;
+  
+  // Actualizar estado de botones
+  document.getElementById("btnAnterior").disabled = paginaActual <= 1;
+  document.getElementById("btnSiguiente").disabled = paginaActual >= totalPaginas;
+}
+
+function cambiarPagina(direccion) {
+  const nuevaPagina = paginaActual + direccion;
+  const totalPaginas = Math.ceil(justificacionesFiltradas.length / elementosPorPagina);
+  
+  if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+    paginaActual = nuevaPagina;
+    mostrarJustificacionesPaginadas();
+    actualizarControlesPaginacion();
+  }
+}
+
+function limpiarFiltros() {
+  document.getElementById("filtroMes").value = "";
+  document.getElementById("filtroAnio").value = "";
+  aplicarFiltrosYPaginacion();
 }

@@ -266,3 +266,32 @@ exports.buscarEmpleados = async (req, res) => {
     res.status(500).json({ error: 'Error al buscar empleados' });
   }
 };
+
+// Obtener estadísticas de empleados
+exports.obtenerEstadisticas = async (req, res) => {
+  try {
+    const conn = await pool;
+    const result = await conn.request().query(`
+      SELECT 
+        COUNT(*) AS totalEmpleados,
+        SUM(CASE WHEN EstadoEmpleado = 'Activo' THEN 1 ELSE 0 END) AS empleadosActivos,
+        SUM(CASE WHEN EstadoEmpleado = 'Cese' THEN 1 ELSE 0 END) AS empleadosCesados,
+        SUM(CASE WHEN FechaCese IS NOT NULL THEN 1 ELSE 0 END) AS empleadosConCese,
+        SUM(CASE WHEN FechaCese IS NULL AND EstadoEmpleado = 'Activo' THEN 1 ELSE 0 END) AS empleadosSinCese
+      FROM PRI.Empleados
+    `);
+
+    const estadisticas = result.recordset[0];
+    
+    res.json({
+      totalEmpleados: estadisticas.totalEmpleados || 0,
+      empleadosActivos: estadisticas.empleadosActivos || 0,
+      empleadosCesados: estadisticas.empleadosCesados || 0,
+      empleadosConCese: estadisticas.empleadosConCese || 0,
+      empleadosSinCese: estadisticas.empleadosSinCese || 0
+    });
+  } catch (err) {
+    console.error('Error obteniendo estadísticas:', err);
+    res.status(500).json({ error: 'Error al obtener estadísticas' });
+  }
+};

@@ -93,7 +93,14 @@ exports.authMiddleware = (req, res, next) => {
     req.user = payload; // { dni, nombre, rol, cargoID }
     next();
   } catch (error) {
-    console.error('Error verificando token:', error);
-    return res.status(401).json({ error: 'Token inválido o expirado' });
+    // No loguear errores de token expirado para reducir ruido en consola
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expirado' });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token inválido' });
+    } else {
+      console.error('Error verificando token:', error);
+      return res.status(401).json({ error: 'Error de autenticación' });
+    }
   }
 }; 

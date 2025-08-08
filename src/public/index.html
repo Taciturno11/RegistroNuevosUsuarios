@@ -57,6 +57,57 @@
       border: none;
     }
 
+    /* ===== Indicadores del header ===== */
+    .indicators-container {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .indicator-item {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .indicator-item:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .indicator-label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-right: 0.25rem;
+      opacity: 0.9;
+    }
+
+    .indicator-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    /* Responsive para indicadores */
+    @media (max-width: 768px) {
+      .indicators-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+      }
+      
+      .indicator-item {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8rem;
+      }
+    }
+
     .card-body {
       padding: 1.5rem;
     }
@@ -344,10 +395,30 @@
     <div class="card mb-4">
       <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
-          <h2 class="mb-0">
-            <i class="fas fa-users me-2"></i>
-            Sistema de Gestión de Empleados
-          </h2>
+          <div class="d-flex align-items-center">
+            <h2 class="mb-0 me-4">
+              <i class="fas fa-users me-2"></i>
+              Sistema de Gestión de Empleados
+            </h2>
+            <!-- Indicadores importantes -->
+            <div class="indicators-container">
+              <div class="indicator-item">
+                <i class="fas fa-user-check text-success me-1"></i>
+                <span class="indicator-label">Activos:</span>
+                <span class="indicator-value" id="empleadosActivos">-</span>
+              </div>
+              <div class="indicator-item">
+                <i class="fas fa-user-times text-danger me-1"></i>
+                <span class="indicator-label">Cese:</span>
+                <span class="indicator-value" id="empleadosCesados">-</span>
+              </div>
+              <div class="indicator-item">
+                <i class="fas fa-users text-info me-1"></i>
+                <span class="indicator-label">Total:</span>
+                <span class="indicator-value" id="totalEmpleados">-</span>
+              </div>
+            </div>
+          </div>
           <div id="userInfo"></div>
         </div>
       </div>

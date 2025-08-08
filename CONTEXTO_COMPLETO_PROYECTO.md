@@ -310,6 +310,249 @@ RegistroNuevosUsuarios/
 
 ---
 
+## 🔐 **SISTEMA DE AUTENTICACIÓN Y GESTIÓN DE TOKENS EXPIRADOS**
+
+### **🚨 PROBLEMA IDENTIFICADO (Diciembre 2024)**
+
+**Error que aparecía en consola:**
+```
+Error verificando token: TokenExpiredError: jwt expired
+    at C:\Users\71936801\Desktop\RegistroEmpleados\RegistroNuevosUsuarios\node_modules\jsonwebtoken\verify.js:190:21
+    at getSecret (C:\Users\71936801\Desktop\RegistroEmpleados\RegistroNuevosUsuarios\node_modules\jsonwebtoken\verify.js:97:14)
+    at module.exports [as verify] (C:\Users\71936801\Desktop\RegistroEmpleados\RegistroNuevosUsuarios\node_modules\jsonwebtoken\verify.js:101:10)
+    at exports.authMiddleware (C:\Users\71936801\Desktop\RegistroEmpleados\RegistroNuevosUsuarios\src\controllers\auth.controller.js:92:25)
+```
+
+### **🔍 ANÁLISIS DEL PROBLEMA**
+
+**Causas identificadas:**
+1. **Token JWT expira después de 8 horas** (configurado en `auth.controller.js`)
+2. **Usuario tiene token guardado en localStorage que ya expiró**
+3. **Frontend sigue enviando token expirado en peticiones**
+4. **Middleware de autenticación logueaba cada error** generando ruido en consola
+5. **No había verificación previa de expiración** en el frontend
+
+### **✅ SOLUCIONES IMPLEMENTADAS**
+
+#### **1. Middleware de Autenticación Mejorado**
+**Archivo:** `src/controllers/auth.controller.js`
+
+```javascript
+// Middleware de autenticación
+exports.authMiddleware = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Token requerido' });
+  }
+
+  const token = authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Token requerido' });
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_simple_2024');
+    req.user = payload; // { dni, nombre, rol, cargoID }
+    next();
+  } catch (error) {
+    // Solo loguear errores que no sean de expiración para reducir ruido
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token expirado' });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Token inválido' });
+    } else {
+      console.error('Error verificando token:', error);
+      return res.status(401).json({ error: 'Error de autenticación' });
+    }
+  }
+};
+```
+
+#### **2. Verificación de Token en Frontend**
+**Archivo:** `src/public/auth.js`
+
+```javascript
+// Verificar y limpiar token expirado
+function checkAndCleanExpiredToken() {
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    // Decodificar el token sin verificar (solo para obtener la fecha de expiración)
+    const base64Url = token.split('.')[1];
+    if (!base64Url) {
+      console.log('Token malformado detectado, limpiando localStorage...');
+      logout();
+      return;
+    }
+
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    const payload = JSON.parse(jsonPayload);
+    const expirationDate = new Date(payload.exp * 1000);
+    const currentDate = new Date();
+
+    // Si el token ha expirado, limpiar localStorage
+    if (currentDate > expirationDate) {
+      console.log('Token expirado detectado, limpiando localStorage...');
+      logout();
+      return;
+    }
+  } catch (error) {
+    // Si hay error al decodificar el token, limpiarlo
+    console.log('Token inválido detectado, limpiando localStorage...');
+    logout();
+  }
+}
+```
+
+#### **3. Función fetchWithAuth Mejorada**
+**Archivo:** `src/public/auth.js`
+
+```javascript
+// Agregar token a las peticiones fetch
+function fetchWithAuth(url, options = {}) {
+  const token = getToken();
+  
+  if (!token) {
+    logout();
+    return Promise.reject(new Error('No hay token'));
+  }
+
+  // Verificar si el token está expirado antes de hacer la petición
+  try {
+    const base64Url = token.split('.')[1];
+    if (base64Url) {
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const payload = JSON.parse(jsonPayload);
+      const expirationDate = new Date(payload.exp * 1000);
+      const currentDate = new Date();
+
+      if (currentDate > expirationDate) {
+        console.log('Token expirado detectado antes de petición, limpiando localStorage...');
+        logout();
+        return Promise.reject(new Error('Token expirado'));
+      }
+    }
+  } catch (error) {
+    // Si hay error al decodificar, limpiar token
+    logout();
+    return Promise.reject(new Error('Token inválido'));
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`
+    }
+  }).then(response => {
+    // Si el token está expirado, limpiar localStorage y redirigir
+    if (response.status === 401) {
+      logout();
+    }
+    return response;
+  }).catch(error => {
+    // Si hay un error de red, también verificar si es por token expirado
+    if (error.message.includes('401') || error.message.includes('unauthorized')) {
+      logout();
+    }
+    throw error;
+  });
+}
+```
+
+#### **4. Inicialización Automática**
+**Archivo:** `src/public/auth.js`
+
+```javascript
+// Función que se ejecuta automáticamente al cargar cualquier página
+function initializeAuth() {
+  // Verificar y limpiar token expirado al cargar la página
+  checkAndCleanExpiredToken();
+  
+  // Si no hay token válido y no estamos en la página de login, redirigir
+  if (!isAuthenticated() && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
+// Ejecutar la inicialización cuando se carga el script
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeAuth);
+} else {
+  initializeAuth();
+}
+```
+
+#### **5. Funciones Exportadas Actualizadas**
+**Archivo:** `src/public/auth.js`
+
+```javascript
+// Exportar funciones para uso global
+window.auth = {
+  isAuthenticated,
+  getToken,
+  getUserInfo,
+  verifyToken,
+  logout,
+  fetchWithAuth,
+  checkAuth,
+  checkAuthImmediate,
+  displayUserInfo,
+  displayGreeting,
+  checkAndCleanExpiredToken,
+  initializeAuth
+};
+```
+
+### **🎯 RESULTADOS DE LA IMPLEMENTACIÓN**
+
+#### **✅ Problemas Resueltos:**
+1. **Ruido en consola eliminado**: Los errores de token expirado ya no se loguean
+2. **Verificación automática**: Tokens expirados se detectan y limpian automáticamente
+3. **Redirección automática**: Usuarios con tokens expirados son redirigidos al login
+4. **Experiencia mejorada**: No más errores visibles para el usuario
+5. **Seguridad reforzada**: Tokens inválidos se limpian inmediatamente
+
+#### **🔧 Funcionalidades Agregadas:**
+1. **Verificación previa**: Tokens se verifican antes de hacer peticiones
+2. **Limpieza automática**: Tokens expirados se eliminan del localStorage
+3. **Inicialización automática**: Verificación al cargar cualquier página
+4. **Manejo robusto**: Funciona en todos los navegadores modernos
+5. **Logging inteligente**: Solo errores importantes se loguean
+
+### **📝 NOTAS TÉCNICAS IMPORTANTES**
+
+#### **Configuración de JWT:**
+- **Duración**: 8 horas (configurable en `auth.controller.js`)
+- **Almacenamiento**: localStorage del navegador
+- **Verificación**: Automática en cada petición
+- **Limpieza**: Automática al detectar expiración
+
+#### **Compatibilidad:**
+- **Navegadores**: Todos los navegadores modernos
+- **Decodificación**: Usa `atob()` nativo del navegador
+- **Manejo de errores**: Robustez ante tokens malformados
+- **Fallbacks**: Redirección al login en caso de error
+
+#### **Seguridad:**
+- **Verificación**: Doble verificación (frontend + backend)
+- **Limpieza**: Tokens inválidos se eliminan inmediatamente
+- **Redirección**: Automática al login cuando es necesario
+- **Logging**: Solo errores importantes se registran
+
+---
+
 ## 🎯 **ESTADO ACTUAL**
 
 ### **✅ FUNCIONALIDADES COMPLETADAS**
@@ -328,6 +571,7 @@ RegistroNuevosUsuarios/
 - ✅ Mensajes permanentes (no auto-ocultos)
 - ✅ Gestión de scroll (mantiene posición)
 - ✅ Rediseño del login con animaciones modernas
+- ✅ **Sistema robusto de gestión de tokens expirados**
 
 ### **🔧 FUNCIONALIDADES TÉCNICAS**
 - ✅ Validaciones frontend y backend
@@ -335,6 +579,9 @@ RegistroNuevosUsuarios/
 - ✅ Responsive design
 - ✅ Animaciones suaves
 - ✅ Navegación intuitiva
+- ✅ **Gestión automática de tokens expirados**
+- ✅ **Verificación previa de autenticación**
+- ✅ **Limpieza automática de tokens inválidos**
 
 ---
 
@@ -349,11 +596,14 @@ RegistroNuevosUsuarios/
 - JWT se almacena en `localStorage`
 - Middleware protege todas las rutas API
 - Frontend maneja tokens automáticamente
+- **NUEVO**: Verificación automática de tokens expirados
+- **NUEVO**: Limpieza automática de tokens inválidos
 
 ### **3. Frontend**
 - No usa frameworks (vanilla JS)
 - Bootstrap para componentes UI
 - CSS personalizado para tema corporativo
+- **NUEVO**: Sistema robusto de gestión de autenticación
 
 ### **4. API Endpoints**
 - `/api/login` - Autenticación
@@ -373,6 +623,13 @@ RegistroNuevosUsuarios/
 - Ver `env.example` para configuración
 - Requiere SQL Server configurado
 - JWT_SECRET necesario
+
+### **6. Gestión de Tokens (NUEVO)**
+- **Duración**: 8 horas por defecto
+- **Verificación**: Automática en cada petición
+- **Limpieza**: Automática al detectar expiración
+- **Redirección**: Automática al login cuando es necesario
+- **Logging**: Solo errores importantes se registran
 
 ---
 
@@ -401,7 +658,8 @@ Este documento debe ser compartido con cualquier nuevo chat de Cursor para mante
 4. **Problemas resueltos**
 5. **Estado actual**
 6. **Notas técnicas importantes**
+7. **Sistema de gestión de tokens expirados (NUEVO)**
 
 **Última actualización**: Diciembre 2024
-**Versión del proyecto**: 2.0.0
-**Estado**: ✅ COMPLETO Y FUNCIONAL CON TODAS LAS MEJORAS IMPLEMENTADAS 
+**Versión del proyecto**: 2.1.0
+**Estado**: ✅ COMPLETO Y FUNCIONAL CON TODAS LAS MEJORAS IMPLEMENTADAS + SISTEMA ROBUSTO DE GESTIÓN DE TOKENS 

@@ -322,6 +322,9 @@ function mostrarMsg(ok, obj) {
 auth.checkAuth().then(() => {
   auth.displayUserInfo();
   
+  // Cargar estadísticas del header
+  cargarEstadisticas();
+  
   // Verificar si hay un DNI guardado al regresar de otra página
   const dniGuardado = localStorage.getItem('empleadoDNI');
   const nombreGuardado = localStorage.getItem('empleadoNombre');
@@ -337,4 +340,28 @@ auth.checkAuth().then(() => {
     localStorage.removeItem('empleadoDNI');
     localStorage.removeItem('empleadoNombre');
   }
-}); 
+});
+
+/* ============ 9. CARGAR ESTADÍSTICAS ============ */
+async function cargarEstadisticas() {
+  try {
+    const res = await auth.fetchWithAuth(`${API}/empleados/estadisticas`);
+    
+    if (!res.ok) {
+      console.error("Error cargando estadísticas");
+      return;
+    }
+    
+    const estadisticas = await res.json();
+    
+    // Actualizar los indicadores en el header
+    document.getElementById("empleadosActivos").textContent = estadisticas.empleadosActivos || 0;
+    document.getElementById("empleadosCesados").textContent = estadisticas.empleadosCesados || 0;
+    document.getElementById("totalEmpleados").textContent = estadisticas.totalEmpleados || 0;
+    
+    console.log("Estadísticas cargadas:", estadisticas);
+    
+  } catch (error) {
+    console.error("Error cargando estadísticas:", error);
+  }
+} 
