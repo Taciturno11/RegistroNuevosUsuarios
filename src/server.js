@@ -47,6 +47,7 @@ const ojtRoutes = require('./routes/ojt.routes');
 app.use('/api/excepciones', excepcionesRoutes);
 app.use('/api/ojt', ojtRoutes);
 app.use('/api/empleados', require('./routes/empleados.routes'));
+app.use('/api/reportes', require('./routes/reportes.routes'));
 
 // Arranque
 const PORT = process.env.PORT || 3000;

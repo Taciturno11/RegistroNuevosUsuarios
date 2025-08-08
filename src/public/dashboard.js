@@ -272,6 +272,12 @@ function ocultarInformacionEmpleado() {
 
 /* ============ 6. EJECUTAR ACCIONES ============ */
 function ejecutarAccion(accion) {
+  if (accion === 'reporte-asistencia') {
+    // Para reporte de asistencia no necesitamos empleado seleccionado
+    mostrarModalReporteAsistencia();
+    return;
+  }
+
   if (!empleadoActual) {
     mostrarMsg(false, { error: "No hay empleado seleccionado" });
     return;
@@ -301,6 +307,88 @@ function ejecutarAccion(accion) {
       break;
     default:
       mostrarMsg(false, { error: "Acción no válida" });
+  }
+}
+
+/* ============ 7. FUNCIONES PARA REPORTE DE ASISTENCIA ============ */
+function mostrarModalReporteAsistencia() {
+  // Establecer fechas por defecto
+  const hoy = new Date();
+  
+  // Fecha de inicio: primer día del mes actual
+  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  
+  // Fecha de fin: día actual
+  const fechaActual = new Date();
+  
+  document.getElementById('fechaInicio').value = primerDiaMes.toISOString().split('T')[0];
+  document.getElementById('fechaFin').value = fechaActual.toISOString().split('T')[0];
+  
+  // Mostrar el modal
+  const modal = new bootstrap.Modal(document.getElementById('modalReporteAsistencia'));
+  modal.show();
+}
+
+// Evento para generar el reporte
+document.addEventListener('DOMContentLoaded', function() {
+  const btnGenerarReporte = document.getElementById('btnGenerarReporte');
+  if (btnGenerarReporte) {
+    btnGenerarReporte.addEventListener('click', generarReporteAsistencia);
+  }
+});
+
+async function generarReporteAsistencia() {
+  const fechaInicio = document.getElementById('fechaInicio').value;
+  const fechaFin = document.getElementById('fechaFin').value;
+  
+  // Validaciones
+  if (!fechaInicio || !fechaFin) {
+    mostrarMsg(false, { error: 'Por favor complete ambas fechas' });
+    return;
+  }
+  
+  if (new Date(fechaInicio) > new Date(fechaFin)) {
+    mostrarMsg(false, { error: 'La fecha de inicio no puede ser mayor que la fecha de fin' });
+    return;
+  }
+  
+  // Deshabilitar botón y mostrar loading
+  const btnGenerar = document.getElementById('btnGenerarReporte');
+  const textoOriginal = btnGenerar.innerHTML;
+  btnGenerar.disabled = true;
+  btnGenerar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generando...';
+  
+  try {
+    const res = await auth.fetchWithAuth(`${API}/api/reportes/asistencia`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fechaInicio,
+        fechaFin
+      })
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok) {
+      mostrarMsg(true, { mensaje: `Reporte generado exitosamente para el período ${fechaInicio} al ${fechaFin}` });
+      
+      // Cerrar modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporteAsistencia'));
+      modal.hide();
+    } else {
+      mostrarMsg(false, result);
+    }
+    
+  } catch (error) {
+    console.error('Error generando reporte:', error);
+    mostrarMsg(false, { error: 'Error al generar el reporte. Verifique su conexión.' });
+  } finally {
+    // Restaurar botón
+    btnGenerar.disabled = false;
+    btnGenerar.innerHTML = textoOriginal;
   }
 }
 

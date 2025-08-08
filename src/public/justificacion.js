@@ -452,14 +452,15 @@ function aplicarFiltrosYPaginacion() {
   justificacionesFiltradas = todasLasJustificaciones.filter(justificacion => {
     let fecha;
     
-    // Manejar diferentes formatos de fecha
+    // Manejar diferentes formatos de fecha de manera más robusta
     if (typeof justificacion.Fecha === 'string') {
       // Si es una fecha ISO (ej: "2025-08-02T00:00:00.000Z")
       if (justificacion.Fecha.includes('T')) {
         fecha = new Date(justificacion.Fecha);
       } else if (justificacion.Fecha.includes('-')) {
-        // Si es formato YYYY-MM-DD
-        fecha = new Date(justificacion.Fecha + 'T00:00:00');
+        // Si es formato YYYY-MM-DD, crear fecha en UTC
+        const [year, month, day] = justificacion.Fecha.split('-').map(Number);
+        fecha = new Date(Date.UTC(year, month - 1, day));
       } else {
         // Otros formatos
         fecha = new Date(justificacion.Fecha);
@@ -473,12 +474,13 @@ function aplicarFiltrosYPaginacion() {
       return false;
     }
     
-    const mes = fecha.getMonth() + 1; // getMonth() devuelve 0-11, convertimos a 1-12
-    const anio = fecha.getFullYear();
+    // Usar UTC para evitar problemas de zona horaria
+    const mes = fecha.getUTCMonth() + 1; // getUTCMonth() devuelve 0-11, convertimos a 1-12
+    const anio = fecha.getUTCFullYear();
     
     // Aplicar filtro de mes (solo si hay filtro activo)
     if (filtroMes && filtroMes !== '') {
-      const mesFiltro = parseInt(filtroMes, 10);
+      const mesFiltro = parseInt(filtroMes);
       if (mes !== mesFiltro) {
         return false;
       }
@@ -486,13 +488,49 @@ function aplicarFiltrosYPaginacion() {
     
     // Aplicar filtro de año (solo si hay filtro activo)
     if (filtroAnio && filtroAnio !== '') {
-      const anioFiltro = parseInt(filtroAnio, 10);
+      const anioFiltro = parseInt(filtroAnio);
       if (anio !== anioFiltro) {
         return false;
       }
     }
     
     return true;
+  });
+  
+  // Ordenar justificaciones por fecha en orden descendente (más recientes primero)
+  justificacionesFiltradas.sort((a, b) => {
+    let fechaA, fechaB;
+    
+    // Procesar fecha A
+    if (typeof a.Fecha === 'string') {
+      if (a.Fecha.includes('T')) {
+        fechaA = new Date(a.Fecha);
+      } else if (a.Fecha.includes('-')) {
+        const [yearA, monthA, dayA] = a.Fecha.split('-').map(Number);
+        fechaA = new Date(Date.UTC(yearA, monthA - 1, dayA));
+      } else {
+        fechaA = new Date(a.Fecha);
+      }
+    } else {
+      fechaA = new Date(a.Fecha);
+    }
+    
+    // Procesar fecha B
+    if (typeof b.Fecha === 'string') {
+      if (b.Fecha.includes('T')) {
+        fechaB = new Date(b.Fecha);
+      } else if (b.Fecha.includes('-')) {
+        const [yearB, monthB, dayB] = b.Fecha.split('-').map(Number);
+        fechaB = new Date(Date.UTC(yearB, monthB - 1, dayB));
+      } else {
+        fechaB = new Date(b.Fecha);
+      }
+    } else {
+      fechaB = new Date(b.Fecha);
+    }
+    
+    // Ordenar descendente (más reciente primero)
+    return fechaB - fechaA;
   });
   
   // Resetear a la primera página

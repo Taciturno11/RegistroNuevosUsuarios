@@ -333,6 +333,7 @@
     .action-justificaciones { background: var(--success-color); }
     .action-ojt { background: var(--info-color); }
     .action-excepciones { background: var(--warning-color); }
+    .action-reporte { background: #7c3aed; } /* Violeta para reportes */
 
     /* ===== Sección de registro nuevo ===== */
     .new-employee-section {
@@ -514,6 +515,15 @@
               <div class="action-title">Asignación Excepciones</div>
               <div class="action-description">Gestionar horarios especiales por día</div>
             </div>
+
+            <!-- Generar Reporte Asistencia -->
+            <div class="action-card" onclick="ejecutarAccion('reporte-asistencia')">
+              <div class="action-icon action-reporte">
+                <i class="fas fa-chart-bar"></i>
+              </div>
+              <div class="action-title">Generar Reporte Asistencia</div>
+              <div class="action-description">Generar reporte maestro de asistencia por fechas</div>
+            </div>
           </div>
         </div>
       </div>
@@ -534,6 +544,55 @@
 
     <!-- Mensajes de alerta -->
     <div id="msg" class="alert mt-4 d-none"></div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Modal para Generar Reporte Asistencia -->
+  <div class="modal fade" id="modalReporteAsistencia" tabindex="-1" aria-labelledby="modalReporteAsistenciaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalReporteAsistenciaLabel">
+            <i class="fas fa-chart-bar me-2"></i>
+            Generar Reporte de Asistencia
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formReporteAsistencia">
+            <div class="mb-3">
+              <label for="fechaInicio" class="form-label">
+                <i class="fas fa-calendar-day me-2"></i>
+                Fecha de Inicio
+              </label>
+              <input type="date" class="form-control" id="fechaInicio" required>
+            </div>
+            <div class="mb-3">
+              <label for="fechaFin" class="form-label">
+                <i class="fas fa-calendar-day me-2"></i>
+                Fecha de Fin
+              </label>
+              <input type="date" class="form-control" id="fechaFin" required>
+            </div>
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              <strong>Nota:</strong> El reporte incluirá todas las campañas por defecto.
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>
+            Cancelar
+          </button>
+          <button type="button" class="btn btn-primary" id="btnGenerarReporte">
+            <i class="fas fa-chart-bar me-2"></i>
+            Generar Reporte
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="auth.js"></script>
