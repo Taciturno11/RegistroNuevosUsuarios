@@ -432,3 +432,67 @@ exports.getAllCatalogos = async (req, res) => {
     });
   }
 };
+
+// Obtener todos los catálogos necesarios
+exports.getCatalogos = async (req, res) => {
+  try {
+    // Obtener cargos
+    const cargosQuery = `
+      SELECT 
+        CargoID as id,
+        NombreCargo as nombre
+      FROM PRI.Cargos 
+      ORDER BY NombreCargo
+    `;
+    const cargosResult = await executeQuery(cargosQuery);
+
+    // Obtener campañas
+    const campaniasQuery = `
+      SELECT 
+        CampañaID as id,
+        NombreCampaña as nombre
+      FROM PRI.Campanias 
+      ORDER BY NombreCampaña
+    `;
+    const campaniasResult = await executeQuery(campaniasQuery);
+
+    // Obtener jornadas
+    const jornadasQuery = `
+      SELECT 
+        JornadaID as id,
+        NombreJornada as nombre
+      FROM PRI.Jornada 
+      ORDER BY NombreJornada
+    `;
+    const jornadasResult = await executeQuery(jornadasQuery);
+
+    // Obtener modalidades
+    const modalidadesQuery = `
+      SELECT 
+        ModalidadID as id,
+        NombreModalidad as nombre
+      FROM PRI.ModalidadesTrabajo 
+      ORDER BY NombreModalidad
+    `;
+    const modalidadesResult = await executeQuery(modalidadesQuery);
+
+    res.json({
+      success: true,
+      message: 'Catálogos obtenidos exitosamente',
+      catalogos: {
+        cargos: cargosResult.recordset,
+        campanias: campaniasResult.recordset,
+        jornadas: jornadasResult.recordset,
+        modalidades: modalidadesResult.recordset
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo catálogos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};

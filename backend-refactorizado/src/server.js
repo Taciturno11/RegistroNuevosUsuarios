@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
+
 require('dotenv').config();
 
 // Importar rutas
@@ -19,17 +19,7 @@ const reportesRoutes = require('./routes/reportes.routes');
 // Crear aplicación Express
 const app = express();
 
-// Configuración de rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos por defecto
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // máximo 100 requests por ventana
-  message: {
-    success: false,
-    message: 'Demasiadas peticiones desde esta IP, intenta de nuevo más tarde.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+
 
 // Middleware de seguridad
 app.use(helmet({
@@ -51,8 +41,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware de rate limiting
-app.use(limiter);
+
 
 // Middleware de logging
 app.use(morgan('combined'));

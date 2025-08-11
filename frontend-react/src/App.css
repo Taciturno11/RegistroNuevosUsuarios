@@ -1,0 +1,366 @@
+/* ===== Variables CSS ===== */
+:root {
+  --primary-color: #1e40af;      /* Azul corporativo */
+  --secondary-color: #475569;    /* Gris azulado */
+  --success-color: #059669;      /* Verde profesional */
+  --warning-color: #d97706;      /* Naranja */
+  --danger-color: #dc2626;       /* Rojo */
+  --info-color: #0891b2;         /* Azul claro */
+  --light-bg: #f8fafc;           /* Gris muy claro */
+  --card-bg: #ffffff;            /* Blanco puro */
+  --border-color: #e2e8f0;       /* Gris claro */
+  --text-primary: #1e293b;       /* Gris oscuro */
+  --text-secondary: #64748b;     /* Gris medio */
+  --header-bg: #1e293b;          /* Gris muy oscuro para headers */
+}
+
+/* ===== Estética general ===== */
+body {
+  min-height: 100vh;
+  background: #f1f5f9;           /* Gris muy claro, sin gradientes */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Scrollbar personalizado ===== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ===== Animaciones ===== */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { 
+    transform: translateX(-20px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateX(0); 
+    opacity: 1; 
+  }
+}
+
+/* ===== Transiciones suaves ===== */
+* {
+  transition: all 0.2s ease;
+}
+
+/* ===== Estilos para Material-UI personalizados ===== */
+.MuiCard-root {
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--card-bg);
+}
+
+.MuiCardHeader-root {
+  background: var(--header-bg);
+  color: white;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.MuiButton-root {
+  border-radius: 0.375rem;
+  text-transform: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.MuiButton-root:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 0.375rem;
+}
+
+.MuiPaper-root {
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== Estilos para el sidebar ===== */
+.sidebar-drawer {
+  background-color: var(--header-bg);
+  color: white;
+}
+
+.sidebar-item {
+  transition: all 0.3s ease;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.sidebar-item.selected {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-left: 4px solid var(--primary-color);
+}
+
+/* ===== Estilos para las tarjetas de acción ===== */
+.action-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: var(--primary-color);
+}
+
+.action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  color: white;
+}
+
+/* ===== Colores de las acciones ===== */
+.action-actualizar { background: var(--primary-color); }
+.action-cese { background: var(--danger-color); }
+.action-justificaciones { background: var(--success-color); }
+.action-ojt { background: var(--info-color); }
+.action-excepciones { background: var(--warning-color); }
+.action-reporte { background: #7c3aed; } /* Violeta para reportes */
+
+/* ===== Estilos para indicadores ===== */
+.indicator-chip {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.indicator-chip:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== Estilos para el modal de reporte ===== */
+.report-modal .MuiDialog-paper {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.report-modal .MuiDialogTitle-root {
+  background: var(--primary-color);
+  color: white;
+}
+
+/* ===== Estilos para la búsqueda ===== */
+.search-container {
+  position: relative;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 0.375rem 0.375rem;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.suggestion-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.suggestion-item:hover {
+  background-color: var(--light-bg);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-dni {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.suggestion-name {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 1rem;
+  }
+  
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .indicator-chips {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* ===== Estilos para el loading ===== */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* ===== Estilos para mensajes de error ===== */
+.error-message {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.success-message {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #059669;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+/* ===== Estilos para formularios ===== */
+.form-section {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.form-title {
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+/* ===== Estilos para tablas ===== */
+.data-table {
+  background: var(--card-bg);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.data-table .MuiTableHead-root {
+  background-color: var(--light-bg);
+}
+
+.data-table .MuiTableCell-head {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ===== Estilos para paginación ===== */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  gap: 1rem;
+}
+
+/* ===== Estilos para filtros ===== */
+.filters-container {
+  background: var(--light-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.filter-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ===== Estilos para botones de acción en tablas ===== */
+.action-button {
+  margin: 0 0.25rem;
+  min-width: auto;
+  padding: 0.25rem 0.5rem;
+}
+
+/* ===== Estilos para tooltips ===== */
+.tooltip-custom {
+  background-color: var(--header-bg);
+  color: white;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+}
+
+/* ===== Estilos para el footer ===== */
+.app-footer {
+  background: var(--header-bg);
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  margin-top: 2rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+}

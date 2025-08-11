@@ -6,7 +6,9 @@ const {
   getCeseByDNI,
   procesarCese,
   reactivarEmpleado,
-  getEstadisticasCeses
+  getEstadisticasCeses,
+  registrarCese,
+  anularCese
 } = require('../controllers/cese.controller');
 
 // Todas las rutas requieren autenticación
@@ -21,6 +23,12 @@ router.get('/', getAllCeses);
 
 // Obtener cese por DNI
 router.get('/:dni', getCeseByDNI);
+
+// Registrar cese de empleado (solo fecha, como en el proyecto original)
+router.put('/:dni', registrarCese);
+
+// Anular cese de empleado (reactivar)
+router.delete('/:dni', anularCese);
 
 // Procesar cese de empleado
 router.post('/:dni/procesar', procesarCese);

@@ -7,7 +7,9 @@ const {
   createEmpleado,
   updateEmpleado,
   deleteEmpleado,
-  getEmpleadosBySupervisor
+  getEmpleadosBySupervisor,
+  getEmpleadosStats,
+  searchEmpleados
 } = require('../controllers/empleados.controller');
 
 // Todas las rutas requieren autenticación
@@ -15,6 +17,12 @@ router.use(authMiddleware);
 
 // Obtener todos los empleados (con filtros y paginación)
 router.get('/', getAllEmpleados);
+
+// Obtener estadísticas de empleados
+router.get('/stats', getEmpleadosStats);
+
+// Buscar empleados por término de búsqueda
+router.get('/buscar', searchEmpleados);
 
 // Obtener empleado por DNI
 router.get('/:dni', getEmpleadoByDNI);

@@ -153,10 +153,19 @@ exports.getEmpleadoByDNI = async (req, res) => {
       });
     }
 
+    // Convertir fechas a strings ISO para evitar problemas de zona horaria
+    const empleado = result.recordset[0];
+    if (empleado.FechaContratacion) {
+      empleado.FechaContratacion = empleado.FechaContratacion.toISOString().split('T')[0];
+    }
+    if (empleado.FechaCese) {
+      empleado.FechaCese = empleado.FechaCese.toISOString().split('T')[0];
+    }
+
     res.json({
       success: true,
       message: 'Empleado obtenido exitosamente',
-      data: result.recordset[0]
+      data: empleado
     });
 
   } catch (error) {
@@ -424,6 +433,105 @@ exports.getEmpleadosBySupervisor = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error obteniendo empleados del supervisor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Obtener estadísticas de empleados
+exports.getEmpleadosStats = async (req, res) => {
+  try {
+    // Consulta para contar empleados por estado
+    const statsQuery = `
+      SELECT 
+        EstadoEmpleado,
+        COUNT(*) as cantidad
+      FROM PRI.Empleados 
+      GROUP BY EstadoEmpleado
+    `;
+
+    const statsResult = await executeQuery(statsQuery);
+    
+    // Procesar resultados
+    let empleadosActivos = 0;
+    let empleadosCesados = 0;
+    let totalEmpleados = 0;
+
+    statsResult.recordset.forEach(row => {
+      if (row.EstadoEmpleado === 'Activo') {
+        empleadosActivos = row.cantidad;
+      } else if (row.EstadoEmpleado === 'Cesado') {
+        empleadosCesados = row.cantidad;
+      }
+      totalEmpleados += row.cantidad;
+    });
+
+    res.json({
+      success: true,
+      message: 'Estadísticas obtenidas exitosamente',
+      stats: {
+        empleadosActivos,
+        empleadosCesados,
+        totalEmpleados
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Buscar empleados por término de búsqueda (para sugerencias)
+exports.searchEmpleados = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    if (!search || search.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Término de búsqueda debe tener al menos 2 caracteres',
+        error: 'INVALID_SEARCH_TERM'
+      });
+    }
+
+    const searchTerm = `%${search.trim()}%`;
+
+    const query = `
+      SELECT TOP 10
+        e.DNI,
+        e.Nombres,
+        e.ApellidoPaterno,
+        e.ApellidoMaterno,
+        e.EstadoEmpleado
+      FROM PRI.Empleados e
+      WHERE (e.DNI LIKE @search 
+             OR e.Nombres LIKE @search 
+             OR e.ApellidoPaterno LIKE @search 
+             OR e.ApellidoMaterno LIKE @search)
+        AND e.EstadoEmpleado = 'Activo'
+      ORDER BY e.ApellidoPaterno, e.ApellidoMaterno, e.Nombres
+    `;
+
+    const result = await executeQuery(query, [
+      { name: 'search', type: sql.VarChar, value: searchTerm }
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Búsqueda realizada exitosamente',
+      empleados: result.recordset
+    });
+
+  } catch (error) {
+    console.error('❌ Error buscando empleados:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

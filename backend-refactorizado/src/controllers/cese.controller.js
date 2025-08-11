@@ -341,3 +341,176 @@ exports.getEstadisticasCeses = async (req, res) => {
     });
   }
 };
+
+// Registrar cese de empleado (solo fecha, como en el proyecto original)
+exports.registrarCese = async (req, res) => {
+  try {
+    const { dni } = req.params;
+    const { fechaCese } = req.body;
+
+    console.log(`🔍 Registrando cese para empleado: ${dni}, fecha: ${fechaCese}`);
+
+    // Validar fecha requerida
+    if (!fechaCese) {
+      return res.status(400).json({
+        success: false,
+        message: 'Fecha de cese es requerida',
+        error: 'MISSING_FECHA_CESE'
+      });
+    }
+
+    // Verificar si el empleado existe y está activo
+    const empleadoQuery = 'SELECT DNI, EstadoEmpleado FROM PRI.Empleados WHERE DNI = @DNI';
+    const empleadoResult = await executeQuery(empleadoQuery, [
+      { name: 'DNI', type: sql.VarChar, value: dni }
+    ]);
+
+    if (empleadoResult.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Empleado no encontrado',
+        error: 'EMPLOYEE_NOT_FOUND'
+      });
+    }
+
+    const empleado = empleadoResult.recordset[0];
+    console.log(`🔍 Estado actual del empleado: ${empleado.EstadoEmpleado}`);
+
+    if (empleado.EstadoEmpleado === 'Inactivo') {
+      console.log(`❌ Empleado ya está inactivo: ${dni}`);
+      return res.status(400).json({
+        success: false,
+        message: 'El empleado ya está inactivo',
+        error: 'EMPLOYEE_ALREADY_INACTIVE'
+      });
+    }
+
+    if (empleado.EstadoEmpleado === 'Cese') {
+      console.log(`❌ Empleado ya está en cese: ${dni}`);
+      return res.status(400).json({
+        success: false,
+        message: 'El empleado ya está en cese',
+        error: 'EMPLOYEE_ALREADY_IN_CESE'
+      });
+    }
+
+    // Registrar el cese (solo fecha, sin motivo ni observaciones)
+    const ceseQuery = `
+      UPDATE PRI.Empleados 
+      SET 
+        EstadoEmpleado = 'Cese',
+        FechaCese = @FechaCese
+      WHERE DNI = @DNI
+    `;
+
+    console.log(`🔍 Query SQL: ${ceseQuery}`);
+    console.log(`🔍 Parámetros: DNI=${dni}, FechaCese=${fechaCese}`);
+
+    await executeQuery(ceseQuery, [
+      { name: 'DNI', type: sql.VarChar, value: dni },
+      { name: 'FechaCese', type: sql.Date, value: new Date(fechaCese) }
+    ]);
+
+    console.log(`✅ Cese registrado exitosamente para empleado: ${dni}`);
+    
+    // Verificar que se actualizó correctamente
+    const verifyQuery = 'SELECT DNI, EstadoEmpleado, FechaCese FROM PRI.Empleados WHERE DNI = @DNI';
+    const verifyResult = await executeQuery(verifyQuery, [
+      { name: 'DNI', type: sql.VarChar, value: dni }
+    ]);
+    
+    if (verifyResult.recordset.length > 0) {
+      const empleadoVerificado = verifyResult.recordset[0];
+      console.log(`🔍 Verificación: DNI=${empleadoVerificado.DNI}, Estado=${empleadoVerificado.EstadoEmpleado}, FechaCese=${empleadoVerificado.FechaCese}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Cese registrado exitosamente',
+      data: { dni, fechaCese, estado: 'Cese' }
+    });
+
+  } catch (error) {
+    console.error('❌ Error registrando cese:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Anular cese de empleado (reactivar)
+exports.anularCese = async (req, res) => {
+  try {
+    const { dni } = req.params;
+
+    console.log(`🔍 Anulando cese para empleado: ${dni}`);
+
+    // Verificar si el empleado existe
+    const empleadoQuery = 'SELECT DNI, EstadoEmpleado, FechaCese FROM PRI.Empleados WHERE DNI = @DNI';
+    const empleadoResult = await executeQuery(empleadoQuery, [
+      { name: 'DNI', type: sql.VarChar, value: dni }
+    ]);
+
+    if (empleadoResult.recordset.length === 0) {
+      console.log(`❌ Empleado no encontrado: ${dni}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Empleado no encontrado',
+        error: 'EMPLOYEE_NOT_FOUND'
+      });
+    }
+
+    const empleado = empleadoResult.recordset[0];
+    console.log(`🔍 Estado actual del empleado: ${empleado.EstadoEmpleado}`);
+
+    if (empleado.EstadoEmpleado === 'Activo') {
+      console.log(`❌ Empleado ya está activo: ${dni}`);
+      return res.status(400).json({
+        success: false,
+        message: 'El empleado ya está activo',
+        error: 'EMPLOYEE_ALREADY_ACTIVE'
+      });
+    }
+
+    // Verificar que el empleado esté en estado 'Cese'
+    if (empleado.EstadoEmpleado !== 'Cese') {
+      console.log(`❌ Empleado no está en estado de cese: ${dni}, estado actual: ${empleado.EstadoEmpleado}`);
+      return res.status(400).json({
+        success: false,
+        message: `El empleado no está en estado de cese (estado actual: ${empleado.EstadoEmpleado})`,
+        error: 'EMPLOYEE_NOT_IN_CESE_STATE'
+      });
+    }
+
+    // Anular el cese (reactivar empleado)
+    const reactivarQuery = `
+      UPDATE PRI.Empleados 
+      SET 
+        EstadoEmpleado = 'Activo',
+        FechaCese = NULL
+      WHERE DNI = @DNI
+    `;
+
+    await executeQuery(reactivarQuery, [
+      { name: 'DNI', type: sql.VarChar, value: dni }
+    ]);
+
+    console.log(`✅ Cese anulado exitosamente para empleado: ${dni}`);
+
+    res.json({
+      success: true,
+      message: 'Cese anulado exitosamente',
+      data: { dni, estado: 'Activo' }
+    });
+
+  } catch (error) {
+    console.error('❌ Error anulando cese:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
