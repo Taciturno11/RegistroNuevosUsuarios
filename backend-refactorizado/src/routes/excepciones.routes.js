@@ -1,13 +1,42 @@
 const express = require('express');
 const router = express.Router();
+const { authMiddleware } = require('../middleware/auth.middleware');
+const {
+  obtenerHorarios,
+  obtenerExcepciones,
+  crearExcepcion,
+  actualizarExcepcion,
+  eliminarExcepcion,
+  getExcepcionById,
+  getEstadisticasExcepciones
+} = require('../controllers/excepciones.controller');
 
-// Ruta temporal - será implementada después
-router.get('/', (req, res) => {
-  res.json({
-    message: '⏰ API de Excepciones - En desarrollo',
-    status: 'coming_soon',
-    note: 'Este módulo será implementado en la siguiente fase'
-  });
-});
+// Todas las rutas requieren autenticación
+router.use(authMiddleware);
+
+// ========================================
+// RUTAS DE ASIGNACIÓN DE EXCEPCIONES
+// ========================================
+
+// Obtener horarios disponibles
+router.get('/horarios', obtenerHorarios);
+
+// Obtener estadísticas de excepciones (DEBE IR ANTES DE LAS RUTAS CON PARÁMETROS)
+router.get('/estadisticas', getEstadisticasExcepciones);
+
+// Obtener excepciones de un empleado
+router.get('/:dni', obtenerExcepciones);
+
+// Obtener excepción por ID
+router.get('/id/:id', getExcepcionById);
+
+// Crear nueva excepción
+router.post('/', crearExcepcion);
+
+// Actualizar excepción existente
+router.put('/:id', actualizarExcepcion);
+
+// Eliminar excepción
+router.delete('/:id', eliminarExcepcion);
 
 module.exports = router;
