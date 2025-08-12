@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -38,84 +38,98 @@ import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   Clear as ClearIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  Person as PersonIcon,
+  Badge as BadgeIcon,
+  Today as TodayIcon,
+  AddCircleOutline as AddCircleOutlineIcon,
+  Info as InfoIcon,
+  CalendarMonth as CalendarMonthIcon,
+  AccessTime as AccessTimeIcon,
+  ListAlt as ListAltIcon,
+  ChatBubbleOutline as ChatBubbleOutlineIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const Excepciones = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { api } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(true);
   const [editingExcepcion, setEditingExcepcion] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedExcepcion, setSelectedExcepcion] = useState(null);
   
-  // Estados para los catálogos
-  const [catalogos, setCatalogos] = useState({
-    gruposHorario: []
-  });
+  // Catálogo de horarios disponibles (Horarios_Base)
+  const [horarios, setHorarios] = useState([]);
 
   // Estado del formulario
   const [formData, setFormData] = useState({
-    empleadoID: '',
-    dni: '',
-    nombres: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    fecha: '',
-    grupoHorarioID: '',
-    horaEntrada: '',
-    horaSalida: '',
-    motivo: '',
-    observaciones: ''
+    fecha: new Date().toISOString().split('T')[0],
+    horarioID: '', // null ⇒ descanso
+    motivo: ''
   });
 
-  // Estado para la lista de excepciones
+  // Lista de excepciones
   const [excepciones, setExcepciones] = useState([]);
+  const [horarioBase, setHorarioBase] = useState('');
+  const [fechaActual, setFechaActual] = useState('');
 
-  // Verificar si se recibió un empleado
+  // Contexto empleado desde localStorage
+  const dni = typeof window !== 'undefined' ? localStorage.getItem('empleadoDNI') : '';
+  const nombreEmpleado = typeof window !== 'undefined' ? localStorage.getItem('empleadoNombre') : '';
+
+  // Carga inicial
   useEffect(() => {
-    if (!location.state?.employee) {
-      setError('No se seleccionó ningún empleado para gestionar excepciones');
-      return;
-    }
+    const init = async () => {
+      if (!dni) {
+        setError('No se ha seleccionado un empleado. Regrese al dashboard.');
+        return;
+      }
+      await cargarHorarios();
+      await cargarExcepciones(dni);
+      await cargarHorarioBase();
+      setFechaActual(new Date().toLocaleDateString('es-PE'));
+    };
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    const employee = location.state.employee;
-    setFormData(prev => ({
-      ...prev,
-      empleadoID: employee.id || employee.empleadoID || '',
-      dni: employee.dni || '',
-      nombres: employee.nombres || '',
-      apellidoPaterno: employee.apellidoPaterno || '',
-      apellidoMaterno: employee.apellidoMaterno || ''
-    }));
-
-    loadCatalogos();
-    loadExcepciones(employee.dni);
-  }, [location.state]);
-
-  const loadCatalogos = async () => {
+  const cargarHorarios = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/grupos/horas');
-      setCatalogos({
-        gruposHorario: response.data.success ? response.data.grupos : []
-      });
-    } catch (error) {
-      console.error('Error cargando catálogos:', error);
+      const { data } = await api.get('/excepciones/horarios');
+      const lista = data?.data || data || [];
+      setHorarios(lista);
+    } catch (err) {
+      console.error('Error cargando horarios:', err);
+      setHorarios([]);
     }
   };
 
-  const loadExcepciones = async (dni) => {
+  const cargarExcepciones = async (dniEmpleado) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/excepciones/empleado/${dni}`);
-      if (response.data.success) {
-        setExcepciones(response.data.excepciones || []);
-      }
-    } catch (error) {
-      console.error('Error cargando excepciones:', error);
+      const { data } = await api.get(`/excepciones/${dniEmpleado}`);
+      const lista = data?.data?.excepciones || data?.data || data || [];
+      setExcepciones(lista);
+    } catch (err) {
+      console.error('Error cargando excepciones:', err);
+      setExcepciones([]);
+    }
+  };
+
+  const cargarHorarioBase = async () => {
+    try {
+      const { data } = await api.get(`/empleados/${dni}/horario`);
+      const nombre = data?.data?.NombreHorario || data?.NombreHorario || data?.nombre || '';
+      const entrada = data?.data?.HoraEntrada || data?.HoraEntrada || data?.horaEntrada;
+      const salida = data?.data?.HoraSalida || data?.HoraSalida || data?.horaSalida;
+      const rango = entrada && salida ? `(${formatearHora(entrada)} - ${formatearHora(salida)})` : '';
+      setHorarioBase(nombre ? `${nombre} ${rango}` : '');
+    } catch (e) {
+      setHorarioBase('');
     }
   };
 
@@ -139,56 +153,57 @@ const Excepciones = () => {
       return;
     }
 
-    if (!formData.grupoHorarioID) {
-      setError('El grupo horario es obligatorio');
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.horaEntrada || !formData.horaSalida) {
-      setError('Las horas de entrada y salida son obligatorias');
-      setLoading(false);
-      return;
-    }
-
     if (!formData.motivo) {
       setError('El motivo es obligatorio');
       setLoading(false);
       return;
     }
 
-    // Validar que la hora de salida sea posterior a la de entrada
-    if (formData.horaEntrada >= formData.horaSalida) {
-      setError('La hora de salida debe ser posterior a la hora de entrada');
+    // No más de 1 mes atrás
+    const unMesAtras = new Date();
+    unMesAtras.setMonth(unMesAtras.getMonth() - 1);
+    if (new Date(formData.fecha) < unMesAtras) {
+      setError('No se pueden crear excepciones para fechas anteriores a 1 mes');
+      setLoading(false);
+      return;
+    }
+
+    // No duplicar fecha
+    const yaExiste = excepciones.some(ex => new Date(ex.Fecha || ex.fecha).toISOString().slice(0,10) === formData.fecha);
+    if (yaExiste) {
+      setError('Ya existe una excepción para esa fecha');
       setLoading(false);
       return;
     }
 
     try {
-      let response;
-      if (editingExcepcion) {
-        // Actualizar excepción existente
-        response = await axios.put(`http://localhost:5000/api/excepciones/${editingExcepcion.id}`, formData);
-      } else {
-        // Crear nueva excepción
-        response = await axios.post('http://localhost:5000/api/excepciones', formData);
-      }
-      
-      if (response.data.success) {
+      // Crear (no implementamos editar en esta versión)
+      const horarioIdValue = (value) => {
+        if (value === '' || value === '__DESCANSO__' || value == null) return null;
+        const n = parseInt(value, 10);
+        return Number.isNaN(n) ? null : n;
+      };
+
+      const payload = {
+        EmpleadoDNI: dni,
+        Fecha: formData.fecha,
+        HorarioID: horarioIdValue(formData.horarioID),
+        Motivo: formData.motivo.trim()
+      };
+
+      const { data } = await api.post('/excepciones', payload);
+
+      if (data.success) {
         setSuccess(editingExcepcion ? 'Excepción actualizada exitosamente' : 'Excepción registrada exitosamente');
         
         // Recargar lista y limpiar formulario
-        loadExcepciones(formData.dni);
+        await cargarExcepciones(dni);
         handleClear();
         setShowForm(false);
         setEditingExcepcion(null);
         
-        // Redirigir al dashboard después de 2 segundos
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
       } else {
-        setError(response.data.message || 'Error procesando excepción');
+        setError(data.message || 'Error procesando excepción');
       }
     } catch (error) {
       setError(error.response?.data?.message || 'Error de conexión');
@@ -221,12 +236,12 @@ const Excepciones = () => {
     }
 
     try {
-      const response = await axios.delete(`http://localhost:5000/api/excepciones/${id}`);
-      if (response.data.success) {
+      const { data } = await api.delete(`/excepciones/${id}`);
+      if (data.success) {
         setSuccess('Excepción eliminada exitosamente');
-        loadExcepciones(formData.dni);
+        cargarExcepciones(dni);
       } else {
-        setError(response.data.message || 'Error eliminando excepción');
+        setError(data.message || 'Error eliminando excepción');
       }
     } catch (error) {
       setError(error.response?.data?.message || 'Error de conexión');
@@ -235,17 +250,9 @@ const Excepciones = () => {
 
   const handleClear = () => {
     setFormData({
-      empleadoID: formData.empleadoID,
-      dni: formData.dni,
-      nombres: formData.nombres,
-      apellidoPaterno: formData.apellidoPaterno,
-      apellidoMaterno: formData.apellidoMaterno,
-      fecha: '',
-      grupoHorarioID: '',
-      horaEntrada: '',
-      horaSalida: '',
-      motivo: '',
-      observaciones: ''
+      fecha: new Date().toISOString().split('T')[0],
+      horarioID: '',
+      motivo: ''
     });
     setEditingExcepcion(null);
     setError('');
@@ -266,7 +273,48 @@ const Excepciones = () => {
     }
   };
 
-  if (!location.state?.employee) {
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'No especificada';
+    try {
+      if (typeof fecha === 'string' && fecha.includes('T')) {
+        const f = new Date(fecha);
+        const d = String(f.getUTCDate()).padStart(2, '0');
+        const m = String(f.getUTCMonth() + 1).padStart(2, '0');
+        const y = f.getUTCFullYear();
+        return `${d}/${m}/${y}`;
+      }
+      if (typeof fecha === 'string' && fecha.includes('-')) {
+        const [y, m, d] = fecha.split('-');
+        return `${d}/${m}/${y}`;
+      }
+      const f = new Date(fecha);
+      return f.toLocaleDateString('es-ES');
+    } catch {
+      return String(fecha);
+    }
+  };
+
+  const formatearHora = (h) => {
+    if (!h) return '00:00';
+    try {
+      if (typeof h === 'string' && h.includes('T')) {
+        const f = new Date(h);
+        const hh = String(f.getUTCHours()).padStart(2, '0');
+        const mm = String(f.getUTCMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+      }
+      if (typeof h === 'string' && h.includes(':') && h.includes('.')) {
+        const [hh, mm] = h.split(':');
+        return `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}`;
+      }
+      if (typeof h === 'string' && h.includes(':')) return h.substring(0,5);
+      return '00:00';
+    } catch {
+      return '00:00';
+    }
+  };
+
+  if (!dni) {
     return (
       <Box>
         <Card sx={{ mb: 4 }}>
@@ -281,7 +329,7 @@ const Excepciones = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/admin')}
               >
                 Volver al Dashboard
               </Button>
@@ -291,11 +339,11 @@ const Excepciones = () => {
         
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Alert severity="error" sx={{ mb: 3 }}>
-            No se seleccionó ningún empleado para gestionar excepciones
+            No se ha seleccionado un empleado. Regrese al dashboard.
           </Alert>
-          <Button
+            <Button
             variant="contained"
-            onClick={() => navigate('/')}
+              onClick={() => navigate('/admin')}
           >
             Volver al Dashboard
           </Button>
@@ -305,41 +353,46 @@ const Excepciones = () => {
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Card sx={{ mb: 4 }}>
-        <CardHeader
-          title={
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <ScheduleIcon sx={{ mr: 2, fontSize: '2rem' }} />
-              <Typography variant="h4">Gestión de Excepciones</Typography>
+    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      {/* Banner Empleado Seleccionado */}
+      <Paper
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 2,
+          background: 'linear-gradient(135deg, #223a4e, #2f4f68)',
+          color: 'white',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <PersonIcon sx={{ mr: 1.5 }} />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>Empleado Seleccionado</Typography>
+        </Box>
+        <Grid container spacing={2}>
+          {/* Columna izquierda: DNI y Nombre */}
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BadgeIcon fontSize="small" />
+              <Typography variant="body2">DNI: <strong>{dni}</strong></Typography>
             </Box>
-          }
-          subtitle={
-            <Typography variant="body1" sx={{ mt: 1, color: '#64748b' }}>
-              Empleado: {formData.nombres} {formData.apellidoPaterno} - DNI: {formData.dni}
-            </Typography>
-          }
-          action={
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setShowForm(true)}
-              >
-                Nueva Excepción
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
-              >
-                Volver al Dashboard
-              </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              <PersonIcon fontSize="small" />
+              <Typography variant="body2">Nombre: <strong>{nombreEmpleado || '-'}</strong></Typography>
             </Box>
-          }
-        />
-      </Card>
+          </Grid>
+          {/* Columna derecha: Horario Base y Fecha Actual */}
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AccessTimeIcon fontSize="small" />
+              <Typography variant="body2">Horario Base: <strong>{horarioBase || '-'}</strong></Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              <TodayIcon fontSize="small" />
+              <Typography variant="body2">Fecha Actual: <strong>{fechaActual}</strong></Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
 
       {/* Alertas */}
       {error && (
@@ -356,124 +409,127 @@ const Excepciones = () => {
 
       {/* Formulario */}
       {showForm && (
-        <Paper sx={{ p: 4, mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-            {editingExcepcion ? 'Editar Excepción' : 'Nueva Excepción'}
-          </Typography>
+        <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+          <Box sx={{
+            background: 'linear-gradient(135deg, #223a4e, #2f4f68)',
+            color: 'white',
+            px: 2.5,
+            py: 1.5,
+            borderRadius: 1,
+            mb: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AddCircleOutlineIcon />
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                {editingExcepcion ? 'Editar Excepción' : 'Nueva Asignación Excepcional'}
+              </Typography>
+            </Box>
+          </Box>
 
           <Box component="form" onSubmit={handleSubmit}>
+            {/* Fila 1: Fecha y Horario */}
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Fecha *"
-                  type="date"
-                  value={formData.fecha}
-                  onChange={(e) => handleInputChange('fecha', e.target.value)}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
+                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <CalendarMonthIcon fontSize="small" />
+                    <Typography variant="subtitle2">Fecha de Excepción</Typography>
+                  </Box>
+                  <TextField
+                    fullWidth
+                    type="date"
+                    value={formData.fecha}
+                    onChange={(e) => handleInputChange('fecha', e.target.value)}
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, color: '#64748b' }}>
+                    <InfoIcon fontSize="small" />
+                    <Typography variant="caption">Puede seleccionar fechas pasadas hasta 1 mes atrás</Typography>
+                  </Box>
+                </Box>
               </Grid>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Grupo Horario</InputLabel>
-                  <Select
-                    value={formData.grupoHorarioID}
-                    onChange={(e) => handleInputChange('grupoHorarioID', e.target.value)}
-                    label="Grupo Horario"
-                  >
-                    {catalogos.gruposHorario.map((grupo) => (
-                      <MenuItem key={grupo.id} value={grupo.id}>
-                        {grupo.nombre} ({grupo.horaEntrada} - {grupo.horaSalida})
+                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <AccessTimeIcon fontSize="small" />
+                    <Typography variant="subtitle2">Horario Excepcional</Typography>
+                  </Box>
+                  <FormControl fullWidth>
+                    <Select
+                      value={formData.horarioID}
+                      onChange={(e) => handleInputChange('horarioID', e.target.value)}
+                      displayEmpty
+                      MenuProps={{ disableScrollLock: true }}
+                    >
+                      <MenuItem value="">
+                        -- Seleccionar Horario --
                       </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                      <MenuItem value="__DESCANSO__">Descanso</MenuItem>
+                      {(() => {
+                        const baseText = (horarioBase || '').split('(')[0]?.trim();
+                        const baseTipo = baseText ? baseText.split(' ').slice(0,2).join(' ') : '';
+                        const lista = baseTipo
+                          ? horarios.filter(h => ((h.NombreHorario || h.nombre || '').split(' ').slice(0,2).join(' ')) === baseTipo)
+                          : horarios;
+                        return lista;
+                      })().map((h) => (
+                        <MenuItem key={h.HorarioID || h.id} value={h.HorarioID || h.id}>
+                          {(h.NombreHorario || h.nombre)} ({formatearHora(h.HoraEntrada || h.horaEntrada)} - {formatearHora(h.HoraSalida || h.horaSalida)})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
               </Grid>
+            </Grid>
+
+            {/* Fila 2: Motivo (siempre debajo, mismo ancho que Horario Excepcional) */}
+            <Grid container spacing={3} sx={{ mt: 0 }}>
+              {/* Espaciador para alinear a la derecha en pantallas md+ */}
+              <Grid item xs={12} md={6} sx={{ display: { xs: 'none', md: 'block' } }} />
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Hora de Entrada *"
-                  type="time"
-                  value={formData.horaEntrada}
-                  onChange={(e) => handleInputChange('horaEntrada', e.target.value)}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Hora de Salida *"
-                  type="time"
-                  value={formData.horaSalida}
-                  onChange={(e) => handleInputChange('horaSalida', e.target.value)}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Motivo *"
-                  value={formData.motivo}
-                  onChange={(e) => handleInputChange('motivo', e.target.value)}
-                  required
-                  placeholder="Describa el motivo de la excepción..."
-                  multiline
-                  rows={3}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Observaciones"
-                  value={formData.observaciones}
-                  onChange={(e) => handleInputChange('observaciones', e.target.value)}
-                  placeholder="Observaciones adicionales..."
-                  multiline
-                  rows={2}
-                />
+                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <ChatBubbleOutlineIcon fontSize="small" />
+                    <Typography variant="subtitle2">Motivo de la Excepción</Typography>
+                  </Box>
+                  <TextField
+                    fullWidth
+                    value={formData.motivo}
+                    onChange={(e) => handleInputChange('motivo', e.target.value)}
+                    required
+                    placeholder="Describa el motivo de la asignación excepcional..."
+                    multiline
+                    rows={3}
+                  />
+                </Box>
               </Grid>
             </Grid>
 
             {/* Botones de acción */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 4 }}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 3 }}>
               <Button
                 type="submit"
                 variant="contained"
                 size="large"
                 startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
                 disabled={loading}
-                sx={{ px: 4, py: 1.5 }}
+                sx={{ px: 4, py: 1.5, background: 'linear-gradient(135deg, #1e81ce, #1669a6)' }}
               >
-                {loading ? 'Guardando...' : (editingExcepcion ? 'Actualizar' : 'Guardar')}
+                {loading ? 'Guardando...' : (editingExcepcion ? 'Actualizar' : 'Guardar Excepción')}
               </Button>
-              
               <Button
                 type="button"
-                variant="outlined"
+                variant="contained"
                 size="large"
-                startIcon={<ClearIcon />}
-                onClick={handleClear}
-                disabled={loading}
-                sx={{ px: 4, py: 1.5 }}
-              >
-                Limpiar
-              </Button>
-
-              <Button
-                type="button"
-                variant="outlined"
-                size="large"
+                startIcon={<ArrowBackIcon />}
                 onClick={() => {
-                  setShowForm(false);
-                  setEditingExcepcion(null);
-                  handleClear();
+                  navigate('/admin');
                 }}
-                sx={{ px: 4, py: 1.5 }}
+                sx={{ px: 4, py: 1.5, bgcolor: '#1f2937', '&:hover': { bgcolor: '#111827' } }}
               >
-                Cancelar
+                Volver al Dashboard
               </Button>
             </Box>
           </Box>
@@ -481,56 +537,85 @@ const Excepciones = () => {
       )}
 
       {/* Lista de Excepciones */}
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-          Historial de Excepciones
-        </Typography>
+      <Paper sx={{ p: 3, borderRadius: 2 }}>
+        <Box sx={{
+          background: 'linear-gradient(135deg, #223a4e, #2f4f68)',
+          color: 'white',
+          px: 2.5,
+          py: 1.5,
+          borderRadius: 1,
+          mb: 2
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ListAltIcon />
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>Excepciones Registradas</Typography>
+          </Box>
+        </Box>
 
         {excepciones.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              No hay excepciones registradas para este empleado
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 3, px: 2, color: '#64748b' }}>
+            <InfoIcon fontSize="small" />
+            <Typography variant="body2">No hay excepciones registradas</Typography>
           </Box>
         ) : (
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell>Fecha</TableCell>
-                  <TableCell>Grupo Horario</TableCell>
-                  <TableCell>Horario Excepcional</TableCell>
-                  <TableCell>Motivo</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Acciones</TableCell>
+                <TableRow sx={{ bgcolor: '#223a4e' }}>
+                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarMonthIcon fontSize="small" /> Fecha
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AccessTimeIcon fontSize="small" /> Horario
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AccessTimeIcon fontSize="small" /> Rango Horario
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ChatBubbleOutlineIcon fontSize="small" /> Motivo
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                    Estado
+                  </TableCell>
+                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SettingsIcon fontSize="small" /> Acciones
+                    </Box>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {excepciones.map((excepcion) => (
-                  <TableRow key={excepcion.id}>
+                    <TableRow key={excepcion.AsignacionID || excepcion.id}>
                     <TableCell>
-                      {new Date(excepcion.fecha).toLocaleDateString()}
+                      {formatearFecha(excepcion.Fecha || excepcion.fecha)}
                     </TableCell>
-                    <TableCell>{excepcion.grupoHorarioNombre || 'N/A'}</TableCell>
+                    <TableCell>{excepcion.NombreHorario || excepcion.grupoHorarioNombre || (excepcion.HorarioID == null ? 'Descanso' : 'N/A')}</TableCell>
                     <TableCell>
-                      <Typography variant="body2">
-                        <strong>Entrada:</strong> {excepcion.horaEntrada}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Salida:</strong> {excepcion.horaSalida}
-                      </Typography>
+                      {excepcion.HorarioID == null ? (
+                        <Typography variant="body2">N/A</Typography>
+                      ) : (
+                        <>
+                          <Typography variant="body2"><strong>Entrada:</strong> {formatearHora(excepcion.HoraEntrada || excepcion.horaEntrada)}</Typography>
+                          <Typography variant="body2"><strong>Salida:</strong> {formatearHora(excepcion.HoraSalida || excepcion.horaSalida)}</Typography>
+                        </>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {excepcion.motivo}
+                        {excepcion.Motivo || excepcion.motivo}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={excepcion.estado || 'Activa'}
-                        color={getStatusColor(excepcion.estado)}
-                        size="small"
-                      />
+                      <Chip label={'Activa'} size="small" />
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -550,7 +635,7 @@ const Excepciones = () => {
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => handleDelete(excepcion.id)}
+                          onClick={() => handleDelete(excepcion.AsignacionID || excepcion.id)}
                           color="error"
                         >
                           <DeleteIcon />
@@ -580,7 +665,7 @@ const Excepciones = () => {
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">DNI</Typography>
-                <Typography variant="body1">{selectedExcepcion.dni}</Typography>
+                <Typography variant="body1">{dni}</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">Empleado</Typography>
@@ -591,20 +676,20 @@ const Excepciones = () => {
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">Fecha</Typography>
                 <Typography variant="body1">
-                  {new Date(selectedExcepcion.fecha).toLocaleDateString()}
+                  {formatearFecha(selectedExcepcion.Fecha || selectedExcepcion.fecha)}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">Grupo Horario</Typography>
-                <Typography variant="body1">{selectedExcepcion.grupoHorarioNombre || 'N/A'}</Typography>
+                <Typography variant="body1">{selectedExcepcion.NombreHorario || selectedExcepcion.grupoHorarioNombre || (selectedExcepcion.HorarioID == null ? 'Descanso' : 'N/A')}</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">Hora de Entrada</Typography>
-                <Typography variant="body1">{selectedExcepcion.horaEntrada}</Typography>
+                <Typography variant="body1">{formatearHora(selectedExcepcion.HoraEntrada || selectedExcepcion.horaEntrada)}</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">Hora de Salida</Typography>
-                <Typography variant="body1">{selectedExcepcion.horaSalida}</Typography>
+                <Typography variant="body1">{formatearHora(selectedExcepcion.HoraSalida || selectedExcepcion.horaSalida)}</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
                 <Typography variant="subtitle2" color="text.secondary">Estado</Typography>
@@ -616,7 +701,7 @@ const Excepciones = () => {
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle2" color="text.secondary">Motivo</Typography>
-                <Typography variant="body1">{selectedExcepcion.motivo}</Typography>
+                <Typography variant="body1">{selectedExcepcion.Motivo || selectedExcepcion.motivo}</Typography>
               </Grid>
               {selectedExcepcion.observaciones && (
                 <Grid item xs={12}>

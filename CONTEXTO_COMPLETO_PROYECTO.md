@@ -296,3 +296,132 @@ El sistema está completamente funcional y listo para uso en producción, con:
 **🔄 Versión del proyecto**: 5.0.0 - Sistema de Control Maestro Completado  
 **👨‍💻 Desarrollado por**: Asistente AI con supervisión del usuario  
 **🎯 Estado**: **COMPLETADO AL 100%** - Listo para producción 
+
+---
+
+## 🔎 Refactorización detallada: Justificaciones y Excepciones (Frontend + Backend)
+
+Esta sección documenta a profundidad la estética, la lógica y los endpoints implementados para los módulos de Justificaciones y Asignación de Excepciones tras la refactorización del monolito (`proyecto-actual/`) a la arquitectura separada (`backend-refactorizado/` + `frontend-react/`).
+
+### 🧭 Módulos y archivos involucrados
+- Backend
+  - `backend-refactorizado/src/controllers/justificaciones.controller.js`
+  - `backend-refactorizado/src/controllers/excepciones.controller.js`
+  - `backend-refactorizado/src/controllers/empleados.controller.js` (horario base del empleado)
+  - `backend-refactorizado/src/routes/justificaciones.routes.js`
+  - `backend-refactorizado/src/routes/excepciones.routes.js`
+- Frontend
+  - `frontend-react/src/pages/Justificaciones.js`
+  - `frontend-react/src/pages/Excepciones.js`
+  - `frontend-react/src/components/Sidebar.js` (entrada de menú “Asignación Excepciones”)
+  - `frontend-react/src/App.js` (ruta protegida `/excepciones`)
+
+---
+
+### 📜 Endpoints y contratos (Backend)
+
+#### Justificaciones
+- GET `/api/justificaciones/tipos`
+  - Respuesta: `[{ TipoJustificacion: string }, ...]`
+- GET `/api/justificaciones/empleado/:dni`
+  - Respuesta: `{ success: true, data: { justificaciones: Justificacion[] } }` o arreglo directo según origen
+  - `Justificacion`: `{ JustificacionID, EmpleadoDNI, Fecha, TipoJustificacion, Motivo, Estado, AprobadorDNI }`
+- POST `/api/justificaciones`
+  - Request body (acepta camelCase y PascalCase): `{ empleadoDNI|EmpleadoDNI, fecha|Fecha, tipoJustificacion|TipoJustificacion, motivo|Motivo, estado|Estado, aprobadorDNI|AprobadorDNI? }`
+  - Respuesta (formato del proyecto unificado): PascalCase incluyendo `JustificacionID` y `AprobadorDNI`.
+- DELETE `/api/justificaciones/:id`
+  - Elimina por `JustificacionID`.
+
+#### Excepciones
+- GET `/api/excepciones/horarios`
+  - Lista de `Horarios_Base`: `{ HorarioID, NombreHorario, HoraEntrada, HoraSalida, ... }[]`
+- GET `/api/excepciones/:dni`
+  - Historial del empleado (puede incluir horas unidas o separadas, se formatea en el front)
+- POST `/api/excepciones`
+  - Body: `{ EmpleadoDNI, Fecha, HorarioID: number|null, Motivo }`
+  - Validaciones: fecha no menor a 1 mes atrás, no duplicar fecha, horario existente si no es descanso
+- DELETE `/api/excepciones/:id`
+- GET `/api/empleados/:dni/horario`
+  - Devuelve `NombreBase/NombreHorario` y (opcional) `HoraEntrada`, `HoraSalida` para el banner y filtrado de horarios.
+
+---
+
+### 🎨 Estética unificada (traída del monolito)
+- Banner superior del empleado con degradado azul y 4 items con iconos: DNI, Nombre, Horario Base (con rango), Fecha Actual.
+- Cards con header azul oscuro, bordes redondeados y sombras suaves.
+- Formularios con cajas grises (borde 2px, radios 8–12px) y labels con icono.
+- Botones primarios con gradiente azul; secundarios oscuros con hover consistente.
+- Tablas con header oscuro, tipografía blanca, celdas con borde inferior suave y hover gris claro.
+
+---
+
+### 🧩 Lógica implementada en Justificaciones (Frontend)
+- Carga inicial
+  - Recupera `empleadoDNI` y `empleadoNombre` desde `localStorage`.
+  - Carga tipos de justificación vía `/justificaciones/tipos`.
+  - Carga historial del empleado vía `/justificaciones/empleado/:dni` y calcula KPIs (total, aprobadas, desaprobadas).
+- Filtros y paginación
+  - Filtros por Mes y Año; un `useEffect` re-aplica filtros y paginación al cambiar mes, año o dataset.
+- Creación
+  - Envío en camelCase desde el front; el backend acepta camelCase o PascalCase; la respuesta se devuelve en PascalCase (compat con monolito) incluyendo `JustificacionID` y `AprobadorDNI`.
+  - `AprobadorDNI` opcional; si no se provee, se usa `req.user.dni`.
+- Eliminación
+  - `DELETE /justificaciones/:id` usando `JustificacionID` o `ID` según la procedencia del dato.
+- Selects y UX
+  - `MenuProps={{ disableScrollLock: true }}` para evitar “temblor” de la vista.
+  - Placeholders con `displayEmpty` y `renderValue` para tamaño consistente cuando no hay selección.
+  - Corrección de anchuras para no desbordar (revertir `width: 500%` del hotfix manual a `width: 100%`).
+- Correcciones visuales clave
+  - Header “Justificaciones Registradas” compactado.
+  - KPI al costado del nombre en el banner cuando aplica.
+  - Simetría de campos y no recorte de labels (“Tipo de Justificación” y “Estado”).
+
+---
+
+### 🧩 Lógica implementada en Excepciones (Frontend)
+- Carga inicial
+  - Horarios disponibles: `/excepciones/horarios`.
+  - Historial del empleado: `/excepciones/:dni`.
+  - Horario base: `/empleados/:dni/horario` → se muestra “Nombre (HH:mm - HH:mm)”.
+- Filtrado de horarios para el select
+  - Se filtran los horarios al mismo “tipo base” que el horario actual del empleado (p.ej. “Full Time Mañana”, “Part Time Tarde”), igual que el monolito.
+  - Opción “Descanso” mapeada a `HorarioID: null` durante el envío.
+- Validaciones
+  - `fecha` requerida; no más de 1 mes atrás.
+  - `motivo` requerido; si `Descanso`, también es obligatorio.
+  - No permitir duplicados por fecha para el mismo DNI.
+- Tabla / detalles
+  - Columnas: Fecha, Horario, Rango Horario (Entrada/Salida o N/A), Motivo, Acciones.
+  - Diálogo de detalles con información completa del registro.
+- Ajustes de layout
+  - Fila 1: Fecha (izquierda) y Horario Excepcional (derecha).
+  - Fila 2: Motivo de la Excepción SIEMPRE debajo; ancho alineado al de “Horario Excepcional” (misma columna md=6 con espaciador a la izquierda en md+).
+  - Botones centrados: “Guardar Excepción” y “Volver al Dashboard” (navega a `/admin`).
+
+---
+
+### 🧯 Errores corregidos y decisiones
+- Varios errores JSX (tags no cerrados), tipográficos y de imports (`ErrorIcon`, `CloseIcon`).
+- Temblor de scroll al abrir selects → `disableScrollLock`.
+- Select con tamaño mínimo al estar vacío → `displayEmpty` + `renderValue`.
+- Inconsistencia de rutas del historial de justificaciones → uso de `/justificaciones/empleado/:dni`.
+- Filtros de mes/año sin reactividad → `useEffect` dependiente de filtros y dataset.
+- No se podía eliminar justificaciones → agregado endpoint `DELETE /justificaciones/:id` y wiring en front.
+- Tipos de justificación faltantes → endpoint `/justificaciones/tipos`.
+- Payloads camelCase vs PascalCase → el backend acepta ambos; responde en PascalCase (compat unificado).
+- En Excepciones, mapeo correcto de “Descanso” a `HorarioID: null` y filtrado por tipo según Horario Base.
+
+---
+
+### 🔄 Flujo de datos resumido
+1) Dashboard guarda en `localStorage` el `empleadoDNI` y `empleadoNombre`.
+2) Justificaciones/Excepciones leen el contexto desde `localStorage` y hacen sus cargas iniciales.
+3) Las vistas usan `useAuth().api` para llamadas autenticadas (Bearer token), siguiendo rutas protegidas por middleware en backend.
+4) Las respuestas se normalizan en el front para UI (formatos de fecha/hora y estructuras mixtas).
+
+---
+
+### 🧭 Próximos pasos sugeridos (estos módulos)
+- Unificar utilidades de formato (`formatearFecha`, `formatearHora`) en `frontend-react/src/utils/` para reuso entre páginas.
+- Tests de integración para validaciones de Excepciones y filtros de Justificaciones.
+- Documentar contratos en OpenAPI/Swagger a partir de estos endpoints.
