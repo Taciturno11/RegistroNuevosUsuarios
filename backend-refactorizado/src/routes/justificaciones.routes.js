@@ -7,7 +7,9 @@ const {
   getJustificacionesByEmpleado,
   createJustificacion,
   aprobarJustificacion,
-  getEstadisticasJustificaciones
+  getEstadisticasJustificaciones,
+  deleteJustificacion,
+  getTiposJustificacion
 } = require('../controllers/justificaciones.controller');
 
 // Todas las rutas requieren autenticación
@@ -20,6 +22,9 @@ router.use(authMiddleware);
 // Obtener todas las justificaciones (con filtros y paginación)
 router.get('/', getAllJustificaciones);
 
+// Obtener tipos de justificación (catálogo)
+router.get('/tipos', getTiposJustificacion);
+
 // Obtener justificación por ID
 router.get('/:id', getJustificacionById);
 
@@ -31,6 +36,9 @@ router.post('/', createJustificacion);
 
 // Aprobar/Rechazar justificación
 router.put('/:id/aprobar', aprobarJustificacion);
+
+// Eliminar justificación
+router.delete('/:id', deleteJustificacion);
 
 // Obtener estadísticas de justificaciones
 router.get('/estadisticas', getEstadisticasJustificaciones);

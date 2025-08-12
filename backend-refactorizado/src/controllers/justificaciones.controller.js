@@ -4,6 +4,31 @@ const { executeQuery, sql } = require('../config/database');
 // GESTIÓN DE JUSTIFICACIONES
 // ========================================
 
+// Catálogo: Tipos de justificación (puede migrarse a tabla si se requiere)
+exports.getTiposJustificacion = async (_req, res) => {
+  try {
+    const tipos = [
+      { TipoJustificacion: 'Descanso Compensatorio' },
+      { TipoJustificacion: 'Licencia Sin Goce de Haber' },
+      { TipoJustificacion: 'Suspensión' },
+      { TipoJustificacion: 'Tardanza Justificada' }
+    ];
+
+    res.json({
+      success: true,
+      message: 'Tipos de justificación obtenidos exitosamente',
+      data: tipos
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo tipos de justificación:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
 // Obtener todas las justificaciones
 exports.getAllJustificaciones = async (req, res) => {
   try {
@@ -228,13 +253,14 @@ exports.getJustificacionesByEmpleado = async (req, res) => {
 // Crear nueva justificación
 exports.createJustificacion = async (req, res) => {
   try {
-    const {
-      empleadoDNI,
-      fecha,
-      tipoJustificacion,
-      motivo,
-      estado = 'Pendiente'
-    } = req.body;
+    // Aceptar tanto estilo camelCase como PascalCase del proyecto anterior
+    const empleadoDNI = req.body.empleadoDNI || req.body.EmpleadoDNI;
+    const fecha = req.body.fecha || req.body.Fecha;
+    const tipoJustificacion = req.body.tipoJustificacion || req.body.TipoJustificacion;
+    const motivo = req.body.motivo || req.body.Motivo;
+    const estado = (req.body.estado || req.body.Estado || 'Pendiente');
+    // Aprobador opcional al crear (en legado se enviaba). Si no viene, tomar el del usuario autenticado
+    const aprobadorDNI = req.body.aprobadorDNI || req.body.AprobadorDNI || req.user?.dni || null;
 
     // Validar campos requeridos
     if (!empleadoDNI || !fecha || !tipoJustificacion || !motivo) {
@@ -259,12 +285,13 @@ exports.createJustificacion = async (req, res) => {
       });
     }
 
-    // Insertar justificación
+    // Insertar justificación y devolver el ID generado
     const insertQuery = `
       INSERT INTO Partner.dbo.Justificaciones (
-        EmpleadoDNI, Fecha, TipoJustificacion, Motivo, Estado
-      ) VALUES (
-        @EmpleadoDNI, @Fecha, @TipoJustificacion, @Motivo, @Estado
+        EmpleadoDNI, Fecha, TipoJustificacion, Motivo, Estado, AprobadorDNI
+      ) OUTPUT INSERTED.JustificacionID as JustificacionID
+      VALUES (
+        @EmpleadoDNI, @Fecha, @TipoJustificacion, @Motivo, @Estado, @AprobadorDNI
       )
     `;
 
@@ -273,22 +300,27 @@ exports.createJustificacion = async (req, res) => {
       { name: 'Fecha', type: sql.Date, value: new Date(fecha) },
       { name: 'TipoJustificacion', type: sql.VarChar, value: tipoJustificacion },
       { name: 'Motivo', type: sql.VarChar, value: motivo },
-      { name: 'Estado', type: sql.VarChar, value: estado }
+      { name: 'Estado', type: sql.VarChar, value: estado },
+      { name: 'AprobadorDNI', type: sql.VarChar, value: aprobadorDNI }
     ];
 
-    await executeQuery(insertQuery, params);
+    const insertResult = await executeQuery(insertQuery, params);
+    const nuevoId = insertResult.recordset?.[0]?.JustificacionID;
 
-    console.log(`✅ Justificación creada exitosamente para: ${empleadoDNI}`);
+    console.log(`✅ Justificación creada exitosamente para: ${empleadoDNI} (ID: ${nuevoId})`);
 
+    // Responder en el formato del proyecto anterior (PascalCase)
     res.status(201).json({
       success: true,
       message: 'Justificación creada exitosamente',
       data: {
-        empleadoDNI,
-        fecha: new Date(fecha),
-        tipoJustificacion,
-        motivo,
-        estado
+        JustificacionID: nuevoId,
+        EmpleadoDNI: empleadoDNI,
+        Fecha: new Date(fecha),
+        TipoJustificacion: tipoJustificacion,
+        Motivo: motivo,
+        Estado: estado,
+        AprobadorDNI: aprobadorDNI
       }
     });
 
@@ -372,6 +404,45 @@ exports.aprobarJustificacion = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error aprobando justificación:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Eliminar justificación (hard delete)
+exports.deleteJustificacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que la justificación existe
+    const existeQuery = 'SELECT JustificacionID FROM Partner.dbo.Justificaciones WHERE JustificacionID = @JustificacionID';
+    const existeResult = await executeQuery(existeQuery, [
+      { name: 'JustificacionID', type: sql.Int, value: parseInt(id) }
+    ]);
+
+    if (existeResult.recordset.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Justificación no encontrada',
+        error: 'JUSTIFICATION_NOT_FOUND'
+      });
+    }
+
+    // Eliminar
+    const deleteQuery = 'DELETE FROM Partner.dbo.Justificaciones WHERE JustificacionID = @JustificacionID';
+    await executeQuery(deleteQuery, [
+      { name: 'JustificacionID', type: sql.Int, value: parseInt(id) }
+    ]);
+
+    res.json({
+      success: true,
+      message: 'Justificación eliminada exitosamente'
+    });
+  } catch (error) {
+    console.error('❌ Error eliminando justificación:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

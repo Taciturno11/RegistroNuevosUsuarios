@@ -112,6 +112,11 @@ const Justificaciones = () => {
     };
   }, []);
 
+  // Reaplicar filtros cuando cambie mes/año
+  useEffect(() => {
+    aplicarFiltrosYPaginacion(justificaciones);
+  }, [filtroMes, filtroAnio, justificaciones]);
+
   const inicializarComponente = async () => {
     try {
       // Obtener empleado del localStorage (como en el proyecto original)
@@ -159,11 +164,13 @@ const Justificaciones = () => {
 
   const cargarJustificacionesExistentes = async (dni) => {
     try {
-      const response = await api.get(`/justificaciones/${dni}`);
+      // La API espera /justificaciones/empleado/:dni
+      const response = await api.get(`/justificaciones/empleado/${dni}`);
       if (response.data.success) {
-        setJustificaciones(response.data.data);
-        aplicarFiltrosYPaginacion(response.data.data);
-        calcularEstadisticas(response.data.data);
+        const lista = response.data.data?.justificaciones || response.data.data || [];
+        setJustificaciones(lista);
+        aplicarFiltrosYPaginacion(lista);
+        calcularEstadisticas(lista);
       }
     } catch (error) {
       console.error('Error cargando justificaciones:', error);
@@ -293,13 +300,14 @@ const Justificaciones = () => {
       setLoading(true);
       setError('');
       
+      // El backend espera estas claves en minúscula: empleadoDNI, fecha, tipoJustificacion, motivo, estado
       const justificacionData = {
-        EmpleadoDNI: empleadoSeleccionado.dni,
-        Fecha: formData.fecha,
-        TipoJustificacion: formData.tipo,
-        Motivo: formData.motivo,
-        Estado: formData.estado,
-        AprobadorDNI: formData.aprobadorDNI
+        empleadoDNI: empleadoSeleccionado.dni,
+        fecha: formData.fecha,
+        tipoJustificacion: formData.tipo,
+        motivo: formData.motivo,
+        estado: formData.estado
+        // AprobadorDNI se asigna al aprobar; no se registra en la creación
       };
 
       const response = await api.post('/justificaciones', justificacionData);
@@ -472,124 +480,48 @@ const Justificaciones = () => {
           border: '1px solid #e5e7eb',
           overflow: 'hidden'
         }}>
-          <Box sx={{
+          <Box sx={{ 
             backgroundColor: '#0f172a',
             color: 'white',
-            p: '1rem 1.25rem',
-            borderRadius: '16px 16px 0 0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 1.5
+            p: '0.75rem 1rem',
+            borderRadius: '16px 16px 0 0'
           }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h5" sx={{ fontWeight: 600, m: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, m: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <PersonIcon sx={{ fontSize: '1.25rem' }} />
                 {empleadoSeleccionado.nombre}
               </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.25 }}>
+                <Typography variant="caption" sx={{ opacity: 0.85, mt: 0.25 }}>
                 DNI: {empleadoSeleccionado.dni}
               </Typography>
-            </Box>
-          </Box>
-
-          <Box sx={{ p: '1.25rem' }}>
-            {/* Indicadores de justificaciones - estética unificada */}
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
-              flexWrap: 'wrap',
-              alignItems: 'center'
-            }}>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                px: 2, 
-                py: 1.5, 
-                borderRadius: '16px',
-                color: 'white',
-                boxShadow: '0 8px 20px rgba(102, 126, 234, 0.3)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 12px 30px rgba(102, 126, 234, 0.4)'
-                }
-              }}>
-                <ListAltIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                <Box>
-                  <Typography variant="body2" sx={{ 
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    opacity: 0.9
-                  }}>Total</Typography>
-                  <Typography variant="h4" sx={{ 
-                    fontWeight: 700,
-                    fontSize: '1.5rem'
-                  }}>{estadisticas.total}</Typography>
-                </Box>
               </Box>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                background: 'linear-gradient(135deg, #48bb78, #38a169)',
-                px: 2, 
-                py: 1.5, 
-                borderRadius: '16px',
-                color: 'white',
-                boxShadow: '0 8px 20px rgba(72, 187, 120, 0.3)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 12px 30px rgba(72, 187, 120, 0.4)'
-                }
-              }}>
-                <CheckCircleOutlineIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                <Box>
-                  <Typography variant="body2" sx={{ 
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    opacity: 0.9
-                  }}>Aprobadas</Typography>
-                  <Typography variant="h4" sx={{ 
-                    fontWeight: 700,
-                    fontSize: '1.5rem'
-                  }}>{estadisticas.aprobadas}</Typography>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Box sx={{ 
+                  display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                  px: 1, py: 0.5, borderRadius: '10px', color: 'white' }}>
+                  <ListAltIcon sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                  <Typography variant="caption" sx={{ opacity: 0.9, mr: 0.5 }}>Total</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{estadisticas.total}</Typography>
                 </Box>
-              </Box>
-              
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                background: 'linear-gradient(135deg, #f56565, #e53e3e)',
-                px: 2, 
-                py: 1.5, 
-                borderRadius: '16px',
-                color: 'white',
-                boxShadow: '0 8px 20px rgba(245, 101, 101, 0.3)',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 12px 30px rgba(245, 101, 101, 0.4)'
-                }
-              }}>
-                <CancelIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
-                <Box>
-                  <Typography variant="body2" sx={{ 
-                    fontSize: '0.8rem',
-                    fontWeight: 500,
-                    opacity: 0.9
-                  }}>Desaprobadas</Typography>
-                  <Typography variant="h4" sx={{ 
-                    fontWeight: 700,
-                    fontSize: '1.5rem'
-                  }}>{estadisticas.desaprobadas}</Typography>
+                <Box sx={{ 
+                  display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #48bb78, #38a169)',
+                  px: 1, py: 0.5, borderRadius: '10px', color: 'white' }}>
+                  <CheckCircleOutlineIcon sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                  <Typography variant="caption" sx={{ opacity: 0.9, mr: 0.5 }}>Aprobadas</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{estadisticas.aprobadas}</Typography>
+                </Box>
+                <Box sx={{ 
+                  display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #f56565, #e53e3e)',
+                  px: 1, py: 0.5, borderRadius: '10px', color: 'white' }}>
+                  <CancelIcon sx={{ mr: 0.5, fontSize: '0.9rem' }} />
+                  <Typography variant="caption" sx={{ opacity: 0.9, mr: 0.5 }}>Desaprobadas</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{estadisticas.desaprobadas}</Typography>
                 </Box>
               </Box>
             </Box>
           </Box>
+          
         </Paper>
 
         {/* Formulario de registro - LAYOUT EXACTO como en el HTML original */}
@@ -615,8 +547,8 @@ const Justificaciones = () => {
           <Box sx={{ p: '1.25rem' }}>
             <form onSubmit={handleSubmit}>
             {/* Primera fila: Fecha y Tipo - Layout simétrico */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={6}>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} md={5}>
                 <TextField
                   label="Fecha de Justificación"
                   type="date"
@@ -651,34 +583,30 @@ const Justificaciones = () => {
                 />
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required sx={{ minWidth: { xs: '100%', md: 360 } }}>
-                  <InputLabel sx={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'unset' }}>Tipo de Justificación</InputLabel>
+              <Grid item xs={12} md={7}>
+                <FormControl fullWidth required>
+                  <InputLabel shrink sx={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'unset' }}>Tipo de Justificación</InputLabel>
                   <Select
                     value={formData.tipo}
                     onChange={(e) => handleInputChange('tipo', e.target.value)}
                     label="Tipo de Justificación"
+                    displayEmpty
+                    renderValue={(selected) => selected || (<Box component="span" sx={{ color: '#94a3b8' }}>Seleccione una opción</Box>)}
+                    MenuProps={{ disableScrollLock: true }}
                     sx={{
                       borderRadius: '12px',
-                      height: '56px',
+                      width: '100%',
                       '& .MuiOutlinedInput-root': {
-                        border: '2px solid #e2e8f0',
-                        padding: '1rem',
-                        fontSize: '1rem',
+                        borderRadius: '12px',
                         transition: 'all 0.3s ease',
-                        '&:focus': {
-                          borderColor: '#3b82f6',
-                          boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
-                          transform: 'translateY(-1px)'
-                        },
-                        '&:hover': {
-                          borderColor: '#3b82f6'
-                        }
+                        minHeight: 56,
+                        '& fieldset': { borderWidth: 2, borderColor: '#e2e8f0' },
+                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                        '&.Mui-focused fieldset': { borderColor: '#3b82f6', boxShadow: '0 0 0 4px rgba(59,130,246,0.1)' }
                       },
-                      '& .MuiInputLabel-root': {
-                        color: '#64748b',
-                        fontWeight: 500,
-                        fontSize: '0.95rem'
+                      '& .MuiSelect-select, & .MuiOutlinedInput-input': {
+                        paddingTop: '14px',
+                        paddingBottom: '14px'
                       }
                     }}
                   >
@@ -694,11 +622,11 @@ const Justificaciones = () => {
             </Grid>
             
             {/* Segunda fila: Motivo - Ancho completo centrado */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
               <TextField
                 label="Motivo"
                 multiline
-                rows={3}
+                rows={2}
                 value={formData.motivo}
                 onChange={(e) => handleInputChange('motivo', e.target.value)}
                 required
@@ -738,35 +666,31 @@ const Justificaciones = () => {
             </Box>
             
             {/* Tercera fila: Estado, Aprobador y Botón - Layout equilibrado */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid container spacing={2} sx={{ mb: 3 }}>
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth required sx={{ minWidth: { xs: '100%', md: 240 } }}>
-                  <InputLabel sx={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'unset' }}>Estado</InputLabel>
+                  <InputLabel shrink sx={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'unset' }}>Estado</InputLabel>
                   <Select
                     value={formData.estado}
                     onChange={(e) => handleInputChange('estado', e.target.value)}
                     label="Estado"
+                    displayEmpty
+                    renderValue={(selected) => selected || (<Box component="span" sx={{ color: '#94a3b8' }}>Seleccione una opción</Box>)}
+                    MenuProps={{ disableScrollLock: true }}
                     sx={{
                       borderRadius: '12px',
-                      height: '56px',
+                      width: '100%',
                       '& .MuiOutlinedInput-root': {
-                        border: '2px solid #e2e8f0',
-                        padding: '1rem',
-                        fontSize: '1rem',
+                        borderRadius: '12px',
                         transition: 'all 0.3s ease',
-                        '&:focus': {
-                          borderColor: '#3b82f6',
-                          boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
-                          transform: 'translateY(-1px)'
-                        },
-                        '&:hover': {
-                          borderColor: '#3b82f6'
-                        }
+                        minHeight: 56,
+                        '& fieldset': { borderWidth: 2, borderColor: '#e2e8f0' },
+                        '&:hover fieldset': { borderColor: '#3b82f6' },
+                        '&.Mui-focused fieldset': { borderColor: '#3b82f6', boxShadow: '0 0 0 4px rgba(59,130,246,0.1)' }
                       },
-                      '& .MuiInputLabel-root': {
-                        color: '#64748b',
-                        fontWeight: 500,
-                        fontSize: '0.95rem'
+                      '& .MuiSelect-select, & .MuiOutlinedInput-input': {
+                        paddingTop: '14px',
+                        paddingBottom: '14px'
                       }
                     }}
                   >
@@ -870,7 +794,7 @@ const Justificaciones = () => {
                   size="large"
                   fullWidth
                   sx={{
-                    height: '56px',
+                    height: 52,
                     background: 'linear-gradient(135deg, #10b981, #059669)',
                     border: 'none',
                     borderRadius: '12px',
@@ -907,16 +831,16 @@ const Justificaciones = () => {
           border: '1px solid #e5e7eb',
           overflow: 'hidden'
         }}>
-          <Box sx={{
+          <Box sx={{ 
             backgroundColor: '#0f172a',
             color: 'white',
-            p: '1rem 1.25rem',
+            p: '0.5rem 0.75rem',
             borderRadius: '16px 16px 0 0'
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h5" sx={{ 
+              <Typography variant="h6" sx={{ 
                 fontWeight: 600,
-                fontSize: '1.25rem',
+                fontSize: '1rem',
                 mb: 0,
                 display: 'flex',
                 alignItems: 'center',
@@ -929,17 +853,17 @@ const Justificaciones = () => {
               {/* Filtros integrados - EXACTOS al HTML original */}
               <Box sx={{ 
                 background: 'rgba(255, 255, 255, 0.1)',
-                padding: '0.75rem',
+                padding: '0.5rem',
                 borderRadius: '0.5rem',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.2)'
               }}>
-                <Grid container spacing={1}>
+                <Grid container spacing={1} alignItems="center">
                   <Grid item xs={4}>
-                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.8rem', fontWeight: 500, mb: 0.25 }}>
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.75rem', fontWeight: 500, mb: 0 }}>
                       Mes
                     </Typography>
-                    <FormControl fullWidth size="small">
+                    <FormControl fullWidth size="small" sx={{ mt: 0.25 }}>
                       <Select
                         value={filtroMes}
                         onChange={(e) => setFiltroMes(e.target.value)}
@@ -947,10 +871,8 @@ const Justificaciones = () => {
                           background: 'rgba(255, 255, 255, 0.9)',
                           border: '1px solid rgba(255, 255, 255, 0.3)',
                           color: '#2c3e50',
-                          fontSize: '0.8rem',
-                          '& .MuiOutlinedInput-root': {
-                            padding: '0.375rem 0.5rem'
-                          },
+                          fontSize: '0.75rem',
+                          '& .MuiOutlinedInput-root': { padding: '0.25rem 0.5rem' },
                           '&:focus': {
                             background: 'white',
                             borderColor: '#3498db',
@@ -976,10 +898,10 @@ const Justificaciones = () => {
                   </Grid>
                   
                   <Grid item xs={4}>
-                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.8rem', fontWeight: 500, mb: 0.25 }}>
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.75rem', fontWeight: 500, mb: 0 }}>
                       Año
                     </Typography>
-                    <FormControl fullWidth size="small">
+                    <FormControl fullWidth size="small" sx={{ mt: 0.25 }}>
                       <Select
                         value={filtroAnio}
                         onChange={(e) => setFiltroAnio(e.target.value)}
@@ -987,10 +909,8 @@ const Justificaciones = () => {
                           background: 'rgba(255, 255, 255, 0.9)',
                           border: '1px solid rgba(255, 255, 255, 0.3)',
                           color: '#2c3e50',
-                          fontSize: '0.8rem',
-                          '& .MuiOutlinedInput-root': {
-                            padding: '0.375rem 0.5rem'
-                          },
+                          fontSize: '0.75rem',
+                          '& .MuiOutlinedInput-root': { padding: '0.25rem 0.5rem' },
                           '&:focus': {
                             background: 'white',
                             borderColor: '#3498db',
@@ -1006,7 +926,7 @@ const Justificaciones = () => {
                     </FormControl>
                   </Grid>
                   
-                  <Grid item xs={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <Grid item xs={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                     <Button
                       variant="outlined"
                       size="small"
@@ -1016,8 +936,8 @@ const Justificaciones = () => {
                         borderColor: 'rgba(255, 255, 255, 0.5)',
                         color: 'white',
                         background: 'transparent',
-                        padding: '0.375rem 0.5rem',
-                        fontSize: '0.8rem',
+                        padding: '0.25rem 0.5rem',
+                        fontSize: '0.75rem',
                         '&:hover': {
                           background: 'rgba(255, 255, 255, 0.2)',
                           borderColor: 'rgba(255, 255, 255, 0.8)',
@@ -1035,7 +955,7 @@ const Justificaciones = () => {
           
           <Box sx={{ p: 0 }}>
             <TableContainer>
-              <Table sx={{ marginBottom: 0 }}>
+              <Table sx={{ marginBottom: 0 }} size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#2c3e50' }}>
                     <TableCell sx={{ 
@@ -1112,7 +1032,7 @@ const Justificaciones = () => {
                     </TableRow>
                   ) : (
                     justificacionesPaginadas.map((justificacion) => (
-                      <TableRow key={justificacion.ID} hover sx={{ '&:hover': { bgcolor: '#ecf0f1' } }}>
+                      <TableRow key={justificacion.JustificacionID || justificacion.ID} hover sx={{ '&:hover': { bgcolor: '#ecf0f1' } }}>
                         <TableCell sx={{ 
                           padding: '1rem', 
                           borderBottom: '1px solid #e9ecef', 
@@ -1171,7 +1091,7 @@ const Justificaciones = () => {
                           <IconButton
                             color="error"
                             size="small"
-                            onClick={() => handleDelete(justificacion.ID)}
+                            onClick={() => handleDelete(justificacion.JustificacionID || justificacion.ID)}
                             title="Eliminar"
                             sx={{
                               background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
@@ -1210,7 +1130,7 @@ const Justificaciones = () => {
           }}>
             <Typography variant="body2" sx={{ 
               color: '#2c3e50',
-              fontSize: '0.9rem',
+              fontSize: '0.85rem',
               fontWeight: 500
             }}>
               Mostrando {inicio + 1}-{Math.min(fin, justificacionesFiltradas.length)} de {justificacionesFiltradas.length} justificaciones
@@ -1233,7 +1153,7 @@ const Justificaciones = () => {
                 Anterior
               </Button>
               
-              <Typography variant="body2" sx={{ mx: 2, fontWeight: 600, color: '#2c3e50' }}>
+              <Typography variant="body2" sx={{ mx: 2, fontWeight: 600, color: '#2c3e50', fontSize: '0.85rem' }}>
                 {paginaActual} de {totalPaginas}
               </Typography>
               
