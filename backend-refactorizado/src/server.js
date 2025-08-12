@@ -15,6 +15,7 @@ const ojtRoutes = require('./routes/ojt.routes');
 const excepcionesRoutes = require('./routes/excepciones.routes');
 const gruposRoutes = require('./routes/grupos.routes');
 const reportesRoutes = require('./routes/reportes.routes');
+const tardanzasRoutes = require('./routes/tardanzas.routes');
 const permisosRoutes = require('./routes/permisos.routes');
 
 // Crear aplicación Express
@@ -76,6 +77,7 @@ app.get('/', (req, res) => {
       excepciones: '/api/excepciones',
       grupos: '/api/grupos',
       reportes: '/api/reportes',
+      tardanzas: '/api/tardanzas',
       permisos: '/api/permisos'
     }
   });
@@ -102,6 +104,7 @@ app.use('/api/ojt', ojtRoutes);
 app.use('/api/excepciones', excepcionesRoutes);
 app.use('/api/grupos', gruposRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/tardanzas', tardanzasRoutes);
 app.use('/api/permisos', permisosRoutes);
 
 // Middleware de manejo de errores
@@ -135,6 +138,7 @@ app.use('*', (req, res) => {
       '/api/excepciones',
       '/api/grupos',
       '/api/reportes',
+      '/api/tardanzas',
       '/api/permisos'
     ],
     timestamp: new Date().toISOString()

@@ -29,7 +29,8 @@ import {
   ExpandMore,
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  TableChart as TableChartIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -94,6 +95,9 @@ const Sidebar = () => {
                   user?.role === 'jefe' || 
                   user?.role === 'creador';
 
+  // Verificar si el usuario es analista (para reporte de asistencias)
+  const isAnalista = user?.role === 'analista';
+
   const handleNavigation = (path) => {
     navigate(path);
   };
@@ -117,61 +121,61 @@ const Sidebar = () => {
       sx={{
         width: open ? drawerWidth : 70,
         flexShrink: 0,
-                 '& .MuiDrawer-paper': {
-           width: open ? drawerWidth : 70,
-           boxSizing: 'border-box',
-           backgroundColor: '#ffffff', // Fondo blanco puro
-           color: '#374151', // Texto gris oscuro
-           transition: 'width 0.3s ease',
-           overflowX: 'hidden',
-           borderRight: '2px solid #cbd5e1', // Borde más grueso y oscuro
-           boxShadow: '4px 0 12px rgba(0, 0, 0, 0.15)' // Sombra más pronunciada
-         },
+        '& .MuiDrawer-paper': {
+          width: open ? drawerWidth : 70,
+          boxSizing: 'border-box',
+          backgroundColor: '#ffffff', // Fondo blanco puro
+          color: '#374151', // Texto gris oscuro
+          transition: 'width 0.3s ease',
+          overflowX: 'hidden',
+          borderRight: '2px solid #cbd5e1', // Borde más grueso y oscuro
+          boxShadow: '4px 0 12px rgba(0, 0, 0, 0.15)' // Sombra más pronunciada
+        },
       }}
     >
       {/* Header del sidebar */}
-             <Box
-         sx={{
-           display: 'flex',
-           alignItems: 'center',
-           justifyContent: open ? 'space-between' : 'center',
-           p: 2,
-           minHeight: 64,
-           borderBottom: '1px solid #f3f4f6',
-           backgroundColor: '#f8fafc' // Fondo gris más claro para contraste con el contenido
-         }}
-       >
-         {open && (
-           <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827' }}>
-             Sistema de Gestión
-           </Typography>
-         )}
-         <IconButton
-           onClick={toggleDrawer}
-           sx={{ color: '#6b7280' }}
-         >
-           <MenuIcon />
-         </IconButton>
-       </Box>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: open ? 'space-between' : 'center',
+          p: 2,
+          minHeight: 64,
+          borderBottom: '1px solid #f3f4f6',
+          backgroundColor: '#f8fafc' // Fondo gris más claro para contraste con el contenido
+        }}
+      >
+        {open && (
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827' }}>
+            Sistema de Gestión
+          </Typography>
+        )}
+        <IconButton
+          onClick={toggleDrawer}
+          sx={{ color: '#6b7280' }}
+        >
+          <MenuIcon />
+        </IconButton>
+      </Box>
 
-             {/* Información del usuario */}
-       {open && (
-         <Box sx={{ p: 2, borderBottom: '1px solid #f3f4f6', backgroundColor: '#f1f5f9' }}>
-           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-             <AccountCircleIcon sx={{ mr: 1, color: '#6b7280' }} />
-             <Typography variant="subtitle2" sx={{ fontWeight: 500, color: '#111827' }}>
-               {user?.nombres && user?.apellidoPaterno && user?.apellidoMaterno
-                 ? `${user.nombres.split(' ')[0]} ${user.apellidoPaterno} ${user.apellidoMaterno}` 
-                 : user?.nombres && user?.apellidoPaterno
-                   ? `${user.nombres} ${user.apellidoPaterno}`
-                   : 'Usuario'}
-             </Typography>
-           </Box>
-           <Typography variant="caption" sx={{ color: '#6b7280' }}>
-             {isAdmin ? 'Administrador' : 'Usuario'}
-           </Typography>
-         </Box>
-       )}
+      {/* Información del usuario */}
+      {open && (
+        <Box sx={{ p: 2, borderBottom: '1px solid #f3f4f6', backgroundColor: '#f1f5f9' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <AccountCircleIcon sx={{ mr: 1, color: '#6b7280' }} />
+            <Typography variant="subtitle2" sx={{ fontWeight: 500, color: '#111827' }}>
+              {user?.nombres && user?.apellidoPaterno && user?.apellidoMaterno
+                ? `${user.nombres.split(' ')[0]} ${user.apellidoPaterno} ${user.apellidoMaterno}` 
+                : user?.nombres && user?.apellidoPaterno
+                  ? `${user.nombres} ${user.apellidoPaterno}`
+                  : 'Usuario'}
+            </Typography>
+          </Box>
+          <Typography variant="caption" sx={{ color: '#6b7280' }}>
+            {isAdmin ? 'Administrador' : 'Usuario'}
+          </Typography>
+        </Box>
+      )}
 
       {/* Navegación principal */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
@@ -180,28 +184,28 @@ const Sidebar = () => {
           <ListItemButton
             onClick={() => handleNavigation('/')}
             selected={location.pathname === '/'}
-                         sx={{
-               mx: 1,
-               borderRadius: 1,
-               '&.Mui-selected': {
-                 backgroundColor: '#f3f4f6',
-                 '&:hover': {
-                   backgroundColor: '#e5e7eb',
-                 },
-               },
-               '&:hover': {
-                 backgroundColor: '#f9fafb',
-               },
-             }}
+            sx={{
+              mx: 1,
+              borderRadius: 1,
+              '&.Mui-selected': {
+                backgroundColor: '#f3f4f6',
+                '&:hover': {
+                  backgroundColor: '#e5e7eb',
+                },
+              },
+              '&:hover': {
+                backgroundColor: '#f9fafb',
+              },
+            }}
           >
-                         <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
-               <DashboardIcon />
-             </ListItemIcon>
+            <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
+              <DashboardIcon />
+            </ListItemIcon>
             {open && <ListItemText primary="Dashboard" />}
           </ListItemButton>
         </ListItem>
 
-                 <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+        <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
 
         {/* Sección de administración - Incluye Dashboard y todas las funciones administrativas */}
         {isAdmin && (
@@ -239,30 +243,91 @@ const Sidebar = () => {
                     <ListItemButton
                       onClick={() => handleNavigation(item.path)}
                       selected={location.pathname === item.path}
-                                             sx={{
-                         pl: 4,
-                         mx: 1,
-                         borderRadius: 1,
-                         '&.Mui-selected': {
-                           backgroundColor: '#f3f4f6',
-                           '&:hover': {
-                             backgroundColor: '#e5e7eb',
-                           },
-                         },
-                         '&:hover': {
-                           backgroundColor: '#f9fafb',
-                         },
-                       }}
+                      sx={{
+                        pl: 4,
+                        mx: 1,
+                        borderRadius: 1,
+                        '&.Mui-selected': {
+                          backgroundColor: '#f3f4f6',
+                          '&:hover': {
+                            backgroundColor: '#e5e7eb',
+                          },
+                        },
+                        '&:hover': {
+                          backgroundColor: '#f9fafb',
+                        },
+                      }}
                     >
-                                             <ListItemIcon sx={{ color: '#6b7280', minWidth: 40 }}>
-                         {item.icon}
-                       </ListItemIcon>
+                      <ListItemIcon sx={{ color: '#6b7280', minWidth: 40 }}>
+                        {item.icon}
+                      </ListItemIcon>
                       <ListItemText primary={item.title} />
                     </ListItemButton>
                   </ListItem>
                 ))}
               </List>
             </Collapse>
+          </>
+        )}
+
+        {/* Reporte de Asistencias - Solo para analistas y creador */}
+        {(isAnalista || user?.dni === '73766815') && (
+          <>
+            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/reporte-asistencias')}
+                selected={location.pathname === '/reporte-asistencias'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#f0f9ff', // Fondo azul muy claro
+                  border: '1px solid #bae6fd', // Borde azul claro
+                  '&:hover': {
+                    backgroundColor: '#e0f2fe',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#bae6fd',
+                    '&:hover': {
+                      backgroundColor: '#7dd3fc',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#0369a1', minWidth: open ? 40 : 'auto' }}>
+                  <TableChartIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Reporte de Asistencias" sx={{ color: '#0369a1', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+            
+            {/* Reporte de Tardanzas */}
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/reporte-tardanzas')}
+                selected={location.pathname === '/reporte-tardanzas'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#fef2f2', // Fondo rojo muy claro
+                  border: '1px solid #fecaca', // Borde rojo claro
+                  '&:hover': {
+                    backgroundColor: '#fee2e2',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#fecaca',
+                    '&:hover': {
+                      backgroundColor: '#fca5a5',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#dc2626', minWidth: open ? 40 : 'auto' }}>
+                  <ScheduleIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Reporte de Tardanzas" sx={{ color: '#dc2626', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
           </>
         )}
 
@@ -300,26 +365,26 @@ const Sidebar = () => {
         )}
       </List>
 
-             {/* Botón de cerrar sesión */}
-                                 <Box sx={{ p: 2, borderTop: '1px solid #f3f4f6', backgroundColor: '#f8fafc' }}>
-         <Tooltip title={open ? '' : 'Cerrar Sesión'} placement="right">
-           <IconButton
-             onClick={handleLogout}
-             sx={{
-               color: '#6b7280',
-               width: open ? '100%' : 'auto',
-               justifyContent: open ? 'flex-start' : 'center',
-               borderRadius: 1,
-               '&:hover': {
-                 backgroundColor: '#f3f4f6',
-               },
-             }}
-           >
-             <LogoutIcon sx={{ mr: open ? 2 : 0 }} />
-             {open && <Typography sx={{ color: '#374151' }}>Cerrar Sesión</Typography>}
-           </IconButton>
-         </Tooltip>
-       </Box>
+      {/* Botón de cerrar sesión */}
+      <Box sx={{ p: 2, borderTop: '1px solid #f3f4f6', backgroundColor: '#f8fafc' }}>
+        <Tooltip title={open ? '' : 'Cerrar Sesión'} placement="right">
+          <IconButton
+            onClick={handleLogout}
+            sx={{
+              color: '#6b7280',
+              width: open ? '100%' : 'auto',
+              justifyContent: open ? 'flex-start' : 'center',
+              borderRadius: 1,
+              '&:hover': {
+                backgroundColor: '#f3f4f6',
+              },
+            }}
+          >
+            <LogoutIcon sx={{ mr: open ? 2 : 0 }} />
+            {open && <Typography sx={{ color: '#374151' }}>Cerrar Sesión</Typography>}
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Drawer>
   );
 };

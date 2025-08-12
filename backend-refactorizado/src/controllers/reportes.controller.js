@@ -1,148 +1,148 @@
-const { executeQuery, executeStoredProcedure, sql } = require('../config/database');
+const { executeQuery, sql } = require('../config/database');
 
 // ========================================
-// GESTIÓN DE REPORTES
+// REPORTE DE ASISTENCIAS
 // ========================================
 
-// Generar reporte de asistencia maestro
-exports.generarReporteAsistencia = async (req, res) => {
+// Obtener reporte de asistencias por mes/año
+exports.getReporteAsistencias = async (req, res) => {
   try {
-    const { fechaInicio, fechaFin } = req.body;
+    const { mes, anio, campania, cargo } = req.query;
     
-    console.log('📊 Generando reporte de asistencia:', { fechaInicio, fechaFin });
-    
-    // Validar fechas
-    if (!fechaInicio || !fechaFin) {
+    // Validar parámetros
+    if (!mes || !anio) {
       return res.status(400).json({
         success: false,
-        message: 'Fechas de inicio y fin son requeridas',
-        error: 'MISSING_DATES'
+        message: 'Mes y año son requeridos',
+        error: 'MISSING_PARAMETERS'
       });
     }
 
-    // Validar que fechaInicio no sea mayor que fechaFin
-    if (new Date(fechaInicio) > new Date(fechaFin)) {
+    const mesNum = parseInt(mes);
+    const anioNum = parseInt(anio);
+
+    // Validar rangos
+    if (mesNum < 1 || mesNum > 12) {
       return res.status(400).json({
         success: false,
-        message: 'La fecha de inicio no puede ser mayor que la fecha de fin',
-        error: 'INVALID_DATE_RANGE'
+        message: 'El mes debe estar entre 1 y 12',
+        error: 'INVALID_MONTH'
       });
     }
 
-    // Validar que las fechas no sean del futuro
-    const hoy = new Date();
-    const fechaInicioDate = new Date(fechaInicio);
-    const fechaFinDate = new Date(fechaFin);
-    
-    if (fechaInicioDate > hoy || fechaFinDate > hoy) {
+    if (anioNum < 2020 || anioNum > 2030) {
       return res.status(400).json({
         success: false,
-        message: 'No se pueden generar reportes para fechas futuras',
-        error: 'FUTURE_DATES_NOT_ALLOWED'
+        message: 'El año debe estar entre 2020 y 2030',
+        error: 'INVALID_YEAR'
       });
     }
 
-    // Validar que el rango de fechas no sea mayor a 1 año
-    const diffTime = Math.abs(fechaFinDate - fechaInicioDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Calcular fechas del mes
+    const fechaInicio = `${anioNum}-${mesNum.toString().padStart(2, '0')}-01`;
+    const ultimoDiaDelMes = new Date(anioNum, mesNum, 0).getDate();
+    const fechaFin = `${anioNum}-${mesNum.toString().padStart(2, '0')}-${ultimoDiaDelMes.toString().padStart(2, '0')}`;
+
+    // Generar columnas dinámicamente para el mes seleccionado
+    const columnasFechas = [];
+    const columnasPivot = [];
     
-    if (diffDays > 365) {
-      return res.status(400).json({
-        success: false,
-        message: 'El rango de fechas no puede ser mayor a 1 año',
-        error: 'DATE_RANGE_TOO_LARGE'
-      });
+    for (let dia = 1; dia <= ultimoDiaDelMes; dia++) {
+      const fecha = `${anioNum}-${mesNum.toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
+      columnasFechas.push(`AsistenciaPivotada.[${fecha}]`);
+      columnasPivot.push(`[${fecha}]`);
     }
 
-    console.log(`📅 Rango de fechas válido: ${fechaInicio} a ${fechaFin} (${diffDays} días)`);
+    // Construir filtros adicionales
+    let filtrosAdicionales = '';
+    const paramsAdicionales = [];
     
-    // Ejecutar el stored procedure
-    const result = await executeStoredProcedure(
-      '[dbo].[usp_GenerarReporteAsistenciaMaestro]',
-      [
-        { name: 'FechaInicio', type: sql.Date, value: fechaInicioDate },
-        { name: 'FechaFin', type: sql.Date, value: fechaFinDate }
-      ]
-    );
-
-    console.log('✅ Stored procedure ejecutado exitosamente');
-    console.log(`📊 Registros procesados: ${result.rowsAffected[0] || 0}`);
-
-    res.json({
-      success: true,
-      message: 'Reporte de asistencia generado exitosamente',
-      data: {
-        fechaInicio: fechaInicio,
-        fechaFin: fechaFin,
-        registrosGenerados: result.rowsAffected[0] || 0,
-        rangoDias: diffDays,
-        fechaGeneracion: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Error generando reporte de asistencia:', error);
+    if (campania && campania !== 'todas') {
+      filtrosAdicionales += ' AND c.CampañaID = @campaniaID';
+      paramsAdicionales.push({ name: 'campaniaID', type: sql.Int, value: parseInt(campania) });
+    }
     
-    // Manejar errores específicos del stored procedure
-    if (error.message && error.message.includes('usp_GenerarReporteAsistenciaMaestro')) {
-      return res.status(500).json({
-        success: false,
-        message: 'Error ejecutando el stored procedure de reporte',
-        error: 'STORED_PROCEDURE_ERROR',
-        details: error.message
-      });
+    if (cargo && cargo !== 'todos') {
+      filtrosAdicionales += ' AND cg.CargoID = @cargoID';
+      paramsAdicionales.push({ name: 'cargoID', type: sql.Int, value: parseInt(cargo) });
     }
 
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor al generar reporte',
-      error: 'INTERNAL_SERVER_ERROR'
-    });
-  }
-};
-
-// Obtener información del stored procedure
-exports.getStoredProcedureInfo = async (req, res) => {
-  try {
-    console.log('ℹ️ Obteniendo información del stored procedure de reportes');
-    
-    // Consultar información del SP
-    const spQuery = `
-      SELECT 
-        ROUTINE_NAME,
-        ROUTINE_DEFINITION,
-        CREATED,
-        LAST_ALTERED
-      FROM INFORMATION_SCHEMA.ROUTINES 
-      WHERE ROUTINE_NAME = 'usp_GenerarReporteAsistenciaMaestro'
-        AND ROUTINE_TYPE = 'PROCEDURE'
+    // Construir la consulta SQL dinámicamente
+    const query = `
+      SELECT
+          e.DNI,
+          UPPER(e.ApellidoPaterno) AS ApellidoPaterno,
+          UPPER(e.ApellidoMaterno) AS ApellidoMaterno,
+          UPPER(e.Nombres) AS Nombres,
+          UPPER(c.NombreCampaña) AS Campaña,
+          UPPER(cg.NombreCargo) AS Cargo,
+          UPPER(e.EstadoEmpleado) AS EstadoEmpleado,
+          e.FechaContratacion,
+          -- Columnas de asistencia dinámicas
+          ${columnasFechas.join(', ')}
+      FROM
+          [Partner].[PRI].[Empleados] e
+      LEFT JOIN (
+          -- Subconsulta que pivotea los datos de asistencia
+          SELECT
+              DNI,
+              ${columnasPivot.join(', ')}
+          FROM (
+              -- Origen de los datos: DNI, Fecha y Estado de la asistencia
+              SELECT DNI, CONVERT(varchar, Fecha, 23) AS Fecha, Estado
+              FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado]
+              WHERE Fecha BETWEEN @fechaInicio AND @fechaFin
+          ) AS SourceData
+          PIVOT (
+              MAX(Estado)
+              FOR Fecha IN (
+                  ${columnasPivot.join(', ')}
+              )
+          ) AS pvt
+      ) AS AsistenciaPivotada ON e.DNI = AsistenciaPivotada.DNI
+      LEFT JOIN [Partner].[PRI].[Campanias] c ON e.CampañaID = c.CampañaID
+      LEFT JOIN [Partner].[PRI].[Cargos] cg ON e.CargoID = cg.CargoID
+      -- Filtro para mostrar solo empleados activos durante el periodo seleccionado
+      WHERE
+          (e.FechaCese IS NULL OR e.FechaCese >= @fechaInicio) 
+          AND e.FechaContratacion <= @fechaFin
+          ${filtrosAdicionales}
+      ORDER BY
+          e.ApellidoPaterno, e.ApellidoMaterno, e.Nombres
     `;
-    
-    const result = await executeQuery(spQuery);
-    
-    if (result.recordset.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Stored procedure no encontrado',
-        error: 'SP_NOT_FOUND'
-      });
-    }
 
-    const spInfo = result.recordset[0];
+    const params = [
+      { name: 'fechaInicio', type: sql.Date, value: fechaInicio },
+      { name: 'fechaFin', type: sql.Date, value: fechaFin },
+      ...paramsAdicionales
+    ];
+
+    console.log(`🔍 Generando reporte de asistencias para ${mesNum}/${anioNum}`);
     
+    const result = await executeQuery(query, params);
+
+    // Preparar metadatos del reporte
+    const metadata = {
+      mes: mesNum,
+      anio: anioNum,
+      fechaInicio,
+      fechaFin,
+      totalEmpleados: result.recordset.length,
+      diasDelMes: ultimoDiaDelMes,
+      fechasColumnas: columnasPivot.map(col => col.replace(/[\[\]]/g, ''))
+    };
+
     res.json({
       success: true,
-      message: 'Información del stored procedure obtenida',
+      message: 'Reporte de asistencias generado exitosamente',
       data: {
-        nombre: spInfo.ROUTINE_NAME,
-        creado: spInfo.CREATED,
-        ultimaModificacion: spInfo.LAST_ALTERED,
-        disponible: true
+        empleados: result.recordset,
+        metadata
       }
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo información del SP:', error);
+    console.error('❌ Error generando reporte de asistencias:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',
@@ -151,28 +151,84 @@ exports.getStoredProcedureInfo = async (req, res) => {
   }
 };
 
-// Obtener estadísticas de reportes generados
-exports.getEstadisticasReportes = async (req, res) => {
+// Obtener años disponibles para reportes
+exports.getAniosDisponibles = async (req, res) => {
   try {
-    console.log('📊 Obteniendo estadísticas de reportes');
-    
-    // Por ahora retornamos información básica
-    // En el futuro se podría implementar un log de reportes generados
+    const query = `
+      SELECT DISTINCT YEAR(Fecha) as anio
+      FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado]
+      WHERE Fecha IS NOT NULL
+      ORDER BY anio DESC
+    `;
+
+    const result = await executeQuery(query);
+
     res.json({
       success: true,
-      message: 'Estadísticas de reportes obtenidas',
-      data: {
-        totalReportesGenerados: 'N/A', // Se implementaría con un log
-        ultimoReporte: 'N/A',
-        reportesEsteMes: 'N/A',
-        reportesEsteAno: 'N/A',
-        storedProcedureDisponible: true,
-        fechaUltimaVerificacion: new Date().toISOString()
-      }
+      message: 'Años disponibles obtenidos exitosamente',
+      data: result.recordset
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo estadísticas de reportes:', error);
+    console.error('❌ Error obteniendo años disponibles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Obtener campañas disponibles
+exports.getCampaniasDisponibles = async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT c.CampañaID, c.NombreCampaña
+      FROM [Partner].[PRI].[Campanias] c
+      INNER JOIN [Partner].[PRI].[Empleados] e ON c.CampañaID = e.CampañaID
+      WHERE e.EstadoEmpleado = 'ACTIVO'
+      ORDER BY c.NombreCampaña
+    `;
+
+    const result = await executeQuery(query);
+
+    res.json({
+      success: true,
+      message: 'Campañas disponibles obtenidas exitosamente',
+      data: result.recordset
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo campañas disponibles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Obtener cargos disponibles
+exports.getCargosDisponibles = async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT cg.CargoID, cg.NombreCargo
+      FROM [Partner].[PRI].[Cargos] cg
+      INNER JOIN [Partner].[PRI].[Empleados] e ON cg.CargoID = e.CargoID
+      WHERE e.EstadoEmpleado = 'ACTIVO'
+      ORDER BY cg.NombreCargo
+    `;
+
+    const result = await executeQuery(query);
+
+    res.json({
+      success: true,
+      message: 'Cargos disponibles obtenidos exitosamente',
+      data: result.recordset
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo cargos disponibles:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

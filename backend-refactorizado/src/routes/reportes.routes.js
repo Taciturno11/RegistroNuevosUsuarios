@@ -1,41 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth.middleware');
-const {
-  generarReporteAsistencia,
-  getStoredProcedureInfo,
-  getEstadisticasReportes
-} = require('../controllers/reportes.controller');
+const reportesController = require('../controllers/reportes.controller');
+const { authMiddleware, requireRole } = require('../middleware/auth.middleware');
 
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
 // ========================================
-// RUTAS DE REPORTES
+// RUTAS DE REPORTES - SOLO ANALISTAS
 // ========================================
 
-// Generar reporte de asistencia maestro
-router.post('/asistencia', generarReporteAsistencia);
+// Obtener reporte de asistencias (solo analistas y creador)
+router.get('/asistencias', requireRole(['analista', 'creador']), reportesController.getReporteAsistencias);
 
-// Obtener información del stored procedure
-router.get('/sp-info', getStoredProcedureInfo);
+// Obtener años disponibles para reportes (solo analistas y creador)
+router.get('/anios-disponibles', requireRole(['analista', 'creador']), reportesController.getAniosDisponibles);
 
-// Obtener estadísticas de reportes
-router.get('/estadisticas', getEstadisticasReportes);
+// Obtener campañas disponibles (solo analistas y creador)
+router.get('/campanias-disponibles', requireRole(['analista', 'creador']), reportesController.getCampaniasDisponibles);
 
-// Ruta raíz de reportes
-router.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API de Reportes - Sistema de Gestión de Empleados',
-    version: '1.0.0',
-    endpoints: {
-      'POST /asistencia': 'Generar reporte de asistencia maestro',
-      'GET /sp-info': 'Obtener información del stored procedure',
-      'GET /estadisticas': 'Obtener estadísticas de reportes'
-    },
-    descripcion: 'Módulo para generar reportes del sistema, incluyendo reporte maestro de asistencia'
-  });
-});
+// Obtener cargos disponibles (solo analistas y creador)
+router.get('/cargos-disponibles', requireRole(['analista', 'creador']), reportesController.getCargosDisponibles);
 
 module.exports = router;

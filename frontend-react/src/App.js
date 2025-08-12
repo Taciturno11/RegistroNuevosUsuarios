@@ -13,6 +13,8 @@ import Cese from './pages/Cese';
 import Justificaciones from './pages/Justificaciones';
 import OJT from './pages/OJT';
 import Excepciones from './pages/Excepciones';
+import ReporteAsistencias from './pages/ReporteAsistencias';
+import ReporteTardanzas from './pages/ReporteTardanzas';
 import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
 import './App.css';
@@ -147,6 +149,21 @@ const AppContent = () => {
               <Excepciones />
             </ProtectedRoute>
           } />
+          
+          {/* Reporte de Asistencias - Solo para analistas y creador */}
+          <Route path="/reporte-asistencias" element={
+            <ProtectedRoute requireRole={['analista', 'creador']}>
+              <ReporteAsistencias />
+            </ProtectedRoute>
+          } />
+          
+          {/* Reporte de Tardanzas - Solo para analistas y creador */}
+          <Route path="/reporte-tardanzas" element={
+            <ProtectedRoute requireRole={['analista', 'creador']}>
+              <ReporteTardanzas />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/control-maestro" element={<ControlMaestro />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
