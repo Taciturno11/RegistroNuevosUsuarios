@@ -77,6 +77,13 @@ const menuItems = [
     path: '/excepciones',
     icon: <ScheduleIcon />,
     adminOnly: true
+  },
+  {
+    title: 'Reporte de Asistencias',
+    path: '/reporte-asistencias',
+    icon: <TableChartIcon />,
+    adminOnly: false,
+    analistaOnly: true
   }
 ];
 
@@ -97,6 +104,12 @@ const Sidebar = () => {
 
   // Verificar si el usuario es analista (para reporte de asistencias)
   const isAnalista = user?.role === 'analista';
+  
+  // DEBUG: Imprimir información del usuario
+  console.log('🔍 DEBUG SIDEBAR - Usuario:', user);
+  console.log('🔍 DEBUG SIDEBAR - Rol del usuario:', user?.role);
+  console.log('🔍 DEBUG SIDEBAR - CargoID:', user?.cargoID);
+  console.log('🔍 DEBUG SIDEBAR - Es analista?:', isAnalista);
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -271,7 +284,7 @@ const Sidebar = () => {
         )}
 
         {/* Reporte de Asistencias - Solo para analistas */}
-        {isAnalista && (
+        {(isAnalista || true) && ( // TEMPORAL: Mostrar para todos para prueba
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>

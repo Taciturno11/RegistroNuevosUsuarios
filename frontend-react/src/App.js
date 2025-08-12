@@ -151,7 +151,7 @@ const AppContent = () => {
           
           {/* Reporte de Asistencias - Solo para analistas */}
           <Route path="/reporte-asistencias" element={
-            <ProtectedRoute requireRole={['analista']}>
+            <ProtectedRoute requireRole={['analista', 'admin', 'coordinador', 'supervisor', 'jefe', 'creador']}>
               <ReporteAsistencias />
             </ProtectedRoute>
           } />
