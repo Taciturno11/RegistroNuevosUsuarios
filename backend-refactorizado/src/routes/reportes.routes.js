@@ -1,41 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth.middleware');
-const {
-  generarReporteAsistencia,
-  getStoredProcedureInfo,
-  getEstadisticasReportes
-} = require('../controllers/reportes.controller');
+const reportesController = require('../controllers/reportes.controller');
+const { authMiddleware, requireRole } = require('../middleware/auth.middleware');
 
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
 // ========================================
-// RUTAS DE REPORTES
+// RUTAS DE REPORTES - SOLO ANALISTAS
 // ========================================
 
-// Generar reporte de asistencia maestro
-router.post('/asistencia', generarReporteAsistencia);
+// Obtener reporte de asistencias (solo analistas)
+router.get('/asistencias', requireRole(['analista']), reportesController.getReporteAsistencias);
 
-// Obtener información del stored procedure
-router.get('/sp-info', getStoredProcedureInfo);
-
-// Obtener estadísticas de reportes
-router.get('/estadisticas', getEstadisticasReportes);
-
-// Ruta raíz de reportes
-router.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API de Reportes - Sistema de Gestión de Empleados',
-    version: '1.0.0',
-    endpoints: {
-      'POST /asistencia': 'Generar reporte de asistencia maestro',
-      'GET /sp-info': 'Obtener información del stored procedure',
-      'GET /estadisticas': 'Obtener estadísticas de reportes'
-    },
-    descripcion: 'Módulo para generar reportes del sistema, incluyendo reporte maestro de asistencia'
-  });
-});
+// Obtener años disponibles para reportes (solo analistas)
+router.get('/anios-disponibles', requireRole(['analista']), reportesController.getAniosDisponibles);
 
 module.exports = router;

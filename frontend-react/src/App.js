@@ -13,6 +13,7 @@ import Cese from './pages/Cese';
 import Justificaciones from './pages/Justificaciones';
 import OJT from './pages/OJT';
 import Excepciones from './pages/Excepciones';
+import ReporteAsistencias from './pages/ReporteAsistencias';
 import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
 import './App.css';
@@ -147,6 +148,14 @@ const AppContent = () => {
               <Excepciones />
             </ProtectedRoute>
           } />
+          
+          {/* Reporte de Asistencias - Solo para analistas */}
+          <Route path="/reporte-asistencias" element={
+            <ProtectedRoute requireRole={['analista']}>
+              <ReporteAsistencias />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/control-maestro" element={<ControlMaestro />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
