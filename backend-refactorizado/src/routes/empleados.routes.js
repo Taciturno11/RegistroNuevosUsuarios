@@ -9,7 +9,10 @@ const {
   deleteEmpleado,
   getEmpleadosBySupervisor,
   getEmpleadosStats,
-  searchEmpleados
+  searchEmpleados,
+  actualizarRolEmpleado,
+  obtenerHistorialRoles,
+  getAllEmpleadosConRoles
 } = require('../controllers/empleados.controller');
 
 // Todas las rutas requieren autenticación
@@ -17,6 +20,9 @@ router.use(authMiddleware);
 
 // Obtener todos los empleados (con filtros y paginación)
 router.get('/', getAllEmpleados);
+
+// Obtener todos los empleados con roles mapeados para el Control Maestro
+router.get('/control-maestro', getAllEmpleadosConRoles);
 
 // Obtener estadísticas de empleados
 router.get('/stats', getEmpleadosStats);
@@ -38,5 +44,11 @@ router.delete('/:dni', deleteEmpleado);
 
 // Obtener empleados por supervisor
 router.get('/supervisor/:supervisorDNI', getEmpleadosBySupervisor);
+
+// Actualizar rol de empleado (solo para el creador)
+router.put('/:dni/rol', actualizarRolEmpleado);
+
+// Obtener historial de cambios de roles (solo para el creador)
+router.get('/historial-roles', obtenerHistorialRoles);
 
 module.exports = router;

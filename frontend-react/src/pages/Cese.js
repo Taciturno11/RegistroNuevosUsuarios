@@ -35,23 +35,31 @@ const Cese = () => {
     if (!fechaString) return 'No especificada';
     
     try {
+      // Si la fecha viene como string ISO, convertirla correctamente
       let fecha;
       if (typeof fechaString === 'string') {
         if (fechaString.includes('T')) {
-          fecha = new Date(fechaString);
+          // Formato ISO con T - usar la fecha tal como viene sin conversión de zona horaria
+          const [year, month, day] = fechaString.split('T')[0].split('-');
+          fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         } else if (fechaString.includes('-')) {
-          fecha = new Date(fechaString + 'T00:00:00');
+          // Formato YYYY-MM-DD
+          const [year, month, day] = fechaString.split('-');
+          fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         } else {
+          // Otro formato, intentar parsear
           fecha = new Date(fechaString);
         }
       } else {
         fecha = new Date(fechaString);
       }
       
+      // Verificar que la fecha sea válida
       if (isNaN(fecha.getTime())) {
         return 'Fecha inválida';
       }
       
+      // Formatear como DD/MM/YYYY
       return fecha.toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',

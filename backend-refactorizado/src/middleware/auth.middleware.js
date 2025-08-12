@@ -64,12 +64,29 @@ const authMiddleware = async (req, res, next) => {
         });
       }
 
+      // Determinar rol basado en CargoID
+      let role = 'empleado';
+      if (user.CargoID === 1) role = 'agente';
+      else if (user.CargoID === 2) role = 'coordinador';
+      else if (user.CargoID === 3) role = 'back office';
+      else if (user.CargoID === 4) role = 'analista';
+      else if (user.CargoID === 5) role = 'supervisor';
+      else if (user.CargoID === 6) role = 'monitor';
+      else if (user.CargoID === 7) role = 'capacitador';
+      else if (user.CargoID === 8) role = 'jefe';
+      else if (user.CargoID === 9) role = 'controller';
+      
+      // El creador siempre tiene acceso especial
+      if (user.DNI === '73766815') role = 'creador';
+
       // Agregar información del usuario al request
       req.user = {
         dni: user.DNI,
         nombres: user.Nombres,
         apellidoPaterno: user.ApellidoPaterno,
-        cargoID: user.CargoID,
+        CargoID: user.CargoID, // Mantener mayúscula para consistencia
+        cargoID: user.CargoID, // También en minúscula para compatibilidad
+        role: role, // Agregar el rol
         estadoEmpleado: user.EstadoEmpleado,
         iat: payload.iat,
         exp: payload.exp
@@ -145,11 +162,21 @@ const optionalAuthMiddleware = async (req, res, next) => {
 
       if (userResult.recordset.length > 0) {
         const user = userResult.recordset[0];
+        
+        // Determinar rol basado en CargoID
+        let role = 'empleado';
+        if (user.CargoID === 8) role = 'admin';
+        else if (user.CargoID === 2) role = 'supervisor';
+        else if (user.CargoID === 5) role = 'auditor';
+        else if (user.CargoID === 9) role = 'creador';
+        else if (user.DNI === '73766815') role = 'creador'; // Asegurar que el creador tenga el rol correcto
+        
         req.user = {
           dni: user.DNI,
           nombres: user.Nombres,
           apellidoPaterno: user.ApellidoPaterno,
           cargoID: user.CargoID,
+          role: role, // Agregar el rol
           estadoEmpleado: user.EstadoEmpleado
         };
       } else {
@@ -181,13 +208,13 @@ const requireRole = (allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.cargoID)) {
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Acceso denegado - Permisos insuficientes',
         error: 'INSUFFICIENT_PERMISSIONS',
         requiredRoles: allowedRoles,
-        userRole: req.user.cargoID
+        userRole: req.user.role
       });
     }
 

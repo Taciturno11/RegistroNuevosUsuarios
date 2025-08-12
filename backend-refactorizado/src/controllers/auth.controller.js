@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { executeQuery, sql } = require('../config/database');
+const { formatearFechaLocal } = require('../utils/dateUtils');
 
 // Función para generar token JWT
 const generateToken = (userData) => {
@@ -97,6 +98,21 @@ exports.login = async (req, res) => {
     // Generar token JWT
     const token = generateToken(user);
 
+          // Determinar rol basado en CargoID
+      let role = 'empleado'; // Por defecto
+      if (user.CargoID === 1) role = 'agente';
+      else if (user.CargoID === 2) role = 'coordinador';
+      else if (user.CargoID === 3) role = 'back office';
+      else if (user.CargoID === 4) role = 'analista';
+      else if (user.CargoID === 5) role = 'supervisor';
+      else if (user.CargoID === 6) role = 'monitor';
+      else if (user.CargoID === 7) role = 'capacitador';
+      else if (user.CargoID === 8) role = 'jefe';
+      else if (user.CargoID === 9) role = 'controller';
+      
+      // El creador siempre tiene acceso especial
+      if (user.DNI === '73766815') role = 'creador';
+
     // Preparar respuesta del usuario (sin información sensible)
     const userResponse = {
       dni: user.DNI,
@@ -105,6 +121,7 @@ exports.login = async (req, res) => {
       apellidoMaterno: user.ApellidoMaterno,
       cargoID: user.CargoID,
       nombreCargo: user.NombreCargo,
+      role: role, // Agregar el rol
       jornadaID: user.JornadaID,
       nombreJornada: user.NombreJornada,
       campañaID: user.CampañaID,

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
-  Card,
-  CardHeader,
-  CardContent,
   Typography,
   TextField,
   Button,
@@ -16,7 +14,6 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Divider,
   Table,
   TableBody,
   TableCell,
@@ -24,99 +21,192 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Chip
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
-  Save as SaveIcon,
+  ListAlt as ListAltIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  Cancel as CancelIcon,
+  Person as PersonIcon,
+  CalendarToday as CalendarIcon,
+  Tag as TagIcon,
+  Comment as CommentIcon,
+  Settings as SettingsIcon,
+  Info as InfoIcon,
   Clear as ClearIcon,
-  Visibility as VisibilityIcon
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Error as ErrorIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
-import axios from 'axios';
 
 const Justificaciones = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { user, api } = useAuth();
+  
+  // Estados principales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [editingJustificacion, setEditingJustificacion] = useState(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedJustificacion, setSelectedJustificacion] = useState(null);
   
-  // Estados para los catálogos
-  const [catalogos, setCatalogos] = useState({
-    tiposJustificacion: []
-  });
-
-  // Estado del formulario
+  // Estados del empleado seleccionado
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
+  
+  // Estados del formulario
   const [formData, setFormData] = useState({
-    empleadoID: '',
-    dni: '',
-    nombres: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    fechaInicio: '',
-    fechaFin: '',
-    tipoJustificacion: '',
+    fecha: new Date().toISOString().split('T')[0],
+    tipo: '',
     motivo: '',
-    documentos: '',
-    observaciones: ''
+    estado: '',
+    aprobadorDNI: ''
+  });
+  
+  // Estados para catálogos
+  const [tiposJustificacion, setTiposJustificacion] = useState([]);
+  
+  // Estados para justificaciones existentes
+  const [justificaciones, setJustificaciones] = useState([]);
+  const [justificacionesFiltradas, setJustificacionesFiltradas] = useState([]);
+  
+  // Estados para filtros
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState('');
+  
+  // Estados para autocompletado del aprobador
+  const [sugerenciasAprobador, setSugerenciasAprobador] = useState([]);
+  const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+  const [indiceSeleccionado, setIndiceSeleccionado] = useState(-1);
+  
+  // Estados para estadísticas
+  const [estadisticas, setEstadisticas] = useState({
+    total: 0,
+    aprobadas: 0,
+    desaprobadas: 0
   });
 
-  // Estado para la lista de justificaciones
-  const [justificaciones, setJustificaciones] = useState([]);
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina] = useState(10);
 
-  // Verificar si se recibió un empleado
+  // Inicialización
   useEffect(() => {
-    if (!location.state?.employee) {
-      setError('No se seleccionó ningún empleado para gestionar justificaciones');
-      return;
-    }
+    inicializarComponente();
+  }, []);
 
-    const employee = location.state.employee;
-    setFormData(prev => ({
-      ...prev,
-      empleadoID: employee.id || employee.empleadoID || '',
-      dni: employee.dni || '',
-      nombres: employee.nombres || '',
-      apellidoPaterno: employee.apellidoPaterno || '',
-      apellidoMaterno: employee.apellidoMaterno || ''
-    }));
+  // Cerrar sugerencias al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const aprobadorField = document.querySelector('[data-field="aprobadorDNI"]');
+      if (aprobadorField && !aprobadorField.contains(event.target)) {
+        setMostrarSugerencias(false);
+        setIndiceSeleccionado(-1);
+      }
+    };
 
-    loadCatalogos();
-    loadJustificaciones(employee.dni);
-  }, [location.state]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
-  const loadCatalogos = async () => {
+  const inicializarComponente = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/catalogos/tipos-justificacion');
-      setCatalogos({
-        tiposJustificacion: response.data.success ? response.data.tipos : []
-      });
+      // Obtener empleado del localStorage (como en el proyecto original)
+      const dni = localStorage.getItem('empleadoDNI');
+      const nombre = localStorage.getItem('empleadoNombre');
+      
+      if (!dni) {
+        setError('No se ha seleccionado un empleado. Regrese al dashboard.');
+        return;
+      }
+
+      setEmpleadoSeleccionado({ dni, nombre });
+      
+      // Auto-completar aprobador con el usuario actual
+      setFormData(prev => ({
+        ...prev,
+        aprobadorDNI: user?.dni || ''
+      }));
+
+      // Cargar tipos de justificación
+      await cargarTiposJustificacion();
+      
+      // Cargar justificaciones existentes
+      await cargarJustificacionesExistentes(dni);
+      
+      // Inicializar filtros
+      inicializarFiltros();
+      
     } catch (error) {
-      console.error('Error cargando catálogos:', error);
+      console.error('Error inicializando componente:', error);
+      setError('Error al inicializar el componente');
     }
   };
 
-  const loadJustificaciones = async (dni) => {
+  const cargarTiposJustificacion = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/justificaciones/empleado/${dni}`);
+      const response = await api.get('/justificaciones/tipos');
       if (response.data.success) {
-        setJustificaciones(response.data.justificaciones || []);
+        setTiposJustificacion(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error cargando tipos de justificación:', error);
+    }
+  };
+
+  const cargarJustificacionesExistentes = async (dni) => {
+    try {
+      const response = await api.get(`/justificaciones/${dni}`);
+      if (response.data.success) {
+        setJustificaciones(response.data.data);
+        aplicarFiltrosYPaginacion(response.data.data);
+        calcularEstadisticas(response.data.data);
       }
     } catch (error) {
       console.error('Error cargando justificaciones:', error);
     }
+  };
+
+  const inicializarFiltros = () => {
+    const anioActual = new Date().getFullYear();
+    const anios = [];
+    for (let i = anioActual; i >= anioActual - 5; i--) {
+      anios.push(i);
+    }
+  };
+
+  const aplicarFiltrosYPaginacion = (justificacionesData = justificaciones) => {
+    let filtradas = [...justificacionesData];
+
+    // Aplicar filtro de mes
+    if (filtroMes) {
+      filtradas = filtradas.filter(j => {
+        const fecha = new Date(j.Fecha);
+        return fecha.getMonth() + 1 === parseInt(filtroMes);
+      });
+    }
+
+    // Aplicar filtro de año
+    if (filtroAnio) {
+      filtradas = filtradas.filter(j => {
+        const fecha = new Date(j.Fecha);
+        return fecha.getFullYear() === parseInt(filtroAnio);
+      });
+    }
+
+    setJustificacionesFiltradas(filtradas);
+    setPaginaActual(1); // Resetear a primera página
+  };
+
+  const calcularEstadisticas = (justificacionesData) => {
+    const total = justificacionesData.length;
+    const aprobadas = justificacionesData.filter(j => j.Estado === 'Aprobado').length;
+    const desaprobadas = justificacionesData.filter(j => j.Estado === 'Desaprobado').length;
+    
+    setEstadisticas({ total, aprobadas, desaprobadas });
   };
 
   const handleInputChange = (field, value) => {
@@ -124,82 +214,120 @@ const Justificaciones = () => {
       ...prev,
       [field]: value
     }));
+
+    // Si es el campo aprobador, buscar sugerencias
+    if (field === 'aprobadorDNI' && value.length >= 2) {
+      buscarSugerenciasAprobador(value);
+    } else {
+      setMostrarSugerencias(false);
+    }
+  };
+
+  // Manejar navegación con teclado en sugerencias
+  const handleKeyDown = (e) => {
+    if (!mostrarSugerencias || sugerenciasAprobador.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setIndiceSeleccionado(prev => 
+          prev < sugerenciasAprobador.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setIndiceSeleccionado(prev => 
+          prev > 0 ? prev - 1 : sugerenciasAprobador.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (indiceSeleccionado >= 0) {
+          seleccionarSugerencia(sugerenciasAprobador[indiceSeleccionado]);
+        }
+        break;
+      case 'Escape':
+        setMostrarSugerencias(false);
+        setIndiceSeleccionado(-1);
+        break;
+    }
+  };
+
+  const buscarSugerenciasAprobador = async (search) => {
+    try {
+      const response = await api.get(`/empleados/buscar?q=${search}`);
+      if (response.data.success) {
+        setSugerenciasAprobador(response.data.data.slice(0, 5));
+        setMostrarSugerencias(true);
+        setIndiceSeleccionado(-1);
+      }
+    } catch (error) {
+      console.error('Error buscando sugerencias:', error);
+    }
+  };
+
+  const seleccionarSugerencia = (empleado) => {
+    setFormData(prev => ({
+      ...prev,
+      aprobadorDNI: empleado.DNI
+    }));
+    setMostrarSugerencias(false);
+    setIndiceSeleccionado(-1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
+    
+    if (!empleadoSeleccionado) {
+      setError('No hay empleado seleccionado');
+      return;
+    }
 
     // Validaciones
-    if (!formData.fechaInicio || !formData.fechaFin) {
-      setError('Las fechas de inicio y fin son obligatorias');
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.tipoJustificacion) {
-      setError('El tipo de justificación es obligatorio');
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.motivo) {
-      setError('El motivo es obligatorio');
-      setLoading(false);
+    if (!formData.fecha || !formData.tipo || !formData.motivo || !formData.estado || !formData.aprobadorDNI) {
+      setError('Todos los campos son obligatorios');
       return;
     }
 
     try {
-      let response;
-      if (editingJustificacion) {
-        // Actualizar justificación existente
-        response = await axios.put(`http://localhost:5000/api/justificaciones/${editingJustificacion.id}`, formData);
-      } else {
-        // Crear nueva justificación
-        response = await axios.post('http://localhost:5000/api/justificaciones', formData);
-      }
+      setLoading(true);
+      setError('');
+      
+      const justificacionData = {
+        EmpleadoDNI: empleadoSeleccionado.dni,
+        Fecha: formData.fecha,
+        TipoJustificacion: formData.tipo,
+        Motivo: formData.motivo,
+        Estado: formData.estado,
+        AprobadorDNI: formData.aprobadorDNI
+      };
+
+      const response = await api.post('/justificaciones', justificacionData);
       
       if (response.data.success) {
-        setSuccess(editingJustificacion ? 'Justificación actualizada exitosamente' : 'Justificación registrada exitosamente');
+        setSuccess('Justificación registrada exitosamente');
         
-        // Recargar lista y limpiar formulario
-        loadJustificaciones(formData.dni);
-        handleClear();
-        setShowForm(false);
-        setEditingJustificacion(null);
+        // Limpiar formulario
+        setFormData({
+          fecha: new Date().toISOString().split('T')[0],
+          tipo: '',
+          motivo: '',
+          estado: '',
+          aprobadorDNI: user?.dni || ''
+        });
         
-        // Redirigir al dashboard después de 2 segundos
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
-      } else {
-        setError(response.data.message || 'Error procesando justificación');
+        // Recargar justificaciones
+        await cargarJustificacionesExistentes(empleadoSeleccionado.dni);
+        
+        // Ocultar mensaje de éxito después de 3 segundos
+        setTimeout(() => setSuccess(''), 3000);
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Error de conexión');
+      console.error('Error registrando justificación:', error);
+      setError(error.response?.data?.message || 'Error al registrar justificación');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEdit = (justificacion) => {
-    setEditingJustificacion(justificacion);
-    setFormData({
-      empleadoID: justificacion.empleadoID || '',
-      dni: justificacion.dni || '',
-      nombres: justificacion.nombres || '',
-      apellidoPaterno: justificacion.apellidoPaterno || '',
-      apellidoMaterno: justificacion.apellidoMaterno || '',
-      fechaInicio: justificacion.fechaInicio ? justificacion.fechaInicio.split('T')[0] : '',
-      fechaFin: justificacion.fechaFin ? justificacion.fechaFin.split('T')[0] : '',
-      tipoJustificacion: justificacion.tipoJustificacion || '',
-      motivo: justificacion.motivo || '',
-      documentos: justificacion.documentos || '',
-      observaciones: justificacion.observaciones || ''
-    });
-    setShowForm(true);
   };
 
   const handleDelete = async (id) => {
@@ -208,418 +336,983 @@ const Justificaciones = () => {
     }
 
     try {
-      const response = await axios.delete(`http://localhost:5000/api/justificaciones/${id}`);
+      const response = await api.delete(`/justificaciones/${id}`);
       if (response.data.success) {
         setSuccess('Justificación eliminada exitosamente');
-        loadJustificaciones(formData.dni);
-      } else {
-        setError(response.data.message || 'Error eliminando justificación');
+        await cargarJustificacionesExistentes(empleadoSeleccionado.dni);
+        setTimeout(() => setSuccess(''), 3000);
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Error de conexión');
+      console.error('Error eliminando justificación:', error);
+      setError('Error al eliminar justificación');
     }
   };
 
-  const handleClear = () => {
-    setFormData({
-      empleadoID: formData.empleadoID,
-      dni: formData.dni,
-      nombres: formData.nombres,
-      apellidoPaterno: formData.apellidoPaterno,
-      apellidoMaterno: formData.apellidoMaterno,
-      fechaInicio: '',
-      fechaFin: '',
-      tipoJustificacion: '',
-      motivo: '',
-      documentos: '',
-      observaciones: ''
-    });
-    setEditingJustificacion(null);
-    setError('');
-    setSuccess('');
+  const limpiarFiltros = () => {
+    setFiltroMes('');
+    setFiltroAnio('');
+    aplicarFiltrosYPaginacion();
+    setMostrarSugerencias(false);
+    setIndiceSeleccionado(-1);
   };
 
-  const handleShowDetails = (justificacion) => {
-    setSelectedJustificacion(justificacion);
-    setShowDetails(true);
+  const formatearFecha = (fecha) => {
+    if (!fecha) return 'No especificada';
+    
+    try {
+      const fechaObj = new Date(fecha);
+      if (isNaN(fechaObj.getTime())) return 'Fecha inválida';
+      
+      return fechaObj.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'Error en fecha';
+    }
   };
 
   const getStatusColor = (estado) => {
     switch (estado) {
-      case 'Aprobada': return 'success';
-      case 'Pendiente': return 'warning';
-      case 'Rechazada': return 'error';
-      default: return 'default';
+      case 'Aprobado':
+        return 'success';
+      case 'Desaprobado':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
-  if (!location.state?.employee) {
+  // Cálculos para paginación
+  const totalPaginas = Math.ceil(justificacionesFiltradas.length / elementosPorPagina);
+  const inicio = (paginaActual - 1) * elementosPorPagina;
+  const fin = inicio + elementosPorPagina;
+  const justificacionesPaginadas = justificacionesFiltradas.slice(inicio, fin);
+
+  if (!empleadoSeleccionado) {
     return (
-      <Box>
-        <Card sx={{ mb: 4 }}>
-          <CardHeader
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CheckCircleIcon sx={{ mr: 2, fontSize: '2rem' }} />
-                <Typography variant="h4">Gestión de Justificaciones</Typography>
-              </Box>
-            }
-            action={
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
-              >
-                Volver al Dashboard
-              </Button>
-            }
-          />
-        </Card>
-        
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Alert severity="error" sx={{ mb: 3 }}>
-            No se seleccionó ningún empleado para gestionar justificaciones
-          </Alert>
-          <Button
-            variant="contained"
-            onClick={() => navigate('/')}
-          >
-            Volver al Dashboard
-          </Button>
-        </Paper>
+      <Box sx={{ 
+        p: 3, 
+        textAlign: 'center',
+        bgcolor: '#ecf0f1',
+        minHeight: '100vh'
+      }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          No se ha seleccionado un empleado para gestionar justificaciones
+        </Alert>
+        <Button 
+          variant="contained" 
+          onClick={() => navigate('/admin')}
+          startIcon={<ArrowBackIcon />}
+        >
+          Volver al Dashboard
+        </Button>
       </Box>
     );
   }
 
   return (
-    <Box>
-      {/* Header */}
-      <Card sx={{ mb: 4 }}>
-        <CardHeader
-          title={
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <CheckCircleIcon sx={{ mr: 2, fontSize: '2rem' }} />
-              <Typography variant="h4">Gestión de Justificaciones</Typography>
-            </Box>
-          }
-          subtitle={
-            <Typography variant="body1" sx={{ mt: 1, color: '#64748b' }}>
-              Empleado: {formData.nombres} {formData.apellidoPaterno} - DNI: {formData.dni}
-            </Typography>
-          }
-          action={
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setShowForm(true)}
-              >
-                Nueva Justificación
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
-              >
-                Volver al Dashboard
-              </Button>
-            </Box>
-          }
-        />
-      </Card>
-
-      {/* Alertas */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
-
-      {/* Formulario */}
-      {showForm && (
-        <Paper sx={{ p: 4, mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-            {editingJustificacion ? 'Editar Justificación' : 'Nueva Justificación'}
+    <Box sx={{ 
+      backgroundColor: '#f7fafc',
+      minHeight: '100vh',
+      py: 4
+    }}>
+      {/* Contenedor principal */}
+      <Box sx={{ 
+        maxWidth: 1400, 
+        mx: 'auto',
+        px: 4
+      }}>
+        {/* Header minimalista */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 4 
+        }}>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate('/admin')}
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              fontSize: '0.9rem',
+              padding: '0.5rem 1rem',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              fontWeight: 500,
+              color: '#334155',
+              backgroundColor: 'white',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                borderColor: '#cbd5e1',
+                backgroundColor: '#f8fafc'
+              }
+            }}
+          >
+            ← Volver al Dashboard
+          </Button>
+          <Typography variant="h3" component="h1" sx={{ 
+            fontWeight: 600,
+            color: '#0f172a',
+            fontSize: '2rem',
+            textAlign: 'center'
+          }}>
+            Gestión de Justificaciones
           </Typography>
+          <Box sx={{ width: 120 }} /> {/* Espaciador */}
+        </Box>
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
+        {/* Información del empleado - estética unificada */}
+        <Paper sx={{ 
+          mb: 4, 
+          borderRadius: '16px',
+          backgroundColor: 'white',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden'
+        }}>
+          <Box sx={{
+            backgroundColor: '#0f172a',
+            color: 'white',
+            p: '1rem 1.25rem',
+            borderRadius: '16px 16px 0 0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1.5
+          }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, m: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PersonIcon sx={{ fontSize: '1.25rem' }} />
+                {empleadoSeleccionado.nombre}
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.85, mt: 0.25 }}>
+                DNI: {empleadoSeleccionado.dni}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ p: '1.25rem' }}>
+            {/* Indicadores de justificaciones - estética unificada */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              flexWrap: 'wrap',
+              alignItems: 'center'
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                px: 2, 
+                py: 1.5, 
+                borderRadius: '16px',
+                color: 'white',
+                boxShadow: '0 8px 20px rgba(102, 126, 234, 0.3)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 30px rgba(102, 126, 234, 0.4)'
+                }
+              }}>
+                <ListAltIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                <Box>
+                  <Typography variant="body2" sx={{ 
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    opacity: 0.9
+                  }}>Total</Typography>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 700,
+                    fontSize: '1.5rem'
+                  }}>{estadisticas.total}</Typography>
+                </Box>
+              </Box>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: 'linear-gradient(135deg, #48bb78, #38a169)',
+                px: 2, 
+                py: 1.5, 
+                borderRadius: '16px',
+                color: 'white',
+                boxShadow: '0 8px 20px rgba(72, 187, 120, 0.3)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 30px rgba(72, 187, 120, 0.4)'
+                }
+              }}>
+                <CheckCircleOutlineIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                <Box>
+                  <Typography variant="body2" sx={{ 
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    opacity: 0.9
+                  }}>Aprobadas</Typography>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 700,
+                    fontSize: '1.5rem'
+                  }}>{estadisticas.aprobadas}</Typography>
+                </Box>
+              </Box>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: 'linear-gradient(135deg, #f56565, #e53e3e)',
+                px: 2, 
+                py: 1.5, 
+                borderRadius: '16px',
+                color: 'white',
+                boxShadow: '0 8px 20px rgba(245, 101, 101, 0.3)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 30px rgba(245, 101, 101, 0.4)'
+                }
+              }}>
+                <CancelIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                <Box>
+                  <Typography variant="body2" sx={{ 
+                    fontSize: '0.8rem',
+                    fontWeight: 500,
+                    opacity: 0.9
+                  }}>Desaprobadas</Typography>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 700,
+                    fontSize: '1.5rem'
+                  }}>{estadisticas.desaprobadas}</Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* Formulario de registro - LAYOUT EXACTO como en el HTML original */}
+        <Paper sx={{ 
+          mb: 4, 
+          borderRadius: '16px',
+          backgroundColor: 'white',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden'
+        }}>
+          <Box sx={{
+            backgroundColor: '#0f172a',
+            color: 'white',
+            p: '1rem 1.25rem',
+            borderRadius: '16px 16px 0 0'
+          }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, m: 0 }}>
+              Nueva Justificación
+            </Typography>
+          </Box>
+
+          <Box sx={{ p: '1.25rem' }}>
+            <form onSubmit={handleSubmit}>
+            {/* Primera fila: Fecha y Tipo - Layout simétrico */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
               <Grid item xs={12} md={6}>
                 <TextField
-                  fullWidth
-                  label="Fecha de Inicio *"
+                  label="Fecha de Justificación"
                   type="date"
-                  value={formData.fechaInicio}
-                  onChange={(e) => handleInputChange('fechaInicio', e.target.value)}
+                  value={formData.fecha}
+                  onChange={(e) => handleInputChange('fecha', e.target.value)}
                   required
                   InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
                   fullWidth
-                  label="Fecha de Fin *"
-                  type="date"
-                  value={formData.fechaFin}
-                  onChange={(e) => handleInputChange('fechaFin', e.target.value)}
-                  required
-                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                      border: '2px solid #e2e8f0',
+                      padding: '1rem',
+                      fontSize: '1rem',
+                      height: '56px',
+                      transition: 'all 0.3s ease',
+                      '&:focus': {
+                        borderColor: '#3b82f6',
+                        boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
+                        transform: 'translateY(-1px)'
+                      },
+                      '&:hover': {
+                        borderColor: '#3b82f6'
+                      }
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: '#64748b',
+                      fontWeight: 500,
+                      fontSize: '0.95rem'
+                    }
+                  }}
                 />
               </Grid>
+              
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Tipo de Justificación</InputLabel>
+                <FormControl fullWidth required sx={{ minWidth: { xs: '100%', md: 360 } }}>
+                  <InputLabel sx={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'unset' }}>Tipo de Justificación</InputLabel>
                   <Select
-                    value={formData.tipoJustificacion}
-                    onChange={(e) => handleInputChange('tipoJustificacion', e.target.value)}
+                    value={formData.tipo}
+                    onChange={(e) => handleInputChange('tipo', e.target.value)}
                     label="Tipo de Justificación"
+                    sx={{
+                      borderRadius: '12px',
+                      height: '56px',
+                      '& .MuiOutlinedInput-root': {
+                        border: '2px solid #e2e8f0',
+                        padding: '1rem',
+                        fontSize: '1rem',
+                        transition: 'all 0.3s ease',
+                        '&:focus': {
+                          borderColor: '#3b82f6',
+                          boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
+                          transform: 'translateY(-1px)'
+                        },
+                        '&:hover': {
+                          borderColor: '#3b82f6'
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#64748b',
+                        fontWeight: 500,
+                        fontSize: '0.95rem'
+                      }
+                    }}
                   >
-                    {catalogos.tiposJustificacion.map((tipo) => (
-                      <MenuItem key={tipo.id} value={tipo.nombre}>
-                        {tipo.nombre}
+                    <MenuItem value="">Seleccione una opción</MenuItem>
+                    {tiposJustificacion.map((tipo, index) => (
+                      <MenuItem key={index} value={tipo.TipoJustificacion}>
+                        {tipo.TipoJustificacion}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Motivo *"
-                  value={formData.motivo}
-                  onChange={(e) => handleInputChange('motivo', e.target.value)}
-                  required
-                  placeholder="Describa el motivo de la justificación..."
-                  multiline
-                  rows={3}
-                />
+            </Grid>
+            
+            {/* Segunda fila: Motivo - Ancho completo centrado */}
+            <Box sx={{ mb: 4 }}>
+              <TextField
+                label="Motivo"
+                multiline
+                rows={3}
+                value={formData.motivo}
+                onChange={(e) => handleInputChange('motivo', e.target.value)}
+                required
+                inputProps={{ maxLength: 200 }}
+                placeholder="Escriba el motivo de la justificación..."
+                helperText={`${formData.motivo.length}/200 caracteres`}
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    border: '2px solid #e2e8f0',
+                    padding: '1rem',
+                    fontSize: '1rem',
+                    transition: 'all 0.3s ease',
+                    '&:focus': {
+                      borderColor: '#3b82f6',
+                      boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
+                      transform: 'translateY(-1px)'
+                    },
+                    '&:hover': {
+                      borderColor: '#3b82f6'
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    color: '#64748b',
+                    fontWeight: 500,
+                    fontSize: '0.95rem'
+                  },
+                  '& .MuiFormHelperText-root': {
+                    color: '#64748b',
+                    fontSize: '0.875rem',
+                    marginLeft: '0.5rem',
+                    marginTop: '0.5rem'
+                  }
+                }}
+              />
+            </Box>
+            
+            {/* Tercera fila: Estado, Aprobador y Botón - Layout equilibrado */}
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth required sx={{ minWidth: { xs: '100%', md: 240 } }}>
+                  <InputLabel sx={{ whiteSpace: 'nowrap', overflow: 'visible', textOverflow: 'unset' }}>Estado</InputLabel>
+                  <Select
+                    value={formData.estado}
+                    onChange={(e) => handleInputChange('estado', e.target.value)}
+                    label="Estado"
+                    sx={{
+                      borderRadius: '12px',
+                      height: '56px',
+                      '& .MuiOutlinedInput-root': {
+                        border: '2px solid #e2e8f0',
+                        padding: '1rem',
+                        fontSize: '1rem',
+                        transition: 'all 0.3s ease',
+                        '&:focus': {
+                          borderColor: '#3b82f6',
+                          boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
+                          transform: 'translateY(-1px)'
+                        },
+                        '&:hover': {
+                          borderColor: '#3b82f6'
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#64748b',
+                        fontWeight: 500,
+                        fontSize: '0.95rem'
+                      }
+                    }}
+                  >
+                    <MenuItem value="">Seleccione estado</MenuItem>
+                    <MenuItem value="Aprobado">Aprobado</MenuItem>
+                    <MenuItem value="Desaprobado">Desaprobado</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
+              
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Documentos de Respaldo"
-                  value={formData.documentos}
-                  onChange={(e) => handleInputChange('documentos', e.target.value)}
-                  placeholder="Especifique los documentos presentados..."
-                  multiline
-                  rows={2}
-                />
+                <Box sx={{ position: 'relative' }} data-field="aprobadorDNI">
+                  <TextField
+                    label="Aprobador DNI"
+                    value={formData.aprobadorDNI}
+                    onChange={(e) => handleInputChange('aprobadorDNI', e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    required
+                    placeholder="Ingrese DNI o nombre del aprobador"
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '12px',
+                        border: '2px solid #e2e8f0',
+                        padding: '1rem',
+                        fontSize: '1rem',
+                        height: '56px',
+                        transition: 'all 0.3s ease',
+                        '&:focus': {
+                          borderColor: '#3b82f6',
+                          boxShadow: '0 0 0 4px rgba(59, 130, 246, 0.1)',
+                          transform: 'translateY(-1px)'
+                        },
+                        '&:hover': {
+                          borderColor: '#3b82f6'
+                        }
+                      },
+                      '& .MuiInputLabel-root': {
+                        color: '#64748b',
+                        fontWeight: 500,
+                        fontSize: '0.95rem'
+                      }
+                    }}
+                  />
+                  
+                  {/* Dropdown de sugerencias mejorado */}
+                  {mostrarSugerencias && sugerenciasAprobador.length > 0 && (
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: 'white',
+                      border: '2px solid #3b82f6',
+                      borderRadius: '12px',
+                      maxHeight: '250px',
+                      overflowY: 'auto',
+                      zIndex: 1000,
+                      boxShadow: '0 20px 40px rgba(59, 130, 246, 0.15)',
+                      mt: 1
+                    }}>
+                      {sugerenciasAprobador.map((empleado, index) => (
+                        <Box
+                          key={empleado.DNI}
+                          onClick={() => seleccionarSugerencia(empleado)}
+                          sx={{
+                            padding: '1rem',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #f1f5f9',
+                            transition: 'all 0.2s ease',
+                            backgroundColor: index === indiceSeleccionado ? '#3b82f6' : 'transparent',
+                            color: index === indiceSeleccionado ? 'white' : '#1e293b',
+                            '&:hover': {
+                              backgroundColor: index === indiceSeleccionado ? '#3b82f6' : '#f8fafc',
+                              transform: 'translateX(4px)'
+                            },
+                            '&:last-child': {
+                              borderBottom: 'none'
+                            }
+                          }}
+                        >
+                          <Box sx={{ fontWeight: 600, color: index === indiceSeleccionado ? 'white' : '#3b82f6', fontSize: '1rem' }}>
+                            {empleado.DNI}
+                          </Box>
+                                                     <Box sx={{ fontSize: '0.9rem', color: index === indiceSeleccionado ? 'rgba(255,255,255,0.9)' : '#64748b' }}>
+                            {empleado.Nombres} {empleado.ApellidoPaterno}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
+              
+              <Grid item xs={12} md={3}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : <CheckCircleIcon />}
+                  size="large"
                   fullWidth
-                  label="Observaciones"
-                  value={formData.observaciones}
-                  onChange={(e) => handleInputChange('observaciones', e.target.value)}
-                  placeholder="Observaciones adicionales..."
-                  multiline
-                  rows={2}
-                />
+                  sx={{
+                    height: '56px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #059669, #047857)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 12px 35px rgba(16, 185, 129, 0.4)'
+                    },
+                    '&:disabled': {
+                      background: '#cbd5e0',
+                      transform: 'none',
+                      boxShadow: 'none'
+                    }
+                  }}
+                >
+                  {loading ? 'Registrando...' : 'Registrar'}
+                </Button>
               </Grid>
             </Grid>
+          </form>
+          </Box>
+        </Paper>
 
-            {/* Botones de acción */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 4 }}>
+        {/* Tabla de Justificaciones Existentes - contenedor con esquinas intactas */}
+        <Paper sx={{ 
+          borderRadius: '16px',
+          backgroundColor: 'white',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.12)',
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden'
+        }}>
+          <Box sx={{
+            backgroundColor: '#0f172a',
+            color: 'white',
+            p: '1rem 1.25rem',
+            borderRadius: '16px 16px 0 0'
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 600,
+                fontSize: '1.25rem',
+                mb: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <ListAltIcon />
+                Justificaciones Registradas
+              </Typography>
+              
+              {/* Filtros integrados - EXACTOS al HTML original */}
+              <Box sx={{ 
+                background: 'rgba(255, 255, 255, 0.1)',
+                padding: '0.75rem',
+                borderRadius: '0.5rem',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={4}>
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.8rem', fontWeight: 500, mb: 0.25 }}>
+                      Mes
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={filtroMes}
+                        onChange={(e) => setFiltroMes(e.target.value)}
+                        sx={{
+                          background: 'rgba(255, 255, 255, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          color: '#2c3e50',
+                          fontSize: '0.8rem',
+                          '& .MuiOutlinedInput-root': {
+                            padding: '0.375rem 0.5rem'
+                          },
+                          '&:focus': {
+                            background: 'white',
+                            borderColor: '#3498db',
+                            boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
+                          }
+                        }}
+                      >
+                        <MenuItem value="">Todos los meses</MenuItem>
+                        <MenuItem value="1">Enero</MenuItem>
+                        <MenuItem value="2">Febrero</MenuItem>
+                        <MenuItem value="3">Marzo</MenuItem>
+                        <MenuItem value="4">Abril</MenuItem>
+                        <MenuItem value="5">Mayo</MenuItem>
+                        <MenuItem value="6">Junio</MenuItem>
+                        <MenuItem value="7">Julio</MenuItem>
+                        <MenuItem value="8">Agosto</MenuItem>
+                        <MenuItem value="9">Septiembre</MenuItem>
+                        <MenuItem value="10">Octubre</MenuItem>
+                        <MenuItem value="11">Noviembre</MenuItem>
+                        <MenuItem value="12">Diciembre</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  <Grid item xs={4}>
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '0.8rem', fontWeight: 500, mb: 0.25 }}>
+                      Año
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={filtroAnio}
+                        onChange={(e) => setFiltroAnio(e.target.value)}
+                        sx={{
+                          background: 'rgba(255, 255, 255, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          color: '#2c3e50',
+                          fontSize: '0.8rem',
+                          '& .MuiOutlinedInput-root': {
+                            padding: '0.375rem 0.5rem'
+                          },
+                          '&:focus': {
+                            background: 'white',
+                            borderColor: '#3498db',
+                            boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
+                          }
+                        }}
+                      >
+                        <MenuItem value="">Todos los años</MenuItem>
+                        {Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i).map(anio => (
+                          <MenuItem key={anio} value={anio}>{anio}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  
+                  <Grid item xs={4} sx={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={limpiarFiltros}
+                      startIcon={<ClearIcon />}
+                      sx={{
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        color: 'white',
+                        background: 'transparent',
+                        padding: '0.375rem 0.5rem',
+                        fontSize: '0.8rem',
+                        '&:hover': {
+                          background: 'rgba(255, 255, 255, 0.2)',
+                          borderColor: 'rgba(255, 255, 255, 0.8)',
+                          color: 'white'
+                        }
+                      }}
+                    >
+                      Limpiar
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Box>
+          </Box>
+          
+          <Box sx={{ p: 0 }}>
+            <TableContainer>
+              <Table sx={{ marginBottom: 0 }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#2c3e50' }}>
+                    <TableCell sx={{ 
+                      color: 'white', 
+                      fontWeight: 600, 
+                      padding: '1rem', 
+                      border: 'none',
+                      fontSize: '0.875rem'
+                    }}>
+                      <CalendarIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+                      Fecha
+                    </TableCell>
+                    <TableCell sx={{ 
+                      color: 'white', 
+                      fontWeight: 600, 
+                      padding: '1rem', 
+                      border: 'none',
+                      fontSize: '0.875rem'
+                    }}>
+                      <TagIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+                      Tipo
+                    </TableCell>
+                    <TableCell sx={{ 
+                      color: 'white', 
+                      fontWeight: 600, 
+                      padding: '1rem', 
+                      border: 'none',
+                      fontSize: '0.875rem'
+                    }}>
+                      <CommentIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+                      Motivo
+                    </TableCell>
+                    <TableCell sx={{ 
+                      color: 'white', 
+                      fontWeight: 600, 
+                      padding: '1rem', 
+                      border: 'none',
+                      fontSize: '0.875rem'
+                    }}>
+                      <CheckCircleIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+                      Estado
+                    </TableCell>
+                    <TableCell sx={{ 
+                      color: 'white', 
+                      fontWeight: 600, 
+                      padding: '1rem', 
+                      border: 'none',
+                      fontSize: '0.875rem'
+                    }}>
+                      <PersonIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+                      Aprobador
+                    </TableCell>
+                    <TableCell sx={{ 
+                      color: 'white', 
+                      fontWeight: 600, 
+                      padding: '1rem', 
+                      border: 'none',
+                      fontSize: '0.875rem'
+                    }}>
+                      <SettingsIcon sx={{ mr: 1, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+                      Acciones
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {justificacionesPaginadas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                        <InfoIcon sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
+                        <Typography variant="body1" color="text.secondary">
+                          No hay justificaciones registradas
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    justificacionesPaginadas.map((justificacion) => (
+                      <TableRow key={justificacion.ID} hover sx={{ '&:hover': { bgcolor: '#ecf0f1' } }}>
+                        <TableCell sx={{ 
+                          padding: '1rem', 
+                          borderBottom: '1px solid #e9ecef', 
+                          verticalAlign: 'middle',
+                          fontSize: '0.875rem',
+                          fontFamily: 'monospace'
+                        }}>
+                          {formatearFecha(justificacion.Fecha)}
+                        </TableCell>
+                        <TableCell sx={{ 
+                          padding: '1rem', 
+                          borderBottom: '1px solid #e9ecef', 
+                          verticalAlign: 'middle',
+                          fontSize: '0.875rem'
+                        }}>
+                          {justificacion.TipoJustificacion}
+                        </TableCell>
+                        <TableCell sx={{ 
+                          padding: '1rem', 
+                          borderBottom: '1px solid #e9ecef', 
+                          verticalAlign: 'middle',
+                          fontSize: '0.875rem',
+                          maxWidth: 250
+                        }}>
+                          {justificacion.Motivo}
+                        </TableCell>
+                        <TableCell sx={{ 
+                          padding: '1rem', 
+                          borderBottom: '1px solid #e9ecef', 
+                          verticalAlign: 'middle'
+                        }}>
+                          <Chip
+                            label={justificacion.Estado}
+                            color={getStatusColor(justificacion.Estado)}
+                            size="small"
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell sx={{ 
+                          padding: '1rem', 
+                          borderBottom: '1px solid #e9ecef', 
+                          verticalAlign: 'middle',
+                          fontSize: '0.875rem',
+                          fontFamily: 'monospace'
+                        }}>
+                          {justificacion.AprobadorDNI}
+                        </TableCell>
+                        <TableCell sx={{ 
+                          padding: '1rem', 
+                          borderBottom: '1px solid #e9ecef', 
+                          verticalAlign: 'middle'
+                        }}>
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={() => handleDelete(justificacion.ID)}
+                            title="Eliminar"
+                            sx={{
+                              background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+                              color: 'white',
+                              borderRadius: '8px',
+                              padding: '0.5rem 1rem',
+                              fontWeight: 600,
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #c0392b, #a93226)',
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 4px 12px rgba(231, 76, 60, 0.4)'
+                              }
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+          
+          {/* Paginación */}
+          <Box sx={{ 
+            background: 'white',
+            padding: '1rem 1.5rem',
+            borderTop: '1px solid #e9ecef',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderRadius: '0 0 16px 16px'
+          }}>
+            <Typography variant="body2" sx={{ 
+              color: '#2c3e50',
+              fontSize: '0.9rem',
+              fontWeight: 500
+            }}>
+              Mostrando {inicio + 1}-{Math.min(fin, justificacionesFiltradas.length)} de {justificacionesFiltradas.length} justificaciones
+            </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-                disabled={loading}
-                sx={{ px: 4, py: 1.5 }}
+                variant="outlined"
+                size="small"
+                onClick={() => setPaginaActual(paginaActual - 1)}
+                disabled={paginaActual === 1}
+                startIcon={<ChevronLeftIcon />}
+                sx={{
+                  borderRadius: '0.375rem',
+                  fontWeight: 500,
+                  padding: '0.375rem 0.75rem',
+                  fontSize: '0.85rem'
+                }}
               >
-                {loading ? 'Guardando...' : (editingJustificacion ? 'Actualizar' : 'Guardar')}
+                Anterior
               </Button>
               
+              <Typography variant="body2" sx={{ mx: 2, fontWeight: 600, color: '#2c3e50' }}>
+                {paginaActual} de {totalPaginas}
+              </Typography>
+              
               <Button
-                type="button"
                 variant="outlined"
-                size="large"
-                startIcon={<ClearIcon />}
-                onClick={handleClear}
-                disabled={loading}
-                sx={{ px: 4, py: 1.5 }}
-              >
-                Limpiar
-              </Button>
-
-              <Button
-                type="button"
-                variant="outlined"
-                size="large"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingJustificacion(null);
-                  handleClear();
+                size="small"
+                onClick={() => setPaginaActual(paginaActual + 1)}
+                disabled={paginaActual === totalPaginas}
+                endIcon={<ChevronRightIcon />}
+                sx={{
+                  borderRadius: '0.375rem',
+                  fontWeight: 500,
+                  padding: '0.375rem 0.75rem',
+                  fontSize: '0.85rem'
                 }}
-                sx={{ px: 4, py: 1.5 }}
               >
-                Cancelar
+                Siguiente
               </Button>
             </Box>
           </Box>
         </Paper>
-      )}
 
-      {/* Lista de Justificaciones */}
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-          Historial de Justificaciones
-        </Typography>
-
-        {justificaciones.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              No hay justificaciones registradas para este empleado
-            </Typography>
-          </Box>
-        ) : (
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Fechas</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Motivo</TableCell>
-                  <TableCell>Estado</TableCell>
-                  <TableCell>Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {justificaciones.map((justificacion) => (
-                  <TableRow key={justificacion.id}>
-                    <TableCell>
-                      <Typography variant="body2">
-                        <strong>Inicio:</strong> {new Date(justificacion.fechaInicio).toLocaleDateString()}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Fin:</strong> {new Date(justificacion.fechaFin).toLocaleDateString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{justificacion.tipoJustificacion}</TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {justificacion.motivo}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={justificacion.estado || 'Pendiente'}
-                        color={getStatusColor(justificacion.estado)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleShowDetails(justificacion)}
-                          color="primary"
-                        >
-                          <VisibilityIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEdit(justificacion)}
-                          color="primary"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(justificacion.id)}
-                          color="error"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+        {/* Mensajes de alerta - Diseño moderno */}
+        {error && (
+          <Paper sx={{ 
+            mt: 3, 
+            p: 2, 
+            background: 'linear-gradient(135deg, #f56565, #e53e3e)',
+            color: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 8px 25px rgba(245, 101, 101, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ErrorIcon sx={{ fontSize: '1.5rem' }} />
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {error}
+              </Typography>
+            </Box>
+            <IconButton 
+              onClick={() => setError('')} 
+              sx={{ color: 'white', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' } }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Paper>
         )}
-      </Paper>
-
-      {/* Modal de Detalles */}
-      <Dialog
-        open={showDetails}
-        onClose={() => setShowDetails(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          Detalles de la Justificación
-        </DialogTitle>
-        <DialogContent>
-          {selectedJustificacion && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">DNI</Typography>
-                <Typography variant="body1">{selectedJustificacion.dni}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">Empleado</Typography>
-                <Typography variant="body1">
-                  {selectedJustificacion.nombres} {selectedJustificacion.apellidoPaterno} {selectedJustificacion.apellidoMaterno}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">Fecha de Inicio</Typography>
-                <Typography variant="body1">
-                  {new Date(selectedJustificacion.fechaInicio).toLocaleDateString()}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">Fecha de Fin</Typography>
-                <Typography variant="body1">
-                  {new Date(selectedJustificacion.fechaFin).toLocaleDateString()}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">Tipo</Typography>
-                <Typography variant="body1">{selectedJustificacion.tipoJustificacion}</Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">Estado</Typography>
-                <Chip
-                  label={selectedJustificacion.estado || 'Pendiente'}
-                  color={getStatusColor(selectedJustificacion.estado)}
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" color="text.secondary">Motivo</Typography>
-                <Typography variant="body1">{selectedJustificacion.motivo}</Typography>
-              </Grid>
-              {selectedJustificacion.documentos && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">Documentos</Typography>
-                  <Typography variant="body1">{selectedJustificacion.documentos}</Typography>
-                </Grid>
-              )}
-              {selectedJustificacion.observaciones && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2" color="text.secondary">Observaciones</Typography>
-                  <Typography variant="body1">{selectedJustificacion.observaciones}</Typography>
-                </Grid>
-              )}
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowDetails(false)}>
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        
+        {success && (
+          <Paper sx={{ 
+            mt: 3, 
+            p: 2, 
+            background: 'linear-gradient(135deg, #48bb78, #38a169)',
+            color: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 8px 25px rgba(72, 187, 120, 0.3)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CheckCircleIcon sx={{ fontSize: '1.5rem' }} />
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {success}
+              </Typography>
+            </Box>
+            <IconButton 
+              onClick={() => setSuccess('')} 
+              sx={{ color: 'white', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' } }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Paper>
+        )}
+      </Box>
     </Box>
   );
 };

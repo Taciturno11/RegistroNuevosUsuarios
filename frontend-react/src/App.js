@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
+import EmployeeProfile from './pages/EmployeeProfile';
 import Login from './pages/Login';
 import RegistrarEmpleado from './pages/RegistrarEmpleado';
 import ActualizarEmpleado from './pages/ActualizarEmpleado';
@@ -12,6 +13,8 @@ import Cese from './pages/Cese';
 import Justificaciones from './pages/Justificaciones';
 import OJT from './pages/OJT';
 import Excepciones from './pages/Excepciones';
+import ProtectedRoute from './components/ProtectedRoute';
+import ControlMaestro from './pages/ControlMaestro';
 import './App.css';
 
 // Tema personalizado que mantiene la estética del proyecto original
@@ -36,7 +39,7 @@ const theme = createTheme({
       main: '#0891b2', // Azul claro
     },
     background: {
-      default: '#f1f5f9', // Gris muy claro
+      default: '#e2e8f0', // Gris más oscuro para contraste visible con el sidebar blanco
       paper: '#ffffff', // Blanco puro
     },
     text: {
@@ -69,8 +72,8 @@ const theme = createTheme({
   },
 });
 
-// Componente de ruta protegida
-const ProtectedRoute = ({ children }) => {
+// Componente de ruta protegida básica (ya no se usa, reemplazado por el componente importado)
+const BasicProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
@@ -96,15 +99,55 @@ const AppContent = () => {
   return (
     <div style={{ display: 'flex' }}>
       <Sidebar />
-      <main style={{ flexGrow: 1, padding: '2rem 1rem', maxWidth: '1400px', margin: '0 auto' }}>
+      <main style={{ 
+        flexGrow: 1, 
+        padding: '2rem 1rem', 
+        maxWidth: '1400px', 
+        margin: '0 auto',
+        backgroundColor: '#e2e8f0', // Fondo gris más oscuro para contraste visible
+        minHeight: '100vh' // Asegura que ocupe toda la altura de la pantalla
+      }}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/registrar-empleado" element={<RegistrarEmpleado />} />
-          <Route path="/actualizar-empleado" element={<ActualizarEmpleado />} />
-          <Route path="/cese" element={<Cese />} />
-          <Route path="/justificaciones" element={<Justificaciones />} />
-          <Route path="/ojt" element={<OJT />} />
-          <Route path="/excepciones" element={<Excepciones />} />
+          {/* Vista principal para todos los empleados */}
+          <Route path="/" element={<EmployeeProfile />} />
+          
+          {/* Rutas administrativas (solo para roles administrativos) */}
+          <Route path="/admin" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/registrar-empleado" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <RegistrarEmpleado />
+            </ProtectedRoute>
+          } />
+          <Route path="/actualizar-empleado" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <ActualizarEmpleado />
+            </ProtectedRoute>
+          } />
+          <Route path="/cese" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <Cese />
+            </ProtectedRoute>
+          } />
+          <Route path="/justificaciones" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <Justificaciones />
+            </ProtectedRoute>
+          } />
+          <Route path="/ojt" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <OJT />
+            </ProtectedRoute>
+          } />
+          <Route path="/excepciones" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <Excepciones />
+            </ProtectedRoute>
+          } />
+          <Route path="/control-maestro" element={<ControlMaestro />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

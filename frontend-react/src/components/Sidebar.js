@@ -28,16 +28,17 @@ import {
   ExpandLess,
   ExpandMore,
   Logout as LogoutIcon,
-  AccountCircle as AccountCircleIcon
+  AccountCircle as AccountCircleIcon,
+  Security as SecurityIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
 
 const menuItems = [
   {
-    title: 'Dashboard',
+    title: 'Mi Perfil',
     path: '/',
-    icon: <DashboardIcon />,
+    icon: <AccountCircleIcon />,
     adminOnly: false
   },
   {
@@ -85,9 +86,13 @@ const Sidebar = () => {
   const [open, setOpen] = useState(true);
   const [adminMenuOpen, setAdminMenuOpen] = useState(true);
 
-  // Por ahora, asumimos que todos los usuarios son administradores
-  // Esto se puede cambiar más adelante cuando implementemos el control de acceso
-  const isAdmin = true; // user?.role === 'admin' || user?.isAdmin
+  // Verificar si el usuario es administrador
+  const isAdmin = user?.role === 'admin' || 
+                  user?.role === 'analista' || 
+                  user?.role === 'coordinador' || 
+                  user?.role === 'supervisor' || 
+                  user?.role === 'jefe' || 
+                  user?.role === 'creador';
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -112,54 +117,61 @@ const Sidebar = () => {
       sx={{
         width: open ? drawerWidth : 70,
         flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: open ? drawerWidth : 70,
-          boxSizing: 'border-box',
-          backgroundColor: '#1e293b', // Gris muy oscuro para headers
-          color: 'white',
-          transition: 'width 0.3s ease',
-          overflowX: 'hidden'
-        },
+                 '& .MuiDrawer-paper': {
+           width: open ? drawerWidth : 70,
+           boxSizing: 'border-box',
+           backgroundColor: '#ffffff', // Fondo blanco puro
+           color: '#374151', // Texto gris oscuro
+           transition: 'width 0.3s ease',
+           overflowX: 'hidden',
+           borderRight: '2px solid #cbd5e1', // Borde más grueso y oscuro
+           boxShadow: '4px 0 12px rgba(0, 0, 0, 0.15)' // Sombra más pronunciada
+         },
       }}
     >
       {/* Header del sidebar */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: open ? 'space-between' : 'center',
-          p: 2,
-          minHeight: 64,
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-        }}
-      >
-        {open && (
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Sistema de Gestión
-          </Typography>
-        )}
-        <IconButton
-          onClick={toggleDrawer}
-          sx={{ color: 'white' }}
-        >
-          <MenuIcon />
-        </IconButton>
-      </Box>
+             <Box
+         sx={{
+           display: 'flex',
+           alignItems: 'center',
+           justifyContent: open ? 'space-between' : 'center',
+           p: 2,
+           minHeight: 64,
+           borderBottom: '1px solid #f3f4f6',
+           backgroundColor: '#f8fafc' // Fondo gris más claro para contraste con el contenido
+         }}
+       >
+         {open && (
+           <Typography variant="h6" sx={{ fontWeight: 600, color: '#111827' }}>
+             Sistema de Gestión
+           </Typography>
+         )}
+         <IconButton
+           onClick={toggleDrawer}
+           sx={{ color: '#6b7280' }}
+         >
+           <MenuIcon />
+         </IconButton>
+       </Box>
 
-      {/* Información del usuario */}
-      {open && (
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <AccountCircleIcon sx={{ mr: 1 }} />
-            <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
-              {user?.nombre || 'Usuario'}
-            </Typography>
-          </Box>
-          <Typography variant="caption" sx={{ opacity: 0.7 }}>
-            {isAdmin ? 'Administrador' : 'Usuario'}
-          </Typography>
-        </Box>
-      )}
+             {/* Información del usuario */}
+       {open && (
+         <Box sx={{ p: 2, borderBottom: '1px solid #f3f4f6', backgroundColor: '#f1f5f9' }}>
+           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+             <AccountCircleIcon sx={{ mr: 1, color: '#6b7280' }} />
+             <Typography variant="subtitle2" sx={{ fontWeight: 500, color: '#111827' }}>
+               {user?.nombres && user?.apellidoPaterno && user?.apellidoMaterno
+                 ? `${user.nombres.split(' ')[0]} ${user.apellidoPaterno} ${user.apellidoMaterno}` 
+                 : user?.nombres && user?.apellidoPaterno
+                   ? `${user.nombres} ${user.apellidoPaterno}`
+                   : 'Usuario'}
+             </Typography>
+           </Box>
+           <Typography variant="caption" sx={{ color: '#6b7280' }}>
+             {isAdmin ? 'Administrador' : 'Usuario'}
+           </Typography>
+         </Box>
+       )}
 
       {/* Navegación principal */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
@@ -168,44 +180,47 @@ const Sidebar = () => {
           <ListItemButton
             onClick={() => handleNavigation('/')}
             selected={location.pathname === '/'}
-            sx={{
-              mx: 1,
-              borderRadius: 1,
-              '&.Mui-selected': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                },
-              },
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              },
-            }}
+                         sx={{
+               mx: 1,
+               borderRadius: 1,
+               '&.Mui-selected': {
+                 backgroundColor: '#f3f4f6',
+                 '&:hover': {
+                   backgroundColor: '#e5e7eb',
+                 },
+               },
+               '&:hover': {
+                 backgroundColor: '#f9fafb',
+               },
+             }}
           >
-            <ListItemIcon sx={{ color: 'white', minWidth: open ? 40 : 'auto' }}>
-              <DashboardIcon />
-            </ListItemIcon>
+                         <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
+               <DashboardIcon />
+             </ListItemIcon>
             {open && <ListItemText primary="Dashboard" />}
           </ListItemButton>
         </ListItem>
 
-        <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                 <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
 
-        {/* Sección de administración */}
+        {/* Sección de administración - Incluye Dashboard y todas las funciones administrativas */}
         {isAdmin && (
           <>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={toggleAdminMenu}
+                onClick={() => {
+                  toggleAdminMenu();
+                  handleNavigation('/admin');
+                }}
                 sx={{
                   mx: 1,
                   borderRadius: 1,
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: '#f9fafb',
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: 'white', minWidth: open ? 40 : 'auto' }}>
+                <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
                   <AssessmentIcon />
                 </ListItemIcon>
                 {open && (
@@ -224,24 +239,24 @@ const Sidebar = () => {
                     <ListItemButton
                       onClick={() => handleNavigation(item.path)}
                       selected={location.pathname === item.path}
-                      sx={{
-                        pl: 4,
-                        mx: 1,
-                        borderRadius: 1,
-                        '&.Mui-selected': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                          },
-                        },
-                        '&:hover': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        },
-                      }}
+                                             sx={{
+                         pl: 4,
+                         mx: 1,
+                         borderRadius: 1,
+                         '&.Mui-selected': {
+                           backgroundColor: '#f3f4f6',
+                           '&:hover': {
+                             backgroundColor: '#e5e7eb',
+                           },
+                         },
+                         '&:hover': {
+                           backgroundColor: '#f9fafb',
+                         },
+                       }}
                     >
-                      <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                        {item.icon}
-                      </ListItemIcon>
+                                             <ListItemIcon sx={{ color: '#6b7280', minWidth: 40 }}>
+                         {item.icon}
+                       </ListItemIcon>
                       <ListItemText primary={item.title} />
                     </ListItemButton>
                   </ListItem>
@@ -250,28 +265,61 @@ const Sidebar = () => {
             </Collapse>
           </>
         )}
+
+        {/* Control Maestro - Solo para el creador y analistas - AL FINAL */}
+        {(user?.dni === '73766815' || user?.role === 'analista') && (
+          <>
+            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/control-maestro')}
+                selected={location.pathname === '/control-maestro'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#fef2f2', // Fondo rojo muy claro
+                  border: '1px solid #fecaca', // Borde rojo claro
+                  '&:hover': {
+                    backgroundColor: '#fee2e2',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#fecaca',
+                    '&:hover': {
+                      backgroundColor: '#fca5a5',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#dc2626', minWidth: open ? 40 : 'auto' }}>
+                  <SecurityIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Control Maestro" sx={{ color: '#dc2626', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+          </>
+        )}
       </List>
 
-      {/* Botón de cerrar sesión */}
-      <Box sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-        <Tooltip title={open ? '' : 'Cerrar Sesión'} placement="right">
-          <IconButton
-            onClick={handleLogout}
-            sx={{
-              color: 'white',
-              width: open ? '100%' : 'auto',
-              justifyContent: open ? 'flex-start' : 'center',
-              borderRadius: 1,
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              },
-            }}
-          >
-            <LogoutIcon sx={{ mr: open ? 2 : 0 }} />
-            {open && <Typography>Cerrar Sesión</Typography>}
-          </IconButton>
-        </Tooltip>
-      </Box>
+             {/* Botón de cerrar sesión */}
+                                 <Box sx={{ p: 2, borderTop: '1px solid #f3f4f6', backgroundColor: '#f8fafc' }}>
+         <Tooltip title={open ? '' : 'Cerrar Sesión'} placement="right">
+           <IconButton
+             onClick={handleLogout}
+             sx={{
+               color: '#6b7280',
+               width: open ? '100%' : 'auto',
+               justifyContent: open ? 'flex-start' : 'center',
+               borderRadius: 1,
+               '&:hover': {
+                 backgroundColor: '#f3f4f6',
+               },
+             }}
+           >
+             <LogoutIcon sx={{ mr: open ? 2 : 0 }} />
+             {open && <Typography sx={{ color: '#374151' }}>Cerrar Sesión</Typography>}
+           </IconButton>
+         </Tooltip>
+       </Box>
     </Drawer>
   );
 };

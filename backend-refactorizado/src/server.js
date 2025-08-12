@@ -15,6 +15,7 @@ const ojtRoutes = require('./routes/ojt.routes');
 const excepcionesRoutes = require('./routes/excepciones.routes');
 const gruposRoutes = require('./routes/grupos.routes');
 const reportesRoutes = require('./routes/reportes.routes');
+const permisosRoutes = require('./routes/permisos.routes');
 
 // Crear aplicación Express
 const app = express();
@@ -74,7 +75,8 @@ app.get('/', (req, res) => {
       ojt: '/api/ojt',
       excepciones: '/api/excepciones',
       grupos: '/api/grupos',
-      reportes: '/api/reportes'
+      reportes: '/api/reportes',
+      permisos: '/api/permisos'
     }
   });
 });
@@ -100,6 +102,7 @@ app.use('/api/ojt', ojtRoutes);
 app.use('/api/excepciones', excepcionesRoutes);
 app.use('/api/grupos', gruposRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/permisos', permisosRoutes);
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
@@ -131,7 +134,8 @@ app.use('*', (req, res) => {
       '/api/ojt',
       '/api/excepciones',
       '/api/grupos',
-      '/api/reportes'
+      '/api/reportes',
+      '/api/permisos'
     ],
     timestamp: new Date().toISOString()
   });
@@ -159,6 +163,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log('   /api/excepciones - Excepciones de horarios');
   console.log('   /api/grupos - Gestión de grupos');
   console.log('   /api/reportes - Reportes del sistema');
+  console.log('   /api/permisos - Permisos especiales');
   console.log('=====================================');
 });
 

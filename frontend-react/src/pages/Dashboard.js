@@ -237,11 +237,13 @@ const Dashboard = () => {
       let fecha;
       if (typeof fechaString === 'string') {
         if (fechaString.includes('T')) {
-          // Formato ISO con T
-          fecha = new Date(fechaString);
+          // Formato ISO con T - usar la fecha tal como viene sin conversión de zona horaria
+          const [year, month, day] = fechaString.split('T')[0].split('-');
+          fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         } else if (fechaString.includes('-')) {
           // Formato YYYY-MM-DD
-          fecha = new Date(fechaString + 'T00:00:00');
+          const [year, month, day] = fechaString.split('-');
+          fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         } else {
           // Otro formato, intentar parsear
           fecha = new Date(fechaString);

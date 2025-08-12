@@ -24,23 +24,29 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   const checkAuthStatus = useCallback(async () => {
-    try {
-      console.log('🔍 Verificando estado de autenticación...');
-      const response = await api.get('/auth/me');
-      if (response.data.success) {
-        setUser(response.data.user);
+    console.log('🔍 Verificando autenticación...');
+    
+    // Lógica SIMPLE: si hay token y usuario en localStorage, restaurar sesión
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log('✅ Restaurando sesión desde localStorage');
+        setUser(userData);
+        setToken(storedToken);
         setIsAuthenticated(true);
-        console.log('✅ Usuario autenticado:', response.data.user);
-      } else {
-        console.log('❌ Respuesta de auth/me no exitosa');
+      } catch (error) {
+        console.error('❌ Error parseando usuario:', error);
         logout();
       }
-    } catch (error) {
-      console.error('❌ Error verificando autenticación:', error);
+    } else {
+      console.log('❌ No hay sesión guardada');
       logout();
-    } finally {
-      setLoading(false);
     }
+    
+    setLoading(false);
   }, []);
 
   const logout = useCallback(() => {
@@ -49,6 +55,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
   }, []);
 
   // Configurar interceptor para incluir token en todas las peticiones
@@ -83,11 +90,11 @@ export const AuthProvider = ({ children }) => {
       }
     );
 
-    if (token) {
-      console.log('✅ Token encontrado en localStorage:', token.substring(0, 20) + '...');
+    // Lógica SIMPLE: verificar autenticación al cargar
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
       checkAuthStatus();
     } else {
-      console.log('❌ No hay token en localStorage');
       setLoading(false);
     }
 
@@ -140,8 +147,9 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('token', newToken);
+        localStorage.setItem('user', JSON.stringify(userData));
         
-        console.log('💾 Token guardado en localStorage y estado');
+        console.log('💾 Token y usuario guardados en localStorage y estado');
         return { success: true };
       } else {
         console.log('❌ Login falló:', response.data.message);
