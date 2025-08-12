@@ -186,8 +186,41 @@ exports.getJustificacionById = async (req, res) => {
 exports.getJustificacionesByEmpleado = async (req, res) => {
   try {
     const { dni } = req.params;
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
+    const { page, limit } = req.query;
+
+    // Si no se especifican parámetros de paginación, traer TODOS los registros
+    if (!page && !limit) {
+      const query = `
+        SELECT
+          j.JustificacionID,
+          j.Fecha,
+          j.TipoJustificacion,
+          j.Motivo,
+          j.Estado,
+          j.AprobadorDNI,
+          aprobador.Nombres as NombreAprobador,
+          aprobador.ApellidoPaterno as ApellidoAprobador
+        FROM Partner.dbo.Justificaciones j
+        LEFT JOIN PRI.Empleados aprobador ON j.AprobadorDNI = aprobador.DNI
+        WHERE j.EmpleadoDNI = @EmpleadoDNI
+        ORDER BY j.Fecha DESC
+      `;
+
+      const result = await executeQuery(query, [
+        { name: 'EmpleadoDNI', type: sql.VarChar, value: dni }
+      ]);
+
+      console.log(`📋 Justificaciones encontradas para DNI ${dni}: ${result.recordset.length}`);
+      
+      // Devolver array simple para compatibilidad
+      res.json(result.recordset);
+      return;
+    }
+
+    // Si hay parámetros de paginación, usar lógica paginada
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const offset = (pageNum - 1) * limitNum;
 
     const query = `
       SELECT
@@ -210,7 +243,7 @@ exports.getJustificacionesByEmpleado = async (req, res) => {
     const result = await executeQuery(query, [
       { name: 'EmpleadoDNI', type: sql.VarChar, value: dni },
       { name: 'offset', type: sql.Int, value: offset },
-      { name: 'limit', type: sql.Int, value: parseInt(limit) }
+      { name: 'limit', type: sql.Int, value: limitNum }
     ]);
 
     // Obtener total de justificaciones del empleado
@@ -232,10 +265,10 @@ exports.getJustificacionesByEmpleado = async (req, res) => {
       data: {
         justificaciones: result.recordset,
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: pageNum,
+          limit: limitNum,
           total,
-          totalPages: Math.ceil(total / limit)
+          totalPages: Math.ceil(total / limitNum)
         }
       }
     });
@@ -254,16 +287,19 @@ exports.getJustificacionesByEmpleado = async (req, res) => {
 exports.createJustificacion = async (req, res) => {
   try {
     // Aceptar tanto estilo camelCase como PascalCase del proyecto anterior
-    const empleadoDNI = req.body.empleadoDNI || req.body.EmpleadoDNI;
+    const empleadoDNI = req.body.empleadoDNI || req.body.EmpleadoDNI || req.user?.dni;
     const fecha = req.body.fecha || req.body.Fecha;
-    const tipoJustificacion = req.body.tipoJustificacion || req.body.TipoJustificacion;
+    const tipo = req.body.tipo || req.body.tipoJustificacion || req.body.TipoJustificacion;
     const motivo = req.body.motivo || req.body.Motivo;
-    const estado = (req.body.estado || req.body.Estado || 'Pendiente');
+    const estado = (req.body.estado || req.body.Estado || 'Aprobado');
     // Aprobador opcional al crear (en legado se enviaba). Si no viene, tomar el del usuario autenticado
-    const aprobadorDNI = req.body.aprobadorDNI || req.body.AprobadorDNI || req.user?.dni || null;
+    const aprobadorDNI = req.body.aprobadorDNI || req.body.AprobadorDNI || null;
+
+    // El tipo de justificación viene directamente como string
+    const tipoJustificacion = tipo;
 
     // Validar campos requeridos
-    if (!empleadoDNI || !fecha || !tipoJustificacion || !motivo) {
+    if (!empleadoDNI || !fecha || !tipo || !motivo) {
       return res.status(400).json({
         success: false,
         message: 'DNI del empleado, fecha, tipo y motivo son requeridos',

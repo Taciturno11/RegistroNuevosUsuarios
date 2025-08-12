@@ -25,11 +25,14 @@ router.get('/', getAllJustificaciones);
 // Obtener tipos de justificación (catálogo)
 router.get('/tipos', getTiposJustificacion);
 
-// Obtener justificación por ID
-router.get('/:id', getJustificacionById);
+// Obtener justificaciones por empleado (ruta simple para compatibilidad)
+router.get('/:dni', getJustificacionesByEmpleado);
 
-// Obtener justificaciones por empleado
+// Obtener justificaciones por empleado (ruta explícita)
 router.get('/empleado/:dni', getJustificacionesByEmpleado);
+
+// Obtener justificación por ID (debe ir después de las rutas de DNI)
+router.get('/justificacion/:id', getJustificacionById);
 
 // Crear nueva justificación
 router.post('/', createJustificacion);
