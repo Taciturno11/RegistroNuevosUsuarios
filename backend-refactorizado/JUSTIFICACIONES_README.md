@@ -140,3 +140,4 @@ Esta técnica será reutilizada en **Asignación de Excepciones**.
 ---
 
 **Próximo paso:** Probar toda la funcionalidad end-to-end y ajustar según feedback del usuario.
+

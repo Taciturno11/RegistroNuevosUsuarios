@@ -97,3 +97,4 @@ SELECT
 FROM [dbo].[Justificaciones];
 
 PRINT '🎉 Script completado exitosamente';
+
