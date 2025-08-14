@@ -4,6 +4,31 @@ const { executeQuery, sql } = require('../config/database');
 // GESTIÓN DE OJT (ON-THE-JOB TRAINING) / CIC
 // ========================================
 
+// Función utilitaria para convertir fechas del formato datetime-local al formato SQL Server
+const convertirFecha = (fechaString) => {
+  if (!fechaString) return null;
+  
+  try {
+    // Convertir "2025-01-15T14:30" a "2025-01-15 14:30:00"
+    const fecha = new Date(fechaString);
+    if (isNaN(fecha.getTime())) {
+      throw new Error('Fecha inválida');
+    }
+    
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    const hours = String(fecha.getHours()).padStart(2, '0');
+    const minutes = String(fecha.getMinutes()).padStart(2, '0');
+    const seconds = String(fecha.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  } catch (error) {
+    console.error('Error convirtiendo fecha:', error, 'Fecha original:', fechaString);
+    throw new Error(`Formato de fecha inválido: ${fechaString}`);
+  }
+};
+
 // Obtener lista de DNIs de empleados activos para autocomplete
 exports.listarDNIsOJT = async (req, res) => {
   try {
@@ -106,7 +131,7 @@ exports.crearOJT = async (req, res) => {
     const {
       UsuarioCIC,
       DNIEmpleado,
-      FechaHoraInicio,          // string "2025-06-28 01:00:00"
+      FechaHoraInicio,          // string "2025-01-15T14:30"
       FechaHoraFin = null,
       Observaciones = null
     } = req.body;
@@ -134,28 +159,30 @@ exports.crearOJT = async (req, res) => {
       });
     }
 
+    // Convertir fechas
+    const fechaInicioSQL = convertirFecha(FechaHoraInicio);
+    const fechaFinSQL = FechaHoraFin ? convertirFecha(FechaHoraFin) : null;
+
+    console.log('🕐 Fechas convertidas:', {
+      original: { FechaHoraInicio, FechaHoraFin },
+      convertidas: { fechaInicioSQL, fechaFinSQL }
+    });
+
     // Insertar nuevo registro OJT
     const insertQuery = `
       INSERT INTO PRI.UsoUsuarioCIC (
         NombreUsuarioCIC, DNIEmpleado, FechaHoraInicio,
         FechaHoraFin, Observaciones
       ) VALUES (
-        @UsuarioCIC, @DNIEmpleado,
-        CONVERT(datetime, @FechaHoraInicio, 120),
-        CASE
-          WHEN @FechaHoraFin IS NULL OR @FechaHoraFin = ''
-          THEN NULL
-          ELSE CONVERT(datetime, @FechaHoraFin, 120)
-        END,
-        @Observaciones
+        @UsuarioCIC, @DNIEmpleado, @FechaHoraInicio, @FechaHoraFin, @Observaciones
       )
     `;
 
     const params = [
       { name: 'UsuarioCIC', type: sql.VarChar, value: UsuarioCIC },
       { name: 'DNIEmpleado', type: sql.VarChar, value: DNIEmpleado },
-      { name: 'FechaHoraInicio', type: sql.VarChar, value: FechaHoraInicio },
-      { name: 'FechaHoraFin', type: sql.VarChar, value: FechaHoraFin },
+      { name: 'FechaHoraInicio', type: sql.DateTime, value: new Date(fechaInicioSQL) },
+      { name: 'FechaHoraFin', type: sql.DateTime, value: fechaFinSQL ? new Date(fechaFinSQL) : null },
       { name: 'Observaciones', type: sql.VarChar, value: Observaciones }
     ];
 
@@ -169,8 +196,8 @@ exports.crearOJT = async (req, res) => {
       data: {
         DNIEmpleado,
         UsuarioCIC,
-        FechaHoraInicio,
-        FechaHoraFin,
+        FechaHoraInicio: fechaInicioSQL,
+        FechaHoraFin: fechaFinSQL,
         Observaciones
       }
     });
@@ -219,25 +246,30 @@ exports.actualizarOJT = async (req, res) => {
       });
     }
 
+    // Convertir fechas
+    const fechaInicioSQL = convertirFecha(FechaHoraInicio);
+    const fechaFinSQL = FechaHoraFin ? convertirFecha(FechaHoraFin) : null;
+
+    console.log('🕐 Fechas convertidas para actualización:', {
+      original: { FechaHoraInicio, FechaHoraFin },
+      convertidas: { fechaInicioSQL, fechaFinSQL }
+    });
+
     // Actualizar registro
     const updateQuery = `
       UPDATE PRI.UsoUsuarioCIC
       SET 
         NombreUsuarioCIC = @UsuarioCIC,
-        FechaHoraInicio = CONVERT(datetime, @FechaHoraInicio, 120),
-        FechaHoraFin = CASE
-          WHEN @FechaHoraFin IS NULL OR @FechaHoraFin = ''
-          THEN NULL
-          ELSE CONVERT(datetime, @FechaHoraFin, 120)
-        END,
+        FechaHoraInicio = @FechaHoraInicio,
+        FechaHoraFin = @FechaHoraFin,
         Observaciones = @Observaciones
       WHERE UsoCICID = @ID
     `;
 
     const params = [
       { name: 'UsuarioCIC', type: sql.VarChar, value: UsuarioCIC },
-      { name: 'FechaHoraInicio', type: sql.VarChar, value: FechaHoraInicio },
-      { name: 'FechaHoraFin', type: sql.VarChar, value: FechaHoraFin },
+      { name: 'FechaHoraInicio', type: sql.DateTime, value: new Date(fechaInicioSQL) },
+      { name: 'FechaHoraFin', type: sql.DateTime, value: fechaFinSQL ? new Date(fechaFinSQL) : null },
       { name: 'Observaciones', type: sql.VarChar, value: Observaciones },
       { name: 'ID', type: sql.Int, value: parseInt(id) }
     ];
@@ -252,8 +284,8 @@ exports.actualizarOJT = async (req, res) => {
       data: {
         UsoCICID: parseInt(id),
         UsuarioCIC,
-        FechaHoraInicio,
-        FechaHoraFin,
+        FechaHoraInicio: fechaInicioSQL,
+        FechaHoraFin: fechaFinSQL,
         Observaciones
       }
     });
