@@ -18,6 +18,7 @@ import ReporteAsistencias from './pages/ReporteAsistencias';
 import ReporteTardanzas from './pages/ReporteTardanzas';
 import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
+import PagosNomina from './pages/PagosNomina';
 import './App.css';
 
 // Tema personalizado que mantiene la estética del proyecto original
@@ -193,6 +194,11 @@ const AppContent = () => {
           } />
           
           <Route path="/control-maestro" element={<ControlMaestro />} />
+          <Route path="/pagos-nomina" element={
+            <ProtectedRoute requireRole={['analista', 'creador']}>
+              <PagosNomina />
+            </ProtectedRoute>
+          } />
           {/* Rutas no encontradas van al Dashboard en lugar de crear un loop */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

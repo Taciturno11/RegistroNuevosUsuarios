@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 
 const ReporteTardanzas = () => {
+  console.log('🚀 ReporteTardanzas: Componente montándose');
   const navigate = useNavigate();
   const { user, api } = useAuth();
   
@@ -70,12 +71,16 @@ const ReporteTardanzas = () => {
 
   // Verificar permisos al montar
   useEffect(() => {
+    console.log('🔍 ReporteTardanzas: useEffect ejecutándose, user:', user);
+    
     // Solo analistas y el creador pueden acceder
     if (user?.role !== 'analista' && user?.dni !== '73766815') {
+      console.log('❌ ReporteTardanzas: Sin permisos, redirigiendo');
       navigate('/');
       return;
     }
     
+    console.log('✅ ReporteTardanzas: Permisos OK, cargando datos');
     cargarOpcionesFiltros();
     // Cargar reporte automáticamente
     generarReporte();

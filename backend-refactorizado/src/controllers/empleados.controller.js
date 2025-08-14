@@ -848,3 +848,80 @@ exports.getAllEmpleadosConRoles = async (req, res) => {
     });
   }
 };
+
+// ========================================
+// LOOKUP PARA AUTOCOMPLETADO
+// ========================================
+
+// Lookup para autocompletar DNI (acepta varios cargos: ?cargo=2,8)
+exports.lookupEmpleados = async (req, res) => {
+  try {
+    const { cargo, search } = req.query;
+    
+    if (!cargo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parámetro cargo es requerido',
+        error: 'MISSING_CARGO_PARAM'
+      });
+    }
+
+    console.log(`🔍 Lookup empleados - Cargo: ${cargo}, Búsqueda: ${search || 'vacía'}`);
+
+    // Construir la consulta base
+    let query = `
+      SELECT 
+        e.DNI,
+        CONCAT(e.Nombres, ' ', e.ApellidoPaterno, ' ', ISNULL(e.ApellidoMaterno, '')) AS NOMBRECOMPLETO,
+        e.Nombres,
+        e.ApellidoPaterno,
+        e.ApellidoMaterno
+      FROM PRI.Empleados e
+      WHERE e.EstadoEmpleado = 'Activo'
+    `;
+
+    const params = [];
+
+    // Filtrar por cargo(s)
+    if (cargo.includes(',')) {
+      // Múltiples cargos separados por coma
+      const cargos = cargo.split(',').map(c => c.trim());
+      query += ` AND e.CargoID IN (${cargos.map((_, i) => `@Cargo${i}`).join(',')})`;
+      cargos.forEach((c, i) => {
+        params.push({ name: `Cargo${i}`, type: sql.Int, value: parseInt(c) });
+      });
+    } else {
+      // Un solo cargo
+      query += ` AND e.CargoID = @CargoID`;
+      params.push({ name: 'CargoID', type: sql.Int, value: parseInt(cargo) });
+    }
+
+    // Filtrar por término de búsqueda si se proporciona
+    if (search && search.trim()) {
+      query += ` AND (e.DNI LIKE @Search OR e.Nombres LIKE @Search OR e.ApellidoPaterno LIKE @Search)`;
+      params.push({ name: 'Search', type: sql.VarChar, value: `%${search.trim()}%` });
+    }
+
+    query += ` ORDER BY e.Nombres, e.ApellidoPaterno`;
+
+    const result = await executeQuery(query, params);
+
+    console.log(`✅ Lookup completado: ${result.recordset.length} empleados encontrados`);
+
+    res.json({
+      success: true,
+      message: 'Lookup completado exitosamente',
+      data: result.recordset
+    });
+
+  } catch (error) {
+    console.error('❌ Error en lookup de empleados:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// ========================================

@@ -95,17 +95,16 @@ app.get('/health', (req, res) => {
 });
 
 // Rutas de la API
-app.use('/api/auth', authRoutes);
-app.use('/api/empleados', empleadosRoutes);
-app.use('/api/catalogos', catalogosRoutes);
-app.use('/api/cese', ceseRoutes);
-app.use('/api/justificaciones', justificacionesRoutes);
-app.use('/api/ojt', ojtRoutes);
-app.use('/api/excepciones', excepcionesRoutes);
-app.use('/api/grupos', gruposRoutes);
-app.use('/api/reportes', reportesRoutes);
-app.use('/api/tardanzas', tardanzasRoutes);
-app.use('/api/permisos', permisosRoutes);
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/empleados', require('./routes/empleados.routes'));
+app.use('/api/catalogos', require('./routes/catalogos.routes'));
+app.use('/api/grupos', require('./routes/grupos.routes'));
+app.use('/api/justificaciones', require('./routes/justificaciones.routes'));
+app.use('/api/ojt', require('./routes/ojt.routes'));
+app.use('/api/excepciones', require('./routes/excepciones.routes'));
+app.use('/api/reportes', require('./routes/reportes.routes'));
+app.use('/api/tardanzas', require('./routes/tardanzas.routes'));
+app.use('/api/nomina', require('./routes/nomina.routes'));
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {

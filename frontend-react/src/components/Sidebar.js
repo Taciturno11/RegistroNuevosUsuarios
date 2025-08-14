@@ -30,18 +30,13 @@ import {
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
   Security as SecurityIcon,
-  TableChart as TableChartIcon
+  TableChart as TableChartIcon,
+  AccountBalance as AccountBalanceIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
 
 const menuItems = [
-  {
-    title: 'Mi Perfil',
-    path: '/profile',
-    icon: <AccountCircleIcon />,
-    adminOnly: false
-  },
   {
     title: 'Registrar Empleado',
     path: '/registrar-empleado',
@@ -181,11 +176,11 @@ const Sidebar = () => {
 
       {/* Navegación principal */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
-        {/* Dashboard siempre visible */}
+        {/* Mi Perfil - Siempre visible */}
         <ListItem disablePadding>
           <ListItemButton
-            onClick={() => handleNavigation('/')}
-            selected={location.pathname === '/'}
+            onClick={() => handleNavigation('/profile')}
+            selected={location.pathname === '/profile'}
             sx={{
               mx: 1,
               borderRadius: 1,
@@ -201,9 +196,9 @@ const Sidebar = () => {
             }}
           >
             <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
-              <DashboardIcon />
+              <AccountCircleIcon />
             </ListItemIcon>
-            {open && <ListItemText primary="Dashboard" />}
+            {open && <ListItemText primary="Mi Perfil" />}
           </ListItemButton>
         </ListItem>
 
@@ -228,7 +223,7 @@ const Sidebar = () => {
                 </ListItemIcon>
                 {open && (
                   <>
-                    <ListItemText primary="Administración" />
+                    <ListItemText primary="Gestión de Empleados" />
                     {adminMenuOpen ? <ExpandLess /> : <ExpandMore />}
                   </>
                 )}
@@ -358,6 +353,34 @@ const Sidebar = () => {
                   <SecurityIcon />
                 </ListItemIcon>
                 {open && <ListItemText primary="Control Maestro" sx={{ color: '#dc2626', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+            
+            {/* Pagos Nómina - Solo para analistas y creador */}
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/pagos-nomina')}
+                selected={location.pathname === '/pagos-nomina'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#f0fdf4', // Fondo verde muy claro
+                  border: '1px solid #bbf7d0', // Borde verde claro
+                  '&:hover': {
+                    backgroundColor: '#dcfce7',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#bbf7d0',
+                    '&:hover': {
+                      backgroundColor: '#86efac',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#16a34a', minWidth: open ? 40 : 'auto' }}>
+                  <AccountBalanceIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Pagos Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
               </ListItemButton>
             </ListItem>
           </>

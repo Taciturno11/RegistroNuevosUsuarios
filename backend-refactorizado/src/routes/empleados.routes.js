@@ -12,7 +12,8 @@ const {
   searchEmpleados,
   actualizarRolEmpleado,
   obtenerHistorialRoles,
-  getAllEmpleadosConRoles
+  getAllEmpleadosConRoles,
+  lookupEmpleados
 } = require('../controllers/empleados.controller');
 const { getHorarioBaseEmpleado } = require('../controllers/grupos.controller');
 
@@ -30,6 +31,9 @@ router.get('/stats', getEmpleadosStats);
 
 // Buscar empleados por término de búsqueda
 router.get('/buscar', searchEmpleados);
+
+// Lookup para autocompletar DNI (acepta varios cargos: ?cargo=5&search=7156)
+router.get('/lookup', lookupEmpleados);
 
 // Obtener empleado por DNI
 router.get('/:dni', getEmpleadoByDNI);
