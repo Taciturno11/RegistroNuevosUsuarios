@@ -364,3 +364,25 @@ body {
   margin-top: 2rem;
   border-radius: 0.5rem 0.5rem 0 0;
 }
+
+/* ===== Fix: Menús MUI tamaño consistente ===== */
+/* Evitar que la regla global "* { transition: all }" afecte a los menús */
+.MuiPopover-root,
+.MuiMenu-paper,
+.MuiMenuItem-root,
+.MuiList-root,
+.MuiMenu-list {
+  transition: none !important;
+}
+
+/* Tamaño de tipografía fijo y consistente dentro del menú */
+.MuiMenu-paper .MuiMenuItem-root {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+}
+
+/* ===== Fix: Tooltips aparecen sin desplazamiento/animación ===== */
+.MuiTooltip-popper,
+.MuiTooltip-tooltip {
+  transition: none !important; /* evita animación de posicionamiento/zoom */
+}

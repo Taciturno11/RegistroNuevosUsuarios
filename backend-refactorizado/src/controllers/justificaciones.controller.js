@@ -1,4 +1,5 @@
 const { executeQuery, sql } = require('../config/database');
+const { parseFechaLocal } = require('../utils/dateUtils');
 
 // ========================================
 // GESTIÓN DE JUSTIFICACIONES
@@ -333,7 +334,8 @@ exports.createJustificacion = async (req, res) => {
 
     const params = [
       { name: 'EmpleadoDNI', type: sql.VarChar, value: empleadoDNI },
-      { name: 'Fecha', type: sql.Date, value: new Date(fecha) },
+      // Parsear fecha en zona local para evitar desfase -1 día
+      { name: 'Fecha', type: sql.Date, value: parseFechaLocal(fecha) || new Date(fecha) },
       { name: 'TipoJustificacion', type: sql.VarChar, value: tipoJustificacion },
       { name: 'Motivo', type: sql.VarChar, value: motivo },
       { name: 'Estado', type: sql.VarChar, value: estado },
@@ -352,7 +354,7 @@ exports.createJustificacion = async (req, res) => {
       data: {
         JustificacionID: nuevoId,
         EmpleadoDNI: empleadoDNI,
-        Fecha: new Date(fecha),
+        Fecha: parseFechaLocal(fecha) || new Date(fecha),
         TipoJustificacion: tipoJustificacion,
         Motivo: motivo,
         Estado: estado,

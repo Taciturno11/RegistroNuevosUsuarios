@@ -58,3 +58,31 @@ exports.formatearFechaEspanol = (fecha) => {
   }
 };
 
+/**
+ * Convierte un string 'YYYY-MM-DD' a un objeto Date en hora local
+ * evitando el desfase de zona horaria que ocurre con new Date('YYYY-MM-DD')
+ * que interpreta la fecha en UTC.
+ *
+ * Se fija la hora al mediodía local para evitar problemas de DST.
+ * @param {string} fechaStr - Fecha en formato 'YYYY-MM-DD' o ISO similar
+ * @returns {Date|null}
+ */
+exports.parseFechaLocal = (fechaStr) => {
+  if (!fechaStr) return null;
+  try {
+    const soloFecha = String(fechaStr).split('T')[0];
+    const [yStr, mStr, dStr] = soloFecha.split('-');
+    const year = parseInt(yStr, 10);
+    const month = parseInt(mStr, 10);
+    const day = parseInt(dStr, 10);
+    if ([year, month, day].some((n) => Number.isNaN(n))) return null;
+    // Usar el mediodía local para evitar saltos por horario de verano
+    return new Date(year, month - 1, day, 12, 0, 0, 0);
+  } catch (err) {
+    console.error('Error parseando fecha local:', err);
+    return null;
+  }
+};
+
+
+

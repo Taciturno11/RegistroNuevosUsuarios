@@ -28,6 +28,7 @@ import {
   Collapse,
   Stack
 } from '@mui/material';
+import Fade from '@mui/material/Fade';
 import {
   ArrowBack as ArrowBackIcon,
   CheckCircle as CheckCircleIcon,
@@ -99,6 +100,27 @@ const Justificaciones = () => {
   }, []);
 
   // Filtrado optimizado con useMemo para evitar re-renders innecesarios
+  // Helper para parsear fechas del backend en hora local sin desfase
+  const parseFechaLocal = (value) => {
+    if (!value) return null;
+    try {
+      if (typeof value === 'string') {
+        const solo = value.split('T')[0];
+        const [yy, mm, dd] = solo.split('-');
+        const y = parseInt(yy, 10);
+        const m = parseInt(mm, 10);
+        const d = parseInt(dd, 10);
+        if (!Number.isNaN(y) && !Number.isNaN(m) && !Number.isNaN(d)) {
+          return new Date(y, m - 1, d, 12, 0, 0, 0);
+        }
+      }
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    } catch {
+      return null;
+    }
+  };
+
   const justificacionesFiltradas = useMemo(() => {
     if (!Array.isArray(justificaciones)) {
       return [];
@@ -108,14 +130,14 @@ const Justificaciones = () => {
 
     if (filtroMes) {
       filtradas = filtradas.filter(j => {
-        const fecha = new Date(j.Fecha || j.fecha);
+        const fecha = parseFechaLocal(j.Fecha || j.fecha);
         return fecha.getMonth() + 1 === parseInt(filtroMes);
       });
     }
 
     if (filtroAnio) {
       filtradas = filtradas.filter(j => {
-        const fecha = new Date(j.Fecha || j.fecha);
+        const fecha = parseFechaLocal(j.Fecha || j.fecha);
         return fecha.getFullYear() === parseInt(filtroAnio);
       });
     }
@@ -328,7 +350,7 @@ const Justificaciones = () => {
       scrollbarGutter: 'stable',
       // Optimizaciones críticas para eliminar temblor
       willChange: 'auto',
-      transform: 'translateZ(0)', // Forzar aceleración por hardware
+      // Nota: evitar transforms en el contenedor para no afectar posicionamiento de Popovers
       '& .MuiSelect-select': {
         transition: 'none !important',
         willChange: 'auto'
@@ -398,13 +420,21 @@ const Justificaciones = () => {
 
   const formatearFecha = useCallback((fecha) => {
     try {
-      return new Date(fecha).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      if (!fecha) return '';
+      if (typeof fecha === 'string') {
+        const solo = fecha.split('T')[0];
+        const [y, m, d] = solo.split('-');
+        const date = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10), 12, 0, 0, 0);
+        if (!Number.isNaN(date.getTime())) {
+          return date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+      }
+      const dateObj = new Date(fecha);
+      return Number.isNaN(dateObj.getTime())
+        ? String(fecha)
+        : dateObj.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' });
     } catch {
-      return fecha;
+      return String(fecha);
     }
   }, []);
 
@@ -641,30 +671,17 @@ const Justificaciones = () => {
                         onChange={handleTipoChange}
                         label="Tipo de Justificación *"
                         displayEmpty
-                        MenuProps={{
-                          disableScrollLock: true,
-                          keepMounted: true,
-                          // CRÍTICO: Evitar que el dropdown afecte el layout
-                          disablePortal: false,
-                          anchorOrigin: {
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                          },
-                          transformOrigin: {
-                            vertical: 'top',
-                            horizontal: 'left',
-                          },
-                          PaperProps: {
-                            style: {
-                              transform: 'translateZ(0)',
-                              willChange: 'auto',
-                              minWidth: '400px', // Ancho mínimo más grande
-                              width: '400px', // Ancho fijo
-                              maxWidth: '400px' // Ancho máximo fijo
-                            }
-                          }
-                        }}
-                        sx={{
+                        												MenuProps={{
+												  disableScrollLock: true,
+												  disablePortal: false,
+												  keepMounted: false,
+												  TransitionComponent: Fade,
+												  transitionDuration: 0,
+												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+												  transformOrigin: { vertical: 'top', horizontal: 'left' },
+												  PaperProps: { sx: { minWidth: 400, width: 400, maxWidth: 400, fontSize: 16, '& .MuiMenuItem-root': { fontSize: 16 } } }
+												}}
+sx={{
                           borderRadius: 2,
                           backgroundColor: 'white',
                           height: 56, // Altura fija
@@ -739,30 +756,17 @@ const Justificaciones = () => {
                         onChange={handleEstadoChange}
                         label="Estado *"
                         displayEmpty
-                        MenuProps={{
-                          disableScrollLock: true,
-                          keepMounted: true,
-                          // CRÍTICO: Evitar que el dropdown afecte el layout
-                          disablePortal: false,
-                          anchorOrigin: {
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                          },
-                          transformOrigin: {
-                            vertical: 'top',
-                            horizontal: 'left',
-                          },
-                          PaperProps: {
-                            style: {
-                              transform: 'translateZ(0)',
-                              willChange: 'auto',
-                              minWidth: '250px', // Ancho mínimo más grande
-                              width: '250px', // Ancho fijo
-                              maxWidth: '250px' // Ancho máximo fijo
-                            }
-                          }
-                        }}
-                        sx={{
+                        												MenuProps={{
+												  disableScrollLock: true,
+												  disablePortal: false,
+												  keepMounted: false,
+												  TransitionComponent: Fade,
+												  transitionDuration: 0,
+												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+												  transformOrigin: { vertical: 'top', horizontal: 'left' },
+												  PaperProps: { sx: { minWidth: 250, width: 250, maxWidth: 250, fontSize: 16, '& .MuiMenuItem-root': { fontSize: 16 } } }
+												}}
+sx={{
                           borderRadius: 2,
                           backgroundColor: 'white',
                           height: 56, // Altura fija
@@ -922,30 +926,17 @@ const Justificaciones = () => {
                         value={filtroMes}
                         onChange={handleFiltroMes}
                         label="Mes"
-                        MenuProps={{
-                          disableScrollLock: true,
-                          keepMounted: true,
-                          // CRÍTICO: Evitar que el dropdown afecte el layout
-                          disablePortal: false,
-                          anchorOrigin: {
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                          },
-                          transformOrigin: {
-                            vertical: 'top',
-                            horizontal: 'left',
-                          },
-                          PaperProps: {
-                            style: {
-                              transform: 'translateZ(0)',
-                              willChange: 'auto',
-                              minWidth: '220px', // Ancho mínimo más grande
-                              width: '220px', // Ancho fijo
-                              maxWidth: '220px' // Ancho máximo fijo
-                            }
-                          }
-                        }}
-                        sx={{
+                        												MenuProps={{
+												  disableScrollLock: true,
+												  disablePortal: false,
+												  keepMounted: false,
+												  TransitionComponent: Fade,
+												  transitionDuration: 0,
+												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+												  transformOrigin: { vertical: 'top', horizontal: 'left' },
+												  PaperProps: { sx: { minWidth: 220, width: 220, maxWidth: 220, fontSize: 15, '& .MuiMenuItem-root': { fontSize: 15 } } }
+												}}
+sx={{
                           backgroundColor: 'rgba(255,255,255,0.15)',
                           color: 'white',
                           borderRadius: 2,
@@ -989,30 +980,17 @@ const Justificaciones = () => {
                         value={filtroAnio}
                         onChange={handleFiltroAnio}
                         label="Año"
-                        MenuProps={{
-                          disableScrollLock: true,
-                          keepMounted: true,
-                          // CRÍTICO: Evitar que el dropdown afecte el layout
-                          disablePortal: false,
-                          anchorOrigin: {
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                          },
-                          transformOrigin: {
-                            vertical: 'top',
-                            horizontal: 'left',
-                          },
-                          PaperProps: {
-                            style: {
-                              transform: 'translateZ(0)',
-                              willChange: 'auto',
-                              minWidth: '180px', // Ancho mínimo más grande
-                              width: '180px', // Ancho fijo
-                              maxWidth: '180px' // Ancho máximo fijo
-                            }
-                          }
-                        }}
-                        sx={{
+                        												MenuProps={{
+												  disableScrollLock: true,
+												  disablePortal: false,
+												  keepMounted: false,
+												  TransitionComponent: Fade,
+												  transitionDuration: 0,
+												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+												  transformOrigin: { vertical: 'top', horizontal: 'left' },
+												  PaperProps: { sx: { minWidth: 180, width: 180, maxWidth: 180, fontSize: 15, '& .MuiMenuItem-root': { fontSize: 15 } } }
+												}}
+sx={{
                           backgroundColor: 'rgba(255,255,255,0.15)',
                           color: 'white',
                           borderRadius: 2,
@@ -1047,30 +1025,17 @@ const Justificaciones = () => {
                         value={filtroEstado}
                         onChange={handleFiltroEstado}
                         label="Estado"
-                        MenuProps={{
-                          disableScrollLock: true,
-                          keepMounted: true,
-                          // CRÍTICO: Evitar que el dropdown afecte el layout
-                          disablePortal: false,
-                          anchorOrigin: {
-                            vertical: 'bottom',
-                            horizontal: 'left',
-                          },
-                          transformOrigin: {
-                            vertical: 'top',
-                            horizontal: 'left',
-                          },
-                          PaperProps: {
-                            style: {
-                              transform: 'translateZ(0)',
-                              willChange: 'auto',
-                              minWidth: '200px', // Ancho mínimo más grande
-                              width: '200px', // Ancho fijo
-                              maxWidth: '200px' // Ancho máximo fijo
-                            }
-                          }
-                        }}
-                      sx={{
+                        												MenuProps={{
+												  disableScrollLock: true,
+												  disablePortal: false,
+												  keepMounted: false,
+												  TransitionComponent: Fade,
+												  transitionDuration: 0,
+												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+												  transformOrigin: { vertical: 'top', horizontal: 'left' },
+												  PaperProps: { sx: { minWidth: 200, width: 200, maxWidth: 200, fontSize: 15, '& .MuiMenuItem-root': { fontSize: 15 } } }
+												}}
+sx={{
                           backgroundColor: 'rgba(255,255,255,0.15)',
                         color: 'white',
                           borderRadius: 2,
@@ -1120,55 +1085,88 @@ const Justificaciones = () => {
           
           {/* Tabla */}
           <TableContainer sx={{ maxHeight: 500 }}>
-            <Table stickyHeader>
+            <Table stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                 <TableHead>
                 <TableRow>
                     <TableCell sx={{ 
-                    backgroundColor: '#f8fafc',
+                      backgroundColor: '#e2e8f0',
                     fontWeight: 700,
                     color: '#374151',
                     borderBottom: '2px solid #e5e7eb',
-                    minWidth: 120
+                      minWidth: 120,
+                      width: '12%'
                   }}>
-                      Fecha
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CalendarIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                        Fecha
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ 
-                    backgroundColor: '#f8fafc',
+                      backgroundColor: '#e2e8f0',
                     fontWeight: 700,
                     color: '#374151',
                     borderBottom: '2px solid #e5e7eb',
-                    minWidth: 200
+                      minWidth: 200,
+                      width: '28%'
                   }}>
-                    Tipo de Justificación
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TagIcon sx={{ fontSize: 16, color: '#10b981' }} />
+                      Tipo de Justificación
+                    </Box>
                     </TableCell>
                     <TableCell sx={{ 
-                    backgroundColor: '#f8fafc',
+                      backgroundColor: '#e2e8f0',
                     fontWeight: 700,
                     color: '#374151',
                     borderBottom: '2px solid #e5e7eb',
-                    minWidth: 250
+                      minWidth: 160,
+                      width: '20%'
                   }}>
-                      Motivo
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <CommentIcon sx={{ fontSize: 16, color: '#64748b' }} />
+                        Motivo
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ 
-                    backgroundColor: '#f8fafc',
+                      backgroundColor: '#e2e8f0',
                     fontWeight: 700,
                     color: '#374151',
                     borderBottom: '2px solid #e5e7eb',
                     textAlign: 'center',
-                    minWidth: 130
+                      minWidth: 130,
+                      width: '16%'
                   }}>
-                      Estado
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        <CheckCircleIcon sx={{ fontSize: 16, color: '#059669' }} />
+                        Estado
+                      </Box>
                     </TableCell>
                     <TableCell sx={{ 
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: '#e2e8f0',
+                    fontWeight: 700,
+                    color: '#374151',
+                    borderBottom: '2px solid #e5e7eb',
+                    minWidth: 140,
+                    width: '14%'
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PersonIcon sx={{ fontSize: 16, color: '#475569' }} />
+                      Aprobador
+                    </Box>
+                    </TableCell>
+                    <TableCell sx={{ 
+                      backgroundColor: '#e2e8f0',
                     fontWeight: 700,
                     color: '#374151',
                     borderBottom: '2px solid #e5e7eb',
                     textAlign: 'center',
-                    minWidth: 100
+                    minWidth: 100,
+                    width: '10%'
                   }}>
-                      Acciones
+                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                         <DeleteIcon sx={{ fontSize: 16, color: '#dc2626' }} />
+                         Acciones
+                       </Box>
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -1210,7 +1208,7 @@ const Justificaciones = () => {
                         }
                       }}
                     >
-                      <TableCell>
+                      <TableCell sx={{ width: '12%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <CalendarIcon sx={{ fontSize: 18, color: '#667eea' }} />
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -1219,7 +1217,7 @@ const Justificaciones = () => {
                         </Box>
                         </TableCell>
                       
-                      <TableCell>
+                      <TableCell sx={{ width: '28%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <TagIcon sx={{ fontSize: 18, color: '#10b981' }} />
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -1228,24 +1226,27 @@ const Justificaciones = () => {
                         </Box>
                         </TableCell>
                       
-                      <TableCell>
-                        <Tooltip title={justificacion.Motivo || justificacion.motivo} placement="top">
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              maxWidth: 250,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              cursor: 'help'
-                            }}
-                          >
-                            {justificacion.Motivo || justificacion.motivo}
-                          </Typography>
-                        </Tooltip>
-                        </TableCell>
+                      <TableCell sx={{ width: '20%' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+                          <CommentIcon sx={{ fontSize: 18, color: '#64748b', flex: '0 0 auto' }} />
+                          <Tooltip title={justificacion.Motivo || justificacion.motivo} placement="top">
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                cursor: 'help'
+                              }}
+                            >
+                              {justificacion.Motivo || justificacion.motivo}
+                            </Typography>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
                       
-                      <TableCell sx={{ textAlign: 'center' }}>
+                      {/* Estado */}
+                      <TableCell sx={{ textAlign: 'center', width: '16%' }}>
                           <Chip
                           icon={getEstadoIcon(justificacion.Estado || justificacion.estado)}
                           label={justificacion.Estado || justificacion.estado}
@@ -1261,8 +1262,18 @@ const Justificaciones = () => {
                           />
                         </TableCell>
                       
-                      <TableCell sx={{ textAlign: 'center' }}>
-                        <Tooltip title="Eliminar justificación">
+                      {/* Aprobador */}
+                      <TableCell sx={{ width: '14%' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <PersonIcon sx={{ fontSize: 18, color: '#475569' }} />
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                            {justificacion.AprobadorDNI || justificacion.aprobadorDNI || '-'}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      
+                      <TableCell sx={{ textAlign: 'center', width: '10%' }}>
+                        <Tooltip placement="top" arrow disableInteractive enterDelay={0} leaveDelay={0} title="Eliminar justificación">
                           <IconButton
                             onClick={() => handleEliminar(justificacion.JustificacionID)}
                             sx={{
