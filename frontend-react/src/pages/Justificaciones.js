@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -89,6 +89,12 @@ const Justificaciones = () => {
   
   // Estados para vista
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+  // Autocomplete Aprobador DNI (similar a Dashboard)
+  const aprobadorRef = useRef(null);
+  const [aprobadorSuggestions, setAprobadorSuggestions] = useState([]);
+  const [aprobadorSelectedIndex, setAprobadorSelectedIndex] = useState(-1);
+  const [aprobadorNombreSel, setAprobadorNombreSel] = useState('');
 
   // Contexto empleado desde localStorage - memoizado para evitar re-renders
   const { dni, nombreEmpleado } = useMemo(() => {
@@ -337,7 +343,75 @@ const Justificaciones = () => {
 
   const handleAprobadorChange = useCallback((e) => {
     handleInputChange('aprobadorDNI', e.target.value);
+    setAprobadorNombreSel('');
   }, [handleInputChange]);
+
+  // Buscar sugerencias de aprobador (DNI o nombre)
+  useEffect(() => {
+    const q = formData.aprobadorDNI?.trim() || '';
+    if (q.length < 2) {
+      setAprobadorSuggestions([]);
+      setAprobadorSelectedIndex(-1);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.get(`/empleados/buscar?search=${encodeURIComponent(q)}`);
+        setAprobadorSuggestions(res.data.empleados || []);
+        setAprobadorSelectedIndex(-1);
+      } catch (err) {
+        setAprobadorSuggestions([]);
+        setAprobadorSelectedIndex(-1);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [api, formData.aprobadorDNI]);
+
+  // Cerrar sugerencias al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (ev) => {
+      if (aprobadorRef.current && !aprobadorRef.current.contains(ev.target)) {
+        setAprobadorSuggestions([]);
+        setAprobadorSelectedIndex(-1);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  // Seleccionar aprobador desde lista
+  const selectAprobador = useCallback((emp) => {
+    handleInputChange('aprobadorDNI', emp.DNI || emp.dni);
+    setAprobadorNombreSel(`${emp.Nombres || emp.nombre} ${emp.ApellidoPaterno || emp.apellido}`);
+    setAprobadorSuggestions([]);
+    setAprobadorSelectedIndex(-1);
+  }, [handleInputChange]);
+
+  const handleAprobadorKeyDown = (e) => {
+    if (!aprobadorSuggestions.length) return;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setAprobadorSelectedIndex((idx) => Math.min(idx + 1, aprobadorSuggestions.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setAprobadorSelectedIndex((idx) => Math.max(idx - 1, -1));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (aprobadorSelectedIndex >= 0 && aprobadorSuggestions[aprobadorSelectedIndex]) {
+          selectAprobador(aprobadorSuggestions[aprobadorSelectedIndex]);
+        }
+        break;
+      case 'Escape':
+        setAprobadorSuggestions([]);
+        setAprobadorSelectedIndex(-1);
+        break;
+      default:
+        break;
+    }
+  };
 
   // Estilos memoizados para evitar recreación
   const estilos = useMemo(() => ({
@@ -788,28 +862,51 @@ sx={{
                 </FormControl>
                   </Box>
               
-                  <Box sx={{ flex: 1 }}>
-                  <TextField
-                    label="Aprobador DNI"
-                    value={formData.aprobadorDNI}
-                                          onChange={handleAprobadorChange}
-                    fullWidth
-                      placeholder="Ingrese DNI del aprobador"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
+                  <Box sx={{ flex: 1, position: 'relative' }} ref={aprobadorRef}>
+                    <TextField
+                      label="Aprobador DNI"
+                      value={formData.aprobadorDNI}
+                      onChange={handleAprobadorChange}
+                      onKeyDown={handleAprobadorKeyDown}
+                      fullWidth
+                      placeholder="Ingrese DNI o nombre del aprobador"
+                      helperText={aprobadorNombreSel ? `Seleccionado: ${aprobadorNombreSel}` : ' '}
+                      FormHelperTextProps={{ sx: { minHeight: 20 } }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
                           borderRadius: 2,
                           backgroundColor: 'white',
-                          '&:hover fieldset': {
-                            borderColor: '#667eea',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#667eea',
-                            borderWidth: 2
-                          },
+                          '&:hover fieldset': { borderColor: '#667eea' },
+                          '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
                         },
                       }}
                     />
+                    {aprobadorSuggestions.length > 0 && (
+                      <Paper sx={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, mt: 0.5 }}>
+                        {aprobadorSuggestions.map((emp, idx) => (
+                          <Box
+                            key={emp.DNI || emp.dni}
+                            onClick={() => selectAprobador(emp)}
+                            sx={{
+                              p: 1.5,
+                              cursor: 'pointer',
+                              backgroundColor: idx === aprobadorSelectedIndex ? '#1e40af' : 'transparent',
+                              color: idx === aprobadorSelectedIndex ? 'white' : 'inherit',
+                              borderBottom: '1px solid #e2e8f0',
+                              '&:last-child': { borderBottom: 'none' },
+                            }}
+                          >
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              {emp.DNI || emp.dni}
+                            </Typography>
+                            <Typography variant="caption" color={idx === aprobadorSelectedIndex ? 'inherit' : 'text.secondary'}>
+                              {(emp.Nombres || emp.nombre) + ' ' + (emp.ApellidoPaterno || emp.apellido)}
+                            </Typography>
                           </Box>
+                        ))}
+                      </Paper>
+                    )}
+                  </Box>
                           </Box>
 
                 {/* Cuarta fila: Botón */}
@@ -1266,9 +1363,21 @@ sx={{
                       <TableCell sx={{ width: '14%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <PersonIcon sx={{ fontSize: 18, color: '#475569' }} />
-                          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                            {justificacion.AprobadorDNI || justificacion.aprobadorDNI || '-'}
-                          </Typography>
+                          {(() => {
+                            const nombre = (justificacion.NombreAprobador || justificacion.nombreAprobador || '').trim();
+                            const apellido = (justificacion.ApellidoAprobador || justificacion.apellidoAprobador || '').trim();
+                            const primerNombre = nombre ? nombre.split(' ')[0] : '';
+                            const nombreTooltip = (primerNombre || apellido)
+                              ? `${primerNombre}${primerNombre && apellido ? ' ' : ''}${apellido}`
+                              : 'Nombre no disponible';
+                            return (
+                              <Tooltip placement="top" title={nombreTooltip}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', cursor: 'help' }}>
+                                  {justificacion.AprobadorDNI || justificacion.aprobadorDNI || '-'}
+                                </Typography>
+                              </Tooltip>
+                            );
+                          })()}
                         </Box>
                       </TableCell>
                       
