@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { Box, Typography } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Sidebar';
@@ -87,9 +88,32 @@ const BasicProtectedRoute = ({ children }) => {
 
 // Componente principal de la aplicación
 const AppContent = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  
+  console.log('🏠 AppContent renderizándose:', { 
+    isAuthenticated, 
+    loading, 
+    currentPath: window.location.pathname 
+  });
+
+  // Mostrar loading mientras se verifica autenticación
+  if (loading) {
+    console.log('⏳ AppContent: Mostrando loading global...');
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        backgroundColor: '#e2e8f0'
+      }}>
+        <Typography variant="h6">Cargando aplicación...</Typography>
+      </Box>
+    );
+  }
 
   if (!isAuthenticated) {
+    console.log('❌ AppContent: No autenticado, mostrando rutas públicas');
     return (
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -98,6 +122,8 @@ const AppContent = () => {
     );
   }
 
+  console.log('✅ AppContent: Usuario autenticado, mostrando aplicación principal');
+  
   return (
     <div style={{ display: 'flex' }}>
       <Sidebar />
@@ -110,15 +136,17 @@ const AppContent = () => {
         minHeight: '100vh' // Asegura que ocupe toda la altura de la pantalla
       }}>
         <Routes>
-          {/* Vista principal para todos los empleados */}
-          <Route path="/" element={<EmployeeProfile />} />
-          
-          {/* Rutas administrativas (solo para roles administrativos) */}
-          <Route path="/admin" element={
+          {/* Dashboard como ruta principal */}
+          <Route path="/" element={
             <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
               <Dashboard />
             </ProtectedRoute>
           } />
+          
+          {/* Vista de perfil de empleado */}
+          <Route path="/profile" element={<EmployeeProfile />} />
+          
+          {/* Rutas administrativas (solo para roles administrativos) */}
           <Route path="/registrar-empleado" element={
             <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
               <RegistrarEmpleado />
@@ -165,7 +193,8 @@ const AppContent = () => {
           } />
           
           <Route path="/control-maestro" element={<ControlMaestro />} />
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* Rutas no encontradas van al Dashboard en lugar de crear un loop */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>

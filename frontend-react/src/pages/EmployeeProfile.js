@@ -324,7 +324,7 @@ const EmployeeProfile = () => {
                variant="contained" 
                color="primary"
                size="medium"
-               onClick={() => navigate('/admin')}
+               onClick={() => navigate('/')}
                startIcon={<AdminPanelSettingsIcon />}
                sx={{ px: 3, py: 1, fontSize: '1rem' }}
              >

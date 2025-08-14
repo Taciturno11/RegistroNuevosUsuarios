@@ -22,40 +22,33 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [selectedEmployee, setSelectedEmployee] = useState(() => {
+    // Persistir empleado seleccionado
+    const dni = localStorage.getItem('empleadoDNI');
+    const nombre = localStorage.getItem('empleadoNombre');
+    return dni && nombre ? { dni, nombre } : null;
+  });
 
-  const checkAuthStatus = useCallback(async () => {
-    console.log('🔍 Verificando autenticación...');
-    
-    // Lógica SIMPLE: si hay token y usuario en localStorage, restaurar sesión
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        console.log('✅ Restaurando sesión desde localStorage');
-        setUser(userData);
-        setToken(storedToken);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('❌ Error parseando usuario:', error);
-        logout();
-      }
-    } else {
-      console.log('❌ No hay sesión guardada');
-      logout();
-    }
-    
-    setLoading(false);
-  }, []);
+  console.log('🔄 AuthContext estado actual:', { 
+    user: user ? `${user.dni} (${user.role})` : 'null', 
+    token: token ? 'presente' : 'null', 
+    isAuthenticated, 
+    loading,
+    currentPath: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
+  });
+
+
 
   const logout = useCallback(() => {
     console.log('🚪 Cerrando sesión...');
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
+    setSelectedEmployee(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('empleadoDNI');
+    localStorage.removeItem('empleadoNombre');
   }, []);
 
   // Configurar interceptor para incluir token en todas las peticiones
@@ -83,8 +76,16 @@ export const AuthProvider = ({ children }) => {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          console.log('❌ Token expirado o inválido, redirigiendo a login');
-          logout();
+          console.log('❌ Token expirado o inválido, limpiando estado');
+          // Solo limpiar estado, no redirigir automáticamente
+          setUser(null);
+          setToken(null);
+          setIsAuthenticated(false);
+          setSelectedEmployee(null);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('empleadoDNI');
+          localStorage.removeItem('empleadoNombre');
         }
         return Promise.reject(error);
       }
@@ -92,8 +93,21 @@ export const AuthProvider = ({ children }) => {
 
     // Lógica SIMPLE: verificar autenticación al cargar
     const storedToken = localStorage.getItem('token');
-    if (storedToken) {
-      checkAuthStatus();
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      // Restaurar inmediatamente sin async
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        setToken(storedToken);
+        setIsAuthenticated(true);
+        setLoading(false);
+        console.log('✅ Sesión restaurada inmediatamente');
+      } catch (error) {
+        console.error('❌ Error parseando usuario:', error);
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
@@ -103,7 +117,7 @@ export const AuthProvider = ({ children }) => {
       api.interceptors.request.eject(requestInterceptor);
       api.interceptors.response.eject(responseInterceptor);
     };
-  }, [token, checkAuthStatus, logout]);
+  }, [token, logout]);
 
   const login = async (dni, password) => {
     console.log('🚀 FUNCIÓN LOGIN INICIADA');
@@ -186,6 +200,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setEmployeeData = useCallback((dni, nombre) => {
+    if (dni && nombre) {
+      const employeeData = { dni, nombre };
+      setSelectedEmployee(employeeData);
+      localStorage.setItem('empleadoDNI', dni);
+      localStorage.setItem('empleadoNombre', nombre);
+    } else {
+      setSelectedEmployee(null);
+      localStorage.removeItem('empleadoDNI');
+      localStorage.removeItem('empleadoNombre');
+    }
+  }, []);
+
   const value = {
     isAuthenticated,
     user,
@@ -194,6 +221,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     refreshToken,
     token,
+    selectedEmployee,
+    setEmployeeData,
     api // Exportar la instancia de Axios configurada
   };
 

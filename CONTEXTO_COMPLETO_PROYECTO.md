@@ -425,3 +425,61 @@ Esta sección documenta a profundidad la estética, la lógica y los endpoints i
 - Unificar utilidades de formato (`formatearFecha`, `formatearHora`) en `frontend-react/src/utils/` para reuso entre páginas.
 - Tests de integración para validaciones de Excepciones y filtros de Justificaciones.
 - Documentar contratos en OpenAPI/Swagger a partir de estos endpoints.
+
+---
+
+## 🔧 PROBLEMA CRÍTICO RESUELTO: Redirección no deseada al refrescar páginas
+
+### 🐛 Descripción del problema
+Al refrescar cualquier página del sistema (Justificaciones, Excepciones, Cese empleado, etc.), el usuario era redirigido automáticamente a la vista de "Administración" (Dashboard) en lugar de permanecer en la página actual.
+
+### 🔍 Causa raíz identificada
+**Condición de carrera entre la restauración de sesión y la lógica de rutas en `AppContent`:**
+
+1. Durante el refresh, `AuthContext` inicia con `loading: true` y `isAuthenticated: false`
+2. `AppContent` ve `isAuthenticated: false` e inmediatamente muestra rutas no autenticadas
+3. Las rutas no autenticadas incluyen `<Navigate to="/login" />` para rutas no encontradas
+4. Esto cambia la URL de `/justificaciones` → `/login` → `/` (Dashboard)
+5. Todo esto ocurre **antes** de que `AuthContext` complete la restauración de sesión
+
+### ✅ Solución implementada
+**Agregada verificación de estado `loading` en `AppContent` (`frontend-react/src/App.js`):**
+
+```javascript
+// Mostrar loading mientras se verifica autenticación
+if (loading) {
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      minHeight: '100vh',
+      backgroundColor: '#e2e8f0'
+    }}>
+      <Typography variant="h6">Cargando aplicación...</Typography>
+    </Box>
+  );
+}
+
+if (!isAuthenticated) {
+  return <PublicRoutes />; // Solo después de verificar autenticación
+}
+```
+
+### 🎯 Resultado
+- ✅ Al refrescar cualquier página, el usuario permanece en la misma vista
+- ✅ No hay redirecciones no deseadas al Dashboard
+- ✅ La sesión se restaura correctamente sin interferencias
+- ✅ Las rutas protegidas funcionan como se esperaba
+
+### 📝 Archivos modificados
+- `frontend-react/src/App.js`: Agregada verificación de `loading` en `AppContent`
+- `frontend-react/src/contexts/AuthContext.js`: Corregida referencia a función eliminada
+- `frontend-react/src/components/ProtectedRoute.js`: Agregados logs de debugging (opcionales)
+
+### 💡 Lección aprendida
+Este es un patrón común en aplicaciones React con autenticación persistente. **Siempre verificar el estado `loading` antes de tomar decisiones de navegación** para evitar condiciones de carrera durante la restauración de sesión.
+
+**📅 Problema resuelto**: 16 de Enero, 2025  
+**🔧 Tipo de fix**: Condición de carrera en lógica de autenticación  
+**⚡ Impacto**: Crítico - Afectaba la experiencia de usuario en toda la aplicación

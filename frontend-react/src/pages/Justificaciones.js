@@ -466,7 +466,7 @@ const Justificaciones = () => {
       mb: 3,
       borderRadius: 4,
       boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-      overflow: 'hidden',
+      overflow: 'visible',
       border: '2px solid #667eea'
     },
     tablaPaper: {
@@ -542,7 +542,7 @@ const Justificaciones = () => {
           </Typography>
         <Button 
           variant="contained" 
-          onClick={() => navigate('/admin')}
+          onClick={() => navigate('/')}
           startIcon={<ArrowBackIcon />}
         >
           Volver al Dashboard
@@ -563,7 +563,7 @@ const Justificaciones = () => {
               {/* Navegación y Título */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <IconButton 
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/')}
             sx={{
                     color: 'white',
                     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -685,190 +685,151 @@ const Justificaciones = () => {
           <Box sx={{
             backgroundColor: '#667eea',
             color: 'white',
-            p: 2,
+            p: 1.5,
             display: 'flex',
             alignItems: 'center',
-            gap: 2
+            gap: 1.5
           }}>
             <AddIcon />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Registrar Nueva Justificación
             </Typography>
           </Box>
-
-          <Box sx={{ p: 4 }}>
+          <Box sx={{ px: 2, pt: 2, pb: 1 }}>
             <form onSubmit={handleSubmit}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Primera fila: Fecha de Justificación y Tipo de Justificación */}
-                <Box sx={{ display: 'flex', gap: 3 }}>
-                  <Box sx={{ flex: 1 }}>
-                <TextField
-                      label="Fecha de Justificación *"
-                  type="date"
-                  value={formData.fecha}
-                                        onChange={handleFechaChange}
-                  fullWidth
-                  required
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          backgroundColor: 'white',
-                          '&:hover fieldset': {
-                            borderColor: '#667eea',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#667eea',
-                            borderWidth: 2
-                          },
-                        },
-                      }}
-                    />
-                  </Box>
-                  
-                  <Box sx={{ flex: 1 }}>
-                <FormControl fullWidth required>
-                      <InputLabel 
-                        shrink 
-                        sx={{ 
-                          fontSize: '1rem',
-                          fontWeight: 500,
-                          '&.Mui-focused': {
-                            color: '#667eea'
-                          }
-                        }}
-                      >
-                        Tipo de Justificación *
-                      </InputLabel>
-                  <Select
-                    value={formData.tipo}
-                        onChange={handleTipoChange}
-                        label="Tipo de Justificación *"
-                        displayEmpty
-                        												MenuProps={{
-												  disableScrollLock: true,
-												  disablePortal: false,
-												  keepMounted: false,
-												  TransitionComponent: Fade,
-												  transitionDuration: 0,
-												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
-												  transformOrigin: { vertical: 'top', horizontal: 'left' },
-												  PaperProps: { sx: { minWidth: 400, width: 400, maxWidth: 400, fontSize: 16, '& .MuiMenuItem-root': { fontSize: 16 } } }
-												}}
-sx={{
-                          borderRadius: 2,
-                          backgroundColor: 'white',
-                          height: 56, // Altura fija
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#667eea',
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#667eea',
-                            borderWidth: 2
-                          },
-                        }}
-                      >
-                        <MenuItem value="" disabled>
-                          <em>Seleccione una opción</em>
-                        </MenuItem>
-                    {tiposJustificacion.map((tipo, index) => (
-                      <MenuItem key={index} value={tipo.TipoJustificacion}>
-                        {tipo.TipoJustificacion}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                  </Box>
-                </Box>
-            
-                {/* Segunda fila: Motivo (campo amplio) */}
-                <Box>
-              <TextField
-                    label="Motivo *"
-                value={formData.motivo}
-                                    onChange={handleMotivoChange}
+              <Grid container spacing={2}>
+                {/* Fecha */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Fecha de Justificación *"
+                    type="date"
+                    value={formData.fecha}
+                    onChange={handleFechaChange}
                     fullWidth
-                required
+                    required
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </Grid>
+                {/* Tipo */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required size="small">
+                    <InputLabel shrink sx={{ fontSize: '0.95rem', fontWeight: 500, '&.Mui-focused': { color: '#667eea' } }}>
+                      Tipo de Justificación *
+                    </InputLabel>
+                    <Select
+                      value={formData.tipo}
+                      onChange={handleTipoChange}
+                      label="Tipo de Justificación *"
+                      displayEmpty
+                      MenuProps={{
+                        disableScrollLock: true,
+                        disablePortal: false,
+                        keepMounted: false,
+                        TransitionComponent: Fade,
+                        transitionDuration: 0,
+                        anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+                        transformOrigin: { vertical: 'top', horizontal: 'left' },
+                        PaperProps: { sx: { minWidth: 360, width: 360, maxWidth: 360, fontSize: 15, '& .MuiMenuItem-root': { fontSize: 15 } } },
+                      }}
+                      sx={{
+                        borderRadius: 2,
+                        backgroundColor: 'white',
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 },
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        <em>Seleccione una opción</em>
+                      </MenuItem>
+                      {tiposJustificacion.map((tipo, index) => (
+                        <MenuItem key={index} value={tipo.TipoJustificacion}>
+                          {tipo.TipoJustificacion}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Motivo */}
+                <Grid item xs={12}>
+                  <TextField
+                    label="Motivo *"
+                    value={formData.motivo}
+                    onChange={handleMotivoChange}
+                    fullWidth
+                    required
+                    size="small"
                     multiline
                     rows={2}
                     placeholder="Escriba el motivo (máx. 200 caracteres)"
-                inputProps={{ maxLength: 200 }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
+                    inputProps={{ maxLength: 200 }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
                         backgroundColor: 'white',
-                        '&:hover fieldset': {
-                          borderColor: '#667eea',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#667eea',
-                          borderWidth: 2
-                        },
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
                       },
-                }}
-              />
-            </Box>
-            
-                {/* Tercera fila: Estado y Aprobador DNI */}
-                <Box sx={{ display: 'flex', gap: 3 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <FormControl fullWidth required>
-                      <InputLabel 
-                        shrink 
-                        sx={{ 
-                          fontSize: '1rem',
-                          fontWeight: 500,
-                          '&.Mui-focused': {
-                            color: '#667eea'
-                          }
-                        }}
-                      >
-                        Estado *
-                      </InputLabel>
-                  <Select
-                    value={formData.estado}
-                        onChange={handleEstadoChange}
-                        label="Estado *"
-                        displayEmpty
-                        												MenuProps={{
-												  disableScrollLock: true,
-												  disablePortal: false,
-												  keepMounted: false,
-												  TransitionComponent: Fade,
-												  transitionDuration: 0,
-												  anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
-												  transformOrigin: { vertical: 'top', horizontal: 'left' },
-												  PaperProps: { sx: { minWidth: 250, width: 250, maxWidth: 250, fontSize: 16, '& .MuiMenuItem-root': { fontSize: 16 } } }
-												}}
-sx={{
-                          borderRadius: 2,
-                          backgroundColor: 'white',
-                          height: 56, // Altura fija
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#667eea',
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#667eea',
-                            borderWidth: 2
-                          },
-                        }}
-                      >
-                                              <MenuItem value="" disabled>
+                    }}
+                  />
+                </Grid>
+
+                {/* Estado */}
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required size="small">
+                    <InputLabel shrink sx={{ fontSize: '0.95rem', fontWeight: 500, '&.Mui-focused': { color: '#667eea' } }}>
+                      Estado *
+                    </InputLabel>
+                    <Select
+                      value={formData.estado}
+                      onChange={handleEstadoChange}
+                      label="Estado *"
+                      displayEmpty
+                      MenuProps={{
+                        disableScrollLock: true,
+                        disablePortal: false,
+                        keepMounted: false,
+                        TransitionComponent: Fade,
+                        transitionDuration: 0,
+                        anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+                        transformOrigin: { vertical: 'top', horizontal: 'left' },
+                        PaperProps: { sx: { minWidth: 220, width: 220, maxWidth: 220, fontSize: 15, '& .MuiMenuItem-root': { fontSize: 15 } } },
+                      }}
+                      sx={{
+                        borderRadius: 2,
+                        backgroundColor: 'white',
+                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea' },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 },
+                      }}
+                    >
+                      <MenuItem value="" disabled>
                         <em>Seleccione estado</em>
                       </MenuItem>
-                    <MenuItem value="Aprobado">Aprobado</MenuItem>
-                    <MenuItem value="Desaprobado">Desaprobado</MenuItem>
-                  </Select>
-                </FormControl>
-                  </Box>
-              
-                  <Box sx={{ flex: 1, position: 'relative' }} ref={aprobadorRef}>
+                      <MenuItem value="Aprobado">Aprobado</MenuItem>
+                      <MenuItem value="Desaprobado">Desaprobado</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* Aprobador DNI */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ position: 'relative' }} ref={aprobadorRef}>
                     <TextField
                       label="Aprobador DNI"
                       value={formData.aprobadorDNI}
                       onChange={handleAprobadorChange}
                       onKeyDown={handleAprobadorKeyDown}
                       fullWidth
+                      size="small"
                       placeholder="Ingrese DNI o nombre del aprobador"
                       helperText={aprobadorNombreSel ? `Seleccionado: ${aprobadorNombreSel}` : ' '}
                       FormHelperTextProps={{ sx: { minHeight: 20 } }}
@@ -888,7 +849,7 @@ sx={{
                             key={emp.DNI || emp.dni}
                             onClick={() => selectAprobador(emp)}
                             sx={{
-                              p: 1.5,
+                              p: 1.25,
                               cursor: 'pointer',
                               backgroundColor: idx === aprobadorSelectedIndex ? '#1e40af' : 'transparent',
                               color: idx === aprobadorSelectedIndex ? 'white' : 'inherit',
@@ -907,40 +868,34 @@ sx={{
                       </Paper>
                     )}
                   </Box>
-                          </Box>
+                </Grid>
 
-                {/* Cuarta fila: Botón */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : <CheckCircleIcon />}
-                  sx={{
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      borderRadius: 2,
-                    fontWeight: 600,
-                      px: 4,
-                      py: 1.5,
-                      minWidth: 140,
-                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                    '&:hover': {
-                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                      transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
-                    },
-                    '&:disabled': {
-                        background: '#9ca3af',
-                      transform: 'none',
-                      boxShadow: 'none'
-                    }
-                  }}
-                >
-                  {loading ? 'Registrando...' : 'Registrar'}
-                </Button>
-                </Box>
-              </Box>
-          </form>
+                {/* Botón */}
+                <Grid item xs={12} sx={{ pb: 0 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={loading}
+                      startIcon={loading ? <CircularProgress size={18} /> : <CheckCircleIcon />}
+                      sx={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        borderRadius: 2,
+                        fontWeight: 600,
+                        px: 3,
+                        py: 1,
+                        minWidth: 120,
+                        boxShadow: '0 3px 12px rgba(16, 185, 129, 0.28)',
+                        '&:hover': { background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', transform: 'translateY(-2px)', boxShadow: '0 5px 16px rgba(16, 185, 129, 0.34)' },
+                        '&:disabled': { background: '#9ca3af', transform: 'none', boxShadow: 'none' },
+                      }}
+                    >
+                      {loading ? 'Registrando...' : 'Registrar'}
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </form>
           </Box>
         </Paper>
 

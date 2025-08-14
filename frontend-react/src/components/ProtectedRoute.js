@@ -4,10 +4,28 @@ import { Box, Typography, Button } from '@mui/material';
 import { useNavigate, Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children, requireRole }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  console.log('🛡️ ProtectedRoute ejecutándose:', { 
+    user: user ? `${user.dni} (${user.role})` : 'null', 
+    loading, 
+    requireRole,
+    currentPath: window.location.pathname 
+  });
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (loading) {
+    console.log('⏳ ProtectedRoute: Mostrando loading...');
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography>Cargando...</Typography>
+      </Box>
+    );
+  }
+
   if (!user) {
+    console.log('❌ ProtectedRoute: No hay usuario, redirigiendo a login');
     return <Navigate to="/login" />;
   }
 
@@ -17,6 +35,7 @@ const ProtectedRoute = ({ children, requireRole }) => {
     const hasAccess = allowedRoles.includes(user.role);
     
     if (!hasAccess) {
+      console.log('🚫 ProtectedRoute: Sin permisos, redirigiendo a Dashboard');
       return (
         <Box sx={{ p: 3, textAlign: 'center' }}>
           <Typography variant="h5" sx={{ mb: 2, color: 'error.main' }}>
@@ -33,6 +52,7 @@ const ProtectedRoute = ({ children, requireRole }) => {
     }
   }
 
+  console.log('✅ ProtectedRoute: Acceso permitido, renderizando children');
   return children;
 };
 

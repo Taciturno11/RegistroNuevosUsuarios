@@ -14,6 +14,7 @@ const {
   obtenerHistorialRoles,
   getAllEmpleadosConRoles
 } = require('../controllers/empleados.controller');
+const { getHorarioBaseEmpleado } = require('../controllers/grupos.controller');
 
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
@@ -32,6 +33,9 @@ router.get('/buscar', searchEmpleados);
 
 // Obtener empleado por DNI
 router.get('/:dni', getEmpleadoByDNI);
+
+// Obtener horario base del empleado (NombreHorario y opcionalmente rango)
+router.get('/:dni/horario', getHorarioBaseEmpleado);
 
 // Crear nuevo empleado
 router.post('/', createEmpleado);

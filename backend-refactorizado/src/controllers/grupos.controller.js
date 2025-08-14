@@ -1,5 +1,67 @@
 const { executeQuery, sql } = require('../config/database');
 
+// Obtener horario base del empleado
+exports.getHorarioBaseEmpleado = async (req, res) => {
+  try {
+    const { dni } = req.params;
+
+    console.log(`📋 Obteniendo horario base para empleado: ${dni}`);
+
+    const query = `
+      SELECT g.NombreGrupo, 
+             LEFT(g.NombreGrupo, 
+                  CASE WHEN CHARINDEX(' (Desc.', g.NombreGrupo) > 0
+                       THEN CHARINDEX(' (Desc.', g.NombreGrupo) - 1
+                       ELSE LEN(g.NombreGrupo)
+                  END) AS NombreBase,
+             hb.HoraEntrada,
+             hb.HoraSalida
+      FROM PRI.Empleados e
+      JOIN dbo.GruposDeHorario g ON g.GrupoID = e.GrupoHorarioID
+      LEFT JOIN dbo.Horarios_Base hb ON hb.NombreHorario = LEFT(g.NombreGrupo, 
+                  CASE WHEN CHARINDEX(' (Desc.', g.NombreGrupo) > 0
+                       THEN CHARINDEX(' (Desc.', g.NombreGrupo) - 1
+                       ELSE LEN(g.NombreGrupo)
+                  END)
+      WHERE e.DNI = @DNI
+    `;
+
+    const result = await executeQuery(query, [{ name: 'DNI', type: sql.VarChar, value: dni }]);
+
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Horario no encontrado',
+        error: 'SCHEDULE_NOT_FOUND' 
+      });
+    }
+
+    const horario = result.recordset[0];
+
+    console.log(`✅ Horario base obtenido: ${horario.NombreBase}`);
+
+    res.json({
+      success: true,
+      message: 'Horario base obtenido exitosamente',
+      data: {
+        NombreHorario: horario.NombreBase,
+        HoraEntrada: horario.HoraEntrada,
+        HoraSalida: horario.HoraSalida,
+        NombreGrupo: horario.NombreGrupo,
+        NombreBase: horario.NombreBase
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo horario base del empleado:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR' 
+    });
+  }
+};
+
 // ========================================
 // GESTIÓN DE GRUPOS DE HORARIO
 // ========================================

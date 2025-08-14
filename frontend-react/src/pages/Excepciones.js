@@ -123,13 +123,14 @@ const Excepciones = () => {
   const cargarHorarioBase = async () => {
     try {
       const { data } = await api.get(`/empleados/${dni}/horario`);
-      const nombre = data?.data?.NombreHorario || data?.NombreHorario || data?.nombre || '';
-      const entrada = data?.data?.HoraEntrada || data?.HoraEntrada || data?.horaEntrada;
-      const salida = data?.data?.HoraSalida || data?.HoraSalida || data?.horaSalida;
-      const rango = entrada && salida ? `(${formatearHora(entrada)} - ${formatearHora(salida)})` : '';
-      setHorarioBase(nombre ? `${nombre} ${rango}` : '');
+      const horarioData = data?.data || data;
+      const nombre = horarioData?.NombreBase || horarioData?.NombreHorario || '';
+      const entrada = horarioData?.HoraEntrada;
+      const salida = horarioData?.HoraSalida;
+      const rango = entrada && salida ? ` (${formatearHora(entrada)} - ${formatearHora(salida)})` : '';
+      setHorarioBase(nombre ? `${nombre}${rango}` : '-');
     } catch (e) {
-      setHorarioBase('');
+      setHorarioBase('-');
     }
   };
 
@@ -194,13 +195,21 @@ const Excepciones = () => {
       const { data } = await api.post('/excepciones', payload);
 
       if (data.success) {
-        setSuccess(editingExcepcion ? 'Excepción actualizada exitosamente' : 'Excepción registrada exitosamente');
+        const mensaje = editingExcepcion ? 'Excepción actualizada exitosamente' : 'Excepción registrada exitosamente';
+        console.log('✅ Configurando mensaje de éxito:', mensaje);
+        setSuccess(mensaje);
         
         // Recargar lista y limpiar formulario
         await cargarExcepciones(dni);
         handleClear();
-        setShowForm(false);
+        // Mantener el formulario visible para registrar más excepciones
         setEditingExcepcion(null);
+
+        // Limpiar mensaje de éxito después de 3 segundos
+        setTimeout(() => {
+          console.log('🧹 Limpiando mensaje de éxito después de 3 segundos');
+          setSuccess('');
+        }, 3000);
         
       } else {
         setError(data.message || 'Error procesando excepción');
@@ -256,7 +265,7 @@ const Excepciones = () => {
     });
     setEditingExcepcion(null);
     setError('');
-    setSuccess('');
+    // No limpiar success aquí para que se vea el mensaje después del registro
   };
 
   const handleShowDetails = (excepcion) => {
@@ -329,7 +338,7 @@ const Excepciones = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/admin')}
+                onClick={() => navigate('/')}
               >
                 Volver al Dashboard
               </Button>
@@ -343,7 +352,7 @@ const Excepciones = () => {
           </Alert>
             <Button
             variant="contained"
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/')}
           >
             Volver al Dashboard
           </Button>
@@ -469,13 +478,14 @@ const Excepciones = () => {
                       {(() => {
                         const baseText = (horarioBase || '').split('(')[0]?.trim();
                         const baseTipo = baseText ? baseText.split(' ').slice(0,2).join(' ') : '';
+                        
                         const lista = baseTipo
                           ? horarios.filter(h => ((h.NombreHorario || h.nombre || '').split(' ').slice(0,2).join(' ')) === baseTipo)
                           : horarios;
                         return lista;
                       })().map((h) => (
                         <MenuItem key={h.HorarioID || h.id} value={h.HorarioID || h.id}>
-                          {(h.NombreHorario || h.nombre)} ({formatearHora(h.HoraEntrada || h.horaEntrada)} - {formatearHora(h.HoraSalida || h.horaSalida)})
+                          {formatearHora(h.HoraEntrada || h.horaEntrada)} - {formatearHora(h.HoraSalida || h.horaSalida)}
                         </MenuItem>
                       ))}
                     </Select>
@@ -484,12 +494,10 @@ const Excepciones = () => {
               </Grid>
             </Grid>
 
-            {/* Fila 2: Motivo (siempre debajo, mismo ancho que Horario Excepcional) */}
+            {/* Fila 2: Motivo (ahora ocupa todo el ancho de la fila) */}
             <Grid container spacing={3} sx={{ mt: 0 }}>
-              {/* Espaciador para alinear a la derecha en pantallas md+ */}
-              <Grid item xs={12} md={6} sx={{ display: { xs: 'none', md: 'block' } }} />
-              <Grid item xs={12} md={6}>
-                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2 }}>
+              <Grid item xs={12} md={12}>
+                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2, width: { xs: '100%', md: '35rem' } }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <ChatBubbleOutlineIcon fontSize="small" />
                     <Typography variant="subtitle2">Motivo de la Excepción</Typography>
@@ -525,7 +533,7 @@ const Excepciones = () => {
                 size="large"
                 startIcon={<ArrowBackIcon />}
                 onClick={() => {
-                  navigate('/admin');
+                  navigate('/');
                 }}
                 sx={{ px: 4, py: 1.5, bgcolor: '#1f2937', '&:hover': { bgcolor: '#111827' } }}
               >
@@ -583,9 +591,6 @@ const Excepciones = () => {
                     </Box>
                   </TableCell>
                   <TableCell sx={{ color: 'white', border: 'none' }}>
-                    Estado
-                  </TableCell>
-                  <TableCell sx={{ color: 'white', border: 'none' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <SettingsIcon fontSize="small" /> Acciones
                     </Box>
@@ -613,9 +618,6 @@ const Excepciones = () => {
                       <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {excepcion.Motivo || excepcion.motivo}
                       </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={'Activa'} size="small" />
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -691,14 +693,7 @@ const Excepciones = () => {
                 <Typography variant="subtitle2" color="text.secondary">Hora de Salida</Typography>
                 <Typography variant="body1">{formatearHora(selectedExcepcion.HoraSalida || selectedExcepcion.horaSalida)}</Typography>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2" color="text.secondary">Estado</Typography>
-                <Chip
-                  label={selectedExcepcion.estado || 'Activa'}
-                  color={getStatusColor(selectedExcepcion.estado)}
-                  size="small"
-                />
-              </Grid>
+
               <Grid item xs={12}>
                 <Typography variant="subtitle2" color="text.secondary">Motivo</Typography>
                 <Typography variant="body1">{selectedExcepcion.Motivo || selectedExcepcion.motivo}</Typography>

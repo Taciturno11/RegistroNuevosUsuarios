@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
@@ -48,6 +48,9 @@ import '../App.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  console.log('🏗️ Dashboard component montándose. Ruta actual:', location.pathname);
   const { api } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -69,6 +72,15 @@ const Dashboard = () => {
 
   // Cargar estadísticas al montar el componente
   useEffect(() => {
+    console.log('🔍 Dashboard useEffect ejecutándose. Ruta actual:', location.pathname);
+    
+    // Solo ejecutar si estamos realmente en la ruta del Dashboard
+    if (location.pathname !== '/') {
+      console.log('🚫 Dashboard montado pero no en ruta /, saltando inicialización');
+      return;
+    }
+    
+    console.log('✅ Dashboard montado en ruta correcta, inicializando...');
     loadStats();
     
     // Restaurar empleado seleccionado desde localStorage si existe
@@ -91,7 +103,7 @@ const Dashboard = () => {
     } else {
       console.log('❌ No hay empleado guardado en localStorage');
     }
-  }, []);
+  }, [location.pathname]);
 
   // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {

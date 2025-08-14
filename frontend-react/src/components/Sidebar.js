@@ -38,7 +38,7 @@ const drawerWidth = 280;
 const menuItems = [
   {
     title: 'Mi Perfil',
-    path: '/',
+    path: '/profile',
     icon: <AccountCircleIcon />,
     adminOnly: false
   },
@@ -112,6 +112,8 @@ const Sidebar = () => {
   };
 
   const toggleAdminMenu = () => {
+    // Navegar al Dashboard (sistema de gestión de empleados) y abrir/cerrar submenú
+    handleNavigation('/');
     setAdminMenuOpen(!adminMenuOpen);
   };
 
@@ -212,10 +214,7 @@ const Sidebar = () => {
           <>
             <ListItem disablePadding>
               <ListItemButton
-                onClick={() => {
-                  toggleAdminMenu();
-                  handleNavigation('/admin');
-                }}
+                onClick={toggleAdminMenu}
                 sx={{
                   mx: 1,
                   borderRadius: 1,
