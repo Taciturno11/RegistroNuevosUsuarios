@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -68,6 +68,11 @@ const ReporteTardanzas = () => {
   // Estados para opciones de filtros
   const [campaniasDisponibles, setCampaniasDisponibles] = useState([]);
   const [cargosDisponibles, setCargosDisponibles] = useState([]);
+
+  // Estados para paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [elementosPorPagina, setElementosPorPagina] = useState(10);
+  const [totalElementos, setTotalElementos] = useState(0);
 
   // Verificar permisos al montar
   useEffect(() => {
@@ -142,6 +147,8 @@ const ReporteTardanzas = () => {
         setDetallesTardanzas({});
         setTimeout(() => {
           setReporteData(response.data.data);
+          setTotalElementos(response.data.data.empleados.length);
+          setPaginaActual(1); // Resetear a la primera página
         }, 100);
       } else {
         setError(response.data.message || 'Error generando reporte de tardanzas');
@@ -155,8 +162,34 @@ const ReporteTardanzas = () => {
   };
 
   const handleFiltroChange = () => {
+    setPaginaActual(1); // Resetear a la primera página
     generarReporte();
   };
+
+  // Calcular datos paginados
+  const datosPaginados = useMemo(() => {
+    if (!reporteData?.empleados) return [];
+    
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    const fin = inicio + elementosPorPagina;
+    return reporteData.empleados.slice(inicio, fin);
+  }, [reporteData, paginaActual, elementosPorPagina]);
+
+  // Calcular total de páginas
+  const totalPaginas = useMemo(() => {
+    return Math.ceil(totalElementos / elementosPorPagina);
+  }, [totalElementos, elementosPorPagina]);
+
+  // Cambiar página
+  const cambiarPagina = useCallback((nuevaPagina) => {
+    setPaginaActual(nuevaPagina);
+  }, []);
+
+  // Cambiar elementos por página
+  const cambiarElementosPorPagina = useCallback((nuevosElementos) => {
+    setElementosPorPagina(nuevosElementos);
+    setPaginaActual(1); // Resetear a la primera página
+  }, []);
 
   // Función para obtener detalles de tardanzas de un empleado específico
   const obtenerDetallesEmpleado = async (dni) => {
@@ -636,7 +669,7 @@ const ReporteTardanzas = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {reporteData.empleados.map((empleado, index) => {
+                {datosPaginados.map((empleado, index) => {
                   const isExpanded = empleadoExpandido === empleado.DNI;
                   const detalles = detallesTardanzas[empleado.DNI] || [];
                   
@@ -766,6 +799,130 @@ const ReporteTardanzas = () => {
               </TableBody>
             </Table>
           </TableContainer>
+        </Paper>
+      )}
+
+      {/* Controles de Paginación */}
+      {reporteData && (
+        <Paper sx={{ 
+          mt: 2,
+          borderRadius: '16px',
+          backgroundColor: 'white',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          border: '1px solid #e5e7eb',
+          p: 2
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}>
+            {/* Información de paginación */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Mostrando {((paginaActual - 1) * elementosPorPagina) + 1} - {Math.min(paginaActual * elementosPorPagina, totalElementos)} de {totalElementos} empleados
+              </Typography>
+            </Box>
+
+            {/* Selector de elementos por página */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Mostrar:
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: 80 }}>
+                <Select
+                  value={elementosPorPagina}
+                  onChange={(e) => cambiarElementosPorPagina(e.target.value)}
+                  size="small"
+                >
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={20}>20</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                  <MenuItem value={100}>100</MenuItem>
+                </Select>
+              </FormControl>
+              <Typography variant="body2" color="text.secondary">
+                por página
+              </Typography>
+            </Box>
+
+            {/* Navegación de páginas */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => cambiarPagina(1)}
+                disabled={paginaActual === 1}
+                sx={{ minWidth: 40, p: 1 }}
+              >
+                {'<<'}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => cambiarPagina(paginaActual - 1)}
+                disabled={paginaActual === 1}
+                sx={{ minWidth: 40, p: 1 }}
+              >
+                {'<'}
+              </Button>
+              
+              {/* Páginas visibles */}
+              {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+                let pagina;
+                if (totalPaginas <= 5) {
+                  pagina = i + 1;
+                } else if (paginaActual <= 3) {
+                  pagina = i + 1;
+                } else if (paginaActual >= totalPaginas - 2) {
+                  pagina = totalPaginas - 4 + i;
+                } else {
+                  pagina = paginaActual - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={pagina}
+                    variant={pagina === paginaActual ? "contained" : "outlined"}
+                    size="small"
+                    onClick={() => cambiarPagina(pagina)}
+                    sx={{ 
+                      minWidth: 40, 
+                      p: 1,
+                      backgroundColor: pagina === paginaActual ? '#dc2626' : 'transparent',
+                      color: pagina === paginaActual ? 'white' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: pagina === paginaActual ? '#b91c1c' : '#f3f4f6'
+                      }
+                    }}
+                  >
+                    {pagina}
+                  </Button>
+                );
+              })}
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => cambiarPagina(paginaActual + 1)}
+                disabled={paginaActual === totalPaginas}
+                sx={{ minWidth: 40, p: 1 }}
+              >
+                {'>'}
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => cambiarPagina(totalPaginas)}
+                disabled={paginaActual === totalPaginas}
+                sx={{ minWidth: 40, p: 1 }}
+              >
+                {'>>'}
+              </Button>
+            </Box>
+          </Box>
         </Paper>
       )}
 

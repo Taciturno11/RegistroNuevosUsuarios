@@ -45,13 +45,13 @@ body {
 
 /* ===== Animaciones ===== */
 .fade-in {
-  animation: fadeIn 0.3s ease-in;
+  animation: fadeIn 0.2s ease-in;
 }
 
 @keyframes fadeIn {
   from { 
     opacity: 0; 
-    transform: translateY(10px); 
+    transform: translateY(5px); 
   }
   to { 
     opacity: 1; 
@@ -60,12 +60,12 @@ body {
 }
 
 .slide-in {
-  animation: slideIn 0.3s ease-out;
+  animation: slideIn 0.2s ease-out;
 }
 
 @keyframes slideIn {
   from { 
-    transform: translateX(-20px); 
+    transform: translateX(-10px); 
     opacity: 0; 
   }
   to { 
@@ -75,33 +75,17 @@ body {
 }
 
 /* ===== Transiciones suaves ===== */
-* {
+.MuiCard-root,
+.MuiButton-root,
+.MuiPaper-root,
+.MuiChip-root {
   transition: all 0.2s ease;
 }
 
-/* ===== Estilos para Material-UI personalizados ===== */
-.MuiCard-root {
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: var(--card-bg);
-}
-
-.MuiCardHeader-root {
-  background: var(--header-bg);
-  color: white;
-  border-radius: 0.5rem 0.5rem 0 0;
-}
-
-.MuiButton-root {
-  border-radius: 0.375rem;
-  text-transform: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.MuiButton-root:hover {
-  transform: translateY(-1px);
+.MuiCard-root:hover,
+.MuiButton-root:hover,
+.MuiPaper-root:hover {
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -385,4 +369,114 @@ body {
 .MuiTooltip-popper,
 .MuiTooltip-tooltip {
   transition: none !important; /* evita animación de posicionamiento/zoom */
+}
+
+/* ===== Estilos para Material-UI personalizados ===== */
+.MuiCard-root {
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: var(--card-bg);
+}
+
+.MuiCardHeader-root {
+  background: var(--header-bg);
+  color: white;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.MuiButton-root {
+  border-radius: 0.375rem;
+  text-transform: none;
+  font-weight: 500;
+}
+
+/* ✅ SIN TRANSICIONES PARA SELECTORES Y ELEMENTOS DE FORMULARIO */
+.MuiFormControl-root,
+.MuiSelect-root,
+.MuiMenuItem-root,
+.MuiInputBase-root,
+.MuiTextField-root {
+  transition: none !important;
+}
+
+/* ✅ OPTIMIZACIONES ESPECÍFICAS PARA SELECTORES */
+.MuiSelect-select {
+  transition: none !important;
+  transform: none !important;
+}
+
+.MuiMenuItem-root {
+  transition: none !important;
+  animation: none !important;
+}
+
+.MuiFormControl-root {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ✅ OPTIMIZAR RENDIMIENTO DE ANIMACIONES */
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(5px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slideIn {
+  from { 
+    transform: translateX(-10px); 
+    opacity: 0; 
+  }
+  to { 
+    transform: translateX(0); 
+    opacity: 1; 
+  }
+}
+
+/* ✅ ELIMINACIÓN COMPLETA DE DELAYS EN SELECTORES */
+.MuiSelect-root,
+.MuiSelect-select,
+.MuiMenuItem-root,
+.MuiFormControl-root,
+.MuiInputBase-root,
+.MuiTextField-root,
+.MuiPopover-root,
+.MuiMenu-paper,
+.MuiMenu-list,
+.MuiList-root {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  will-change: auto !important;
+  backface-visibility: visible !important;
+}
+
+/* ✅ OPTIMIZACIÓN ESPECÍFICA PARA MENÚS DESPLEGABLES */
+.MuiPopover-root .MuiPaper-root,
+.MuiMenu-paper {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+/* ✅ ELIMINAR CUALQUIER DELAY EN INTERACCIONES */
+.MuiSelect-select:focus,
+.MuiMenuItem-root:hover,
+.MuiMenuItem-root:active {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+/* ✅ OPTIMIZAR RENDIMIENTO DEL COMPONENTE */
+.reporte-asistencias-selector {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
 }
