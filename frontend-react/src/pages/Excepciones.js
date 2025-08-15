@@ -416,34 +416,52 @@ const Excepciones = () => {
         </Alert>
       )}
 
-      {/* Formulario */}
+      {/* Formulario - COMPACTO y optimizado */}
       {showForm && (
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+        <Box sx={{ 
+          background: 'white',
+          borderRadius: '15px',
+          boxShadow: '0 5px 20px rgba(0,0,0,0.1)',
+          padding: '1.5rem',
+          marginBottom: '1.5rem'
+        }}>
+          {/* Header del formulario */}
           <Box sx={{
-            background: 'linear-gradient(135deg, #223a4e, #2f4f68)',
+            background: 'linear-gradient(135deg, #2c3e50, #34495e)',
             color: 'white',
-            px: 2.5,
-            py: 1.5,
-            borderRadius: 1,
-            mb: 2
+            borderRadius: '10px 10px 0 0',
+            padding: '1rem',
+            margin: '-1.5rem -1.5rem 1rem -1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AddCircleOutlineIcon />
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {editingExcepcion ? 'Editar Excepción' : 'Nueva Asignación Excepcional'}
-              </Typography>
-            </Box>
+            <AddCircleOutlineIcon />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {editingExcepcion ? 'Editar Excepción' : 'Nueva Asignación Excepcional'}
+            </Typography>
           </Box>
-
+          
           <Box component="form" onSubmit={handleSubmit}>
-            {/* Fila 1: Fecha y Horario */}
-            <Grid container spacing={3}>
+            <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box sx={{ 
+                  background: '#ecf0f1',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    fontWeight: 600, 
+                    color: '#2c3e50',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
                     <CalendarMonthIcon fontSize="small" />
-                    <Typography variant="subtitle2">Fecha de Excepción</Typography>
-                  </Box>
+                    Fecha de Excepción
+                  </Typography>
                   <TextField
                     fullWidth
                     type="date"
@@ -451,25 +469,78 @@ const Excepciones = () => {
                     onChange={(e) => handleInputChange('fecha', e.target.value)}
                     required
                     InputLabelProps={{ shrink: true }}
+                    size="small"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        border: '2px solid #e9ecef',
+                        borderRadius: '6px',
+                        transition: 'all 0.3s ease',
+                        backgroundColor: 'white',
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#3498db'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#3498db',
+                          boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
+                        }
+                      }
+                    }}
                   />
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, color: '#64748b' }}>
+                  <Box sx={{ 
+                    marginTop: '0.25rem',
+                    color: '#7f8c8d',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
                     <InfoIcon fontSize="small" />
-                    <Typography variant="caption">Puede seleccionar fechas pasadas hasta 1 mes atrás</Typography>
+                    <Typography variant="caption">
+                      Puede seleccionar fechas pasadas hasta 1 mes atrás
+                    </Typography>
                   </Box>
                 </Box>
               </Grid>
+              
               <Grid item xs={12} md={6}>
-                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box sx={{ 
+                  background: '#ecf0f1',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  marginBottom: '1rem'
+                }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    fontWeight: 600, 
+                    color: '#2c3e50',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }}>
                     <AccessTimeIcon fontSize="small" />
-                    <Typography variant="subtitle2">Horario Excepcional</Typography>
-                  </Box>
-                  <FormControl fullWidth>
+                    Horario Excepcional
+                  </Typography>
+                  <FormControl fullWidth size="small">
                     <Select
                       value={formData.horarioID}
                       onChange={(e) => handleInputChange('horarioID', e.target.value)}
                       displayEmpty
                       MenuProps={{ disableScrollLock: true }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          border: '2px solid #e9ecef',
+                          borderRadius: '6px',
+                          transition: 'all 0.3s ease',
+                          backgroundColor: 'white',
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#3498db'
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#3498db',
+                            boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
+                          }
+                        }
+                      }}
                     >
                       <MenuItem value="">
                         -- Seleccionar Horario --
@@ -493,55 +564,107 @@ const Excepciones = () => {
                 </Box>
               </Grid>
             </Grid>
-
-            {/* Fila 2: Motivo (ahora ocupa todo el ancho de la fila) */}
-            <Grid container spacing={3} sx={{ mt: 0 }}>
-              <Grid item xs={12} md={12}>
-                <Box sx={{ bgcolor: '#eef2f7', borderRadius: 1.5, p: 2, width: { xs: '100%', md: '35rem' } }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <ChatBubbleOutlineIcon fontSize="small" />
-                    <Typography variant="subtitle2">Motivo de la Excepción</Typography>
-                  </Box>
-                  <TextField
-                    fullWidth
-                    value={formData.motivo}
-                    onChange={(e) => handleInputChange('motivo', e.target.value)}
-                    required
-                    placeholder="Describa el motivo de la asignación excepcional..."
-                    multiline
-                    rows={3}
-                  />
-                </Box>
-              </Grid>
-            </Grid>
-
-            {/* Botones de acción */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 3 }}>
+            
+            <Box sx={{ 
+              background: '#ecf0f1',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <Typography variant="subtitle2" sx={{ 
+                fontWeight: 600, 
+                color: '#2c3e50',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <ChatBubbleOutlineIcon fontSize="small" />
+                Motivo de la Excepción
+              </Typography>
+              <TextField
+                fullWidth
+                value={formData.motivo}
+                onChange={(e) => handleInputChange('motivo', e.target.value)}
+                required
+                placeholder="Describa el motivo de la asignación excepcional..."
+                multiline
+                rows={2}
+                size="small"
+                                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      border: '2px solid #e9ecef',
+                      borderRadius: '6px',
+                      transition: 'all 0.3s ease',
+                      backgroundColor: 'white',
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#3498db'
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: '#3498db',
+                        boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
+                      }
+                    }
+                  }}
+              />
+            </Box>
+            
+            <Box sx={{ 
+              textAlign: 'center',
+              marginTop: '1rem'
+            }}>
               <Button
                 type="submit"
                 variant="contained"
-                size="large"
-                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                size="medium"
+                startIcon={loading ? <CircularProgress size={18} /> : <SaveIcon />}
                 disabled={loading}
-                sx={{ px: 4, py: 1.5, background: 'linear-gradient(135deg, #1e81ce, #1669a6)' }}
+                sx={{ 
+                  background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.5rem 1.5rem',
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease',
+                  marginRight: 2,
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 5px 15px rgba(52, 152, 219, 0.4)',
+                    background: 'linear-gradient(135deg, #2980b9, #1f5f8b)'
+                  },
+                  '&:disabled': {
+                    transform: 'none',
+                    boxShadow: 'none'
+                  }
+                }}
               >
                 {loading ? 'Guardando...' : (editingExcepcion ? 'Actualizar' : 'Guardar Excepción')}
               </Button>
               <Button
                 type="button"
                 variant="contained"
-                size="large"
+                size="medium"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => {
-                  navigate('/');
+                onClick={() => navigate('/')}
+                sx={{ 
+                  background: 'linear-gradient(135deg, #34495e, #2c3e50)',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '0.5rem 1.5rem',
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 5px 15px rgba(52, 73, 94, 0.4)',
+                    background: 'linear-gradient(135deg, #2c3e50, #1a252f)'
+                  }
                 }}
-                sx={{ px: 4, py: 1.5, bgcolor: '#1f2937', '&:hover': { bgcolor: '#111827' } }}
               >
                 Volver al Dashboard
               </Button>
             </Box>
           </Box>
-        </Paper>
+        </Box>
       )}
 
       {/* Lista de Excepciones */}

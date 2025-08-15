@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ExcelJS from 'exceljs';
 import {
   Box,
   Card,
@@ -146,7 +147,7 @@ const PagosNomina = () => {
   };
 
   // Exportar a Excel
-  const exportarExcel = () => {
+  const exportarExcel = async () => {
     if (reporteNomina.length === 0) {
       setError('No hay datos para exportar');
       return;
@@ -154,64 +155,213 @@ const PagosNomina = () => {
     
     setSuccess('Exportando datos a Excel...');
     
-    // Crear contenido CSV
-    const headers = [
-      'DNI',
-      'Nombres',
-      'Apellido Paterno',
-      'Apellido Materno',
-      'Campaña',
-      'Cargo',
-      'Estado',
-      'Sueldo Base',
-      'Bono Conexión',
-      'Bono Dinámica',
-      'Bono Movilidad',
-      'Bono Variable',
-      'Días Trabajados',
-      'Días Asistidos',
-      'Días Faltados',
-      'Descuento Días No Pagados',
-      'Total a Pagar'
-    ];
-    
-    const csvContent = [
-      headers.join(','),
-      ...reporteNomina.map(registro => [
-        registro.DNI || '',
-        `"${registro.Nombres || ''}"`,
-        `"${registro.ApellidoPaterno || ''}"`,
-        `"${registro.ApellidoMaterno || ''}"`,
-        `"${registro.NombreCampaña || ''}"`,
-        `"${registro.NombreCargo || ''}"`,
-        registro.EstadoEmpleado || 'ACTIVO',
-        registro.SueldoBase || 0,
-        registro.BonoConexion || 0,
-        registro.BonoDinamica || 0,
-        registro.BonoMovilidad || 0,
-        registro.BonoVariable || 0,
-        registro.DiasTrabajados || 0,
-        registro.DiasAsistidos || 0,
-        registro.DiasFaltados || 0,
-        registro.DescuentoDiasNoPagados || 0,
-        registro.TotalPagar || 0
-      ].join(','))
-    ].join('\n');
-    
-    // Crear y descargar archivo
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Reporte_Nomina_${filtros.mes}_${filtros.anio}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    setTimeout(() => {
-      setSuccess('Datos exportados exitosamente');
-    }, 1000);
+    try {
+      // Crear nuevo workbook y worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Reporte Nómina');
+      
+      // Obtener TODAS las columnas del primer registro para incluir todo en Excel
+      const primerRegistro = reporteNomina[0];
+      const todasLasColumnas = Object.keys(primerRegistro);
+      
+      console.log('🔍 Todas las columnas disponibles para Excel:', todasLasColumnas);
+      
+      // Definir encabezados - incluir TODAS las columnas del SP
+      const headers = todasLasColumnas.map(columna => {
+        // Mapear nombres de columnas a nombres más legibles
+        const mapeoNombres = {
+          'DNI': 'DNI',
+          'Nombres': 'Nombres',
+          'ApellidoPaterno': 'Apellido Paterno',
+          'ApellidoMaterno': 'Apellido Materno',
+          'Campaña': 'Campaña',
+          'Cargo': 'Cargo',
+          'EstadoEmpleado': 'Estado',
+          'SueldoBaseMensual': 'Sueldo Base Mensual',
+          'NetoAPagar': 'Neto a Pagar',
+          'DiasNoLaborados': 'Días No Laborados',
+          // Agregar aquí más mapeos según las columnas que devuelva tu SP
+        };
+        
+        return mapeoNombres[columna] || columna;
+      });
+      
+      // Agregar encabezados con estilos
+      const headerRow = worksheet.addRow(headers);
+      
+      // Estilos para encabezados
+      headerRow.eachCell((cell, colNumber) => {
+        cell.font = {
+          bold: true,
+          color: { argb: 'FFFFFFFF' },
+          size: 12
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF2E7D32' } // Verde oscuro
+        };
+        cell.alignment = {
+          horizontal: 'center',
+          vertical: 'middle'
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF1B5E20' } },
+          bottom: { style: 'thin', color: { argb: 'FF1B5E20' } },
+          left: { style: 'thin', color: { argb: 'FF1B5E20' } },
+          right: { style: 'thin', color: { argb: 'FF1B5E20' } }
+        };
+      });
+      
+      // Agregar datos - incluir TODAS las columnas del SP
+      reporteNomina.forEach((registro, index) => {
+        // Crear array con TODAS las columnas del registro
+        const rowData = todasLasColumnas.map(columna => {
+          const valor = registro[columna];
+          
+          // Formatear valores según el tipo de dato
+          if (typeof valor === 'number') {
+            // Si es un número, verificar si es entero o decimal
+            if (Number.isInteger(valor)) {
+              return valor; // Entero
+            } else {
+              return parseFloat(valor).toFixed(2); // Decimal con 2 decimales
+            }
+          } else if (valor === null || valor === undefined) {
+            return ''; // Valor vacío
+          } else {
+            return valor.toString(); // Convertir a string
+          }
+        });
+        
+        const row = worksheet.addRow(rowData);
+        
+        // Aplicar estilos a cada celda de la fila
+        row.eachCell((cell, colNumber) => {
+          // Estilo base para todas las celdas
+          cell.font = {
+            size: 11,
+            color: { argb: 'FF212121' }
+          };
+          cell.alignment = {
+            horizontal: 'center',
+            vertical: 'middle'
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+            left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+            right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+          };
+          
+          // Estilos especiales por columna
+          const nombreColumna = todasLasColumnas[colNumber - 1]; // colNumber empieza en 1
+          
+          if (nombreColumna === 'DNI') {
+            cell.font.bold = true;
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF3E5F5' } // Violeta claro
+            };
+          }
+          
+          if (nombreColumna === 'EstadoEmpleado' || nombreColumna === 'Estado') {
+            cell.font.bold = true;
+            if (cell.value === 'CESE') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFEBEE' } // Rojo claro
+              };
+              cell.font.color = { argb: 'FFC62828' }; // Rojo oscuro
+            } else {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE8F5E8' } // Verde claro
+              };
+              cell.font.color = { argb: 'FF2E7D32' }; // Verde oscuro
+            }
+          }
+          
+          // Columnas de montos (sueldos, bonos, totales)
+          if (nombreColumna.includes('Sueldo') || nombreColumna.includes('Bono') || 
+              nombreColumna.includes('Total') || nombreColumna.includes('Neto') ||
+              nombreColumna.includes('Descuento')) {
+            cell.alignment.horizontal = 'right';
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF1F8E9' } // Verde muy claro
+            };
+            cell.font.color = { argb: 'FF1B5E20' }; // Verde oscuro
+          }
+          
+          // Columnas de días
+          if (nombreColumna.includes('Dia') || nombreColumna.includes('Dias')) {
+            cell.alignment.horizontal = 'center';
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFE3F2FD' } // Azul claro
+            };
+            cell.font.color = { argb: 'FF1565C0' }; // Azul oscuro
+          }
+          
+          // Filas alternadas para mejor legibilidad
+          if (index % 2 === 1) {
+            if (!cell.fill || cell.fill.type !== 'pattern') {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFAFAFA' } // Gris muy claro
+              };
+            }
+          }
+        });
+      });
+      
+      // Configurar ancho de columnas automáticamente según el contenido
+      worksheet.columns.forEach((column, index) => {
+        // Anchos base según el tipo de columna
+        const columna = todasLasColumnas[index];
+        let ancho = 15; // Ancho por defecto
+        
+        // Ajustar ancho según el tipo de contenido
+        if (columna === 'DNI') ancho = 12;
+        else if (columna.includes('Nombre') || columna.includes('Apellido')) ancho = 20;
+        else if (columna.includes('Campaña') || columna.includes('Cargo')) ancho = 25;
+        else if (columna.includes('Sueldo') || columna.includes('Bono') || columna.includes('Total') || columna.includes('Neto')) ancho = 18;
+        else if (columna.includes('Día') || columna.includes('Dias')) ancho = 15;
+        else if (columna.includes('Estado')) ancho = 12;
+        else ancho = 15;
+        
+        column.width = ancho;
+      });
+      
+      // Generar nombre del archivo
+      const mesNombre = meses.find(m => m.value === filtros.mes)?.label || filtros.mes;
+      const fileName = `Reporte_Nomina_${mesNombre}_${filtros.anio}.xlsx`;
+      
+      // Generar y descargar archivo
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      
+      setTimeout(() => {
+        setSuccess('Archivo Excel con estilos generado y descargado exitosamente');
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error generando Excel:', error);
+      setError('Error generando archivo Excel. Intente nuevamente.');
+    }
   };
 
   // Ver detalle del registro
@@ -255,6 +405,8 @@ const PagosNomina = () => {
           🔍 Parámetros del Reporte
         </Typography>
         
+
+        
         <Grid container spacing={3} alignItems="end">
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
@@ -274,7 +426,7 @@ const PagosNomina = () => {
           </Grid>
           
           <Grid item xs={12} md={3}>
-            <FormControl fullWidth sx={{ width: '5rem' }}>
+            <FormControl fullWidth sx={{ width: '8rem' }}>
               <InputLabel>Mes</InputLabel>
               <Select
                 value={filtros.mes}
@@ -391,9 +543,14 @@ const PagosNomina = () => {
               variant="contained"
               startIcon={<DownloadIcon />}
               onClick={exportarExcel}
-              sx={{ backgroundColor: '#16a34a', '&:hover': { backgroundColor: '#15803d' } }}
+              sx={{ 
+                backgroundColor: '#16a34a', 
+                '&:hover': { backgroundColor: '#15803d' },
+                px: 3,
+                py: 1.5
+              }}
             >
-              Descargar Excel
+              📊 Descargar Excel
             </Button>
           </Box>
 

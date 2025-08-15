@@ -146,7 +146,7 @@ const ActualizarEmpleado = () => {
         await cargarHorarioEmpleado(dni);
         
         // Llenar formulario con datos actuales
-        setFormData({
+    setFormData({
           DNI: empleado.DNI || '',
           Nombres: empleado.Nombres || '',
           ApellidoPaterno: empleado.ApellidoPaterno || '',
@@ -546,17 +546,17 @@ const ActualizarEmpleado = () => {
       </Card>
 
       {/* Mensajes */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }}>
+            {success}
+          </Alert>
+        )}
 
       {/* Vista de solo lectura */}
       {!isEditing && (
@@ -963,123 +963,123 @@ const ActualizarEmpleado = () => {
             </Button>
           </Box>
 
-          <Box component="form" onSubmit={handleSubmit}>
-            {/* Información Personal */}
-            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-              Información Personal
-            </Typography>
-            
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="DNI *"
+        <Box component="form" onSubmit={handleSubmit}>
+          {/* Información Personal */}
+          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+            Información Personal
+          </Typography>
+          
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="DNI *"
                   value={formData.DNI}
-                  disabled
-                  sx={{ backgroundColor: '#f8fafc' }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Nombres *"
+                disabled
+                sx={{ backgroundColor: '#f8fafc' }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Nombres *"
                   value={formData.Nombres}
                   onChange={(e) => handleInputChange('Nombres', e.target.value)}
-                  required
-                  placeholder="Juan Carlos"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Apellido Paterno *"
+                required
+                placeholder="Juan Carlos"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Apellido Paterno *"
                   value={formData.ApellidoPaterno}
                   onChange={(e) => handleInputChange('ApellidoPaterno', e.target.value)}
-                  required
-                  placeholder="García"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Apellido Materno"
+                required
+                placeholder="García"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Apellido Materno"
                   value={formData.ApellidoMaterno}
                   onChange={(e) => handleInputChange('ApellidoMaterno', e.target.value)}
-                  placeholder="López"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
+                placeholder="López"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
                   label="Fecha de Contratación *"
-                  type="date"
+                type="date"
                   value={formData.FechaContratacion}
                   onChange={(e) => handleInputChange('FechaContratacion', e.target.value)}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+                required
+                InputLabelProps={{ shrink: true }}
+              />
             </Grid>
+          </Grid>
 
-            <Divider sx={{ my: 4 }} />
+          <Divider sx={{ my: 4 }} />
 
             {/* Registro del Empleado */}
-            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
               Registro del Empleado
-            </Typography>
-            
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+          </Typography>
+          
+          <Grid container spacing={3} sx={{ mb: 4 }}>
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth required>
-                  <InputLabel>Campaña</InputLabel>
-                  <Select
+              <FormControl fullWidth required>
+                <InputLabel>Campaña</InputLabel>
+                <Select
                     value={formData.CampañaID}
                     onChange={(e) => handleInputChange('CampañaID', e.target.value)}
-                    label="Campaña"
-                  >
+                  label="Campaña"
+                >
                     <MenuItem value="" disabled>-- Elegir --</MenuItem>
                     {catalogos.campanias?.map((campania) => (
-                      <MenuItem key={campania.id} value={campania.id}>
-                        {campania.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                    <MenuItem key={campania.id} value={campania.id}>
+                      {campania.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth required>
-                  <InputLabel>Cargo</InputLabel>
-                  <Select
+              <FormControl fullWidth required>
+                <InputLabel>Cargo</InputLabel>
+                <Select
                     value={formData.CargoID}
                     onChange={(e) => handleInputChange('CargoID', e.target.value)}
-                    label="Cargo"
-                  >
+                  label="Cargo"
+                >
                     <MenuItem value="" disabled>-- Elegir --</MenuItem>
                     {catalogos.cargos?.map((cargo) => (
-                      <MenuItem key={cargo.id} value={cargo.id}>
-                        {cargo.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                    <MenuItem key={cargo.id} value={cargo.id}>
+                      {cargo.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth required>
+              <FormControl fullWidth required>
                   <InputLabel>Modalidad</InputLabel>
-                  <Select
+                <Select
                     value={formData.ModalidadID}
                     onChange={(e) => handleInputChange('ModalidadID', e.target.value)}
                     label="Modalidad"
                   >
                     <MenuItem value="" disabled>-- Elegir --</MenuItem>
                     {catalogos.modalidades?.map((modalidad) => (
-                      <MenuItem key={modalidad.id} value={modalidad.id}>
-                        {modalidad.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                    <MenuItem key={modalidad.id} value={modalidad.id}>
+                      {modalidad.nombre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
             </Grid>
 
             <Divider sx={{ my: 4 }} />
@@ -1091,9 +1091,9 @@ const ActualizarEmpleado = () => {
             
             <Grid container spacing={3} sx={{ mb: 4 }}>
               <Grid item xs={12} md={3}>
-                <FormControl fullWidth required>
+              <FormControl fullWidth required>
                   <InputLabel>Jornada</InputLabel>
-                  <Select
+                <Select
                     value={formData.JornadaID}
                     onChange={(e) => handleInputChange('JornadaID', e.target.value)}
                     label="Jornada"
@@ -1102,11 +1102,11 @@ const ActualizarEmpleado = () => {
                     {catalogos.jornadas?.map((jornada) => (
                       <MenuItem key={jornada.id} value={jornada.id}>
                         {jornada.nombre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
               <Grid item xs={12} md={3}>
               <FormControl sx={{ width: '8rem' }} required>
                   <InputLabel>Turno</InputLabel>
@@ -1160,20 +1160,20 @@ const ActualizarEmpleado = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
             </Grid>
+          </Grid>
 
-            <Divider sx={{ my: 4 }} />
+          <Divider sx={{ my: 4 }} />
 
             {/* DNIs de Referencia */}
-            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
               DNIs de Referencia
-            </Typography>
-            
-            <Grid container spacing={3} sx={{ mb: 4 }}>
+          </Typography>
+          
+          <Grid container spacing={3} sx={{ mb: 4 }}>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
+              <TextField
+                fullWidth
                   label="Supervisor DNI"
                   value={formData.SupervisorDNI}
                   onChange={(e) => {
@@ -1204,10 +1204,10 @@ const ActualizarEmpleado = () => {
                     ))}
                   </Box>
                 )}
-              </Grid>
+            </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
+              <TextField
+                fullWidth
                   label="Coordinador DNI"
                   value={formData.CoordinadorDNI}
                   onChange={(e) => {
@@ -1238,10 +1238,10 @@ const ActualizarEmpleado = () => {
                     ))}
                   </Box>
                 )}
-              </Grid>
+            </Grid>
               <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
+              <TextField
+                fullWidth
                   label="Jefe DNI"
                   value={formData.JefeDNI}
                   onChange={(e) => {
@@ -1272,24 +1272,24 @@ const ActualizarEmpleado = () => {
                     ))}
                   </Box>
                 )}
-              </Grid>
             </Grid>
+          </Grid>
 
-            {/* Botones de acción */}
+          {/* Botones de acción */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-                disabled={loading}
-                sx={{ px: 4, py: 1.5 }}
-              >
-                {loading ? 'Actualizando...' : 'Actualizar Empleado'}
-              </Button>
-            </Box>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+              disabled={loading}
+              sx={{ px: 4, py: 1.5 }}
+            >
+              {loading ? 'Actualizando...' : 'Actualizar Empleado'}
+            </Button>
           </Box>
-        </Paper>
+        </Box>
+      </Paper>
       )}
     </Box>
   );
