@@ -1,9 +1,23 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
+// Función para obtener la URL del backend dinámicamente
+const getBackendURL = () => {
+  // Obtener la IP del hostname actual (funciona en cualquier red)
+  const hostname = window.location.hostname;
+  
+  // Si no es localhost, usar la IP actual
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:5000/api`;
+  }
+  
+  // Fallback a localhost
+  return 'http://localhost:5000/api';
+};
+
 // Crear instancia específica de Axios para el proyecto
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: getBackendURL(),
   timeout: 10000,
 });
 
@@ -122,14 +136,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (dni, password) => {
     console.log('🚀 FUNCIÓN LOGIN INICIADA');
     console.log('🔐 Iniciando login para DNI:', dni);
-    console.log('📤 Enviando petición a:', 'http://localhost:5000/api/auth/login');
+    console.log('📤 Enviando petición a:', '/api/auth/login');
     console.log('📤 Datos enviados:', { dni, password });
     
     try {
       console.log('📡 ANTES DE LA PETICIÓN HTTP');
       
       // Usar axios directamente para el login
-      const response = await axios.post('http://localhost:5000/api/auth/login', { dni, password });
+      const response = await axios.post('/api/auth/login', { dni, password });
 
       console.log('📡 DESPUÉS DE LA PETICIÓN HTTP');
       console.log('📡 Respuesta completa del backend:', response);

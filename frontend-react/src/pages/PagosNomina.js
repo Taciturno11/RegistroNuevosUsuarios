@@ -23,7 +23,11 @@ import {
   TableRow,
   CircularProgress,
   IconButton,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -31,7 +35,8 @@ import {
   Search as SearchIcon,
   Download as DownloadIcon,
   Visibility as VisibilityIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 
 const PagosNomina = () => {
@@ -50,6 +55,7 @@ const PagosNomina = () => {
   // Estados para datos
   const [aniosDisponibles, setAniosDisponibles] = useState([]);
   const [reporteNomina, setReporteNomina] = useState([]);
+  const [modalBonos, setModalBonos] = useState({ open: false, empleado: null });
   const [meses] = useState([
     { value: '1', label: 'Enero' },
     { value: '2', label: 'Febrero' },
@@ -83,6 +89,43 @@ const PagosNomina = () => {
     cargarAniosDisponibles();
   }, [cargarAniosDisponibles]);
 
+  // Función para calcular días correctamente
+  const calcularDias = (registro) => {
+    // Calcular días reales del mes
+    const fecha = new Date(parseInt(filtros.anio), parseInt(filtros.mes) - 1, 1);
+    const diasDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
+    
+    // Identificar solo columnas que representen días del mes
+    const columnasDias = Object.keys(registro).filter(col => 
+      col.startsWith('Dia') && /^Dia\d+$/.test(col)
+    );
+    
+    // Contar diferentes tipos de asistencia y faltas
+    const diasAsistidos = columnasDias.filter(dia => 
+      ['A', 'T', 'ST', 'P'].includes(registro[dia])
+    ).length;
+    
+    const faltasInjustificadas = columnasDias.filter(dia => 
+      registro[dia] === 'FI'
+    ).length;
+    
+    const faltasJustificadas = columnasDias.filter(dia => 
+      registro[dia] === 'FJ'
+    ).length;
+    
+    const totalFaltas = faltasInjustificadas + faltasJustificadas;
+    const diasTrabajados = diasDelMes - totalFaltas;
+    
+    return {
+      diasDelMes,
+      diasAsistidos,
+      diasFaltados: totalFaltas,
+      diasTrabajados,
+      faltasInjustificadas,
+      faltasJustificadas
+    };
+  };
+
   // Generar reporte de nómina
   const generarReporte = async () => {
     if (!filtros.anio || !filtros.mes) {
@@ -105,6 +148,19 @@ const PagosNomina = () => {
           // Log de cada registro para debug
           console.log('🔍 Registro individual:', registro);
           
+          // Calcular días usando la nueva lógica
+          const calculoDias = calcularDias(registro);
+          
+          // Log detallado del cálculo para debug
+          console.log(`🔍 Cálculo de días para ${registro.Nombres || 'Empleado'}:`, {
+            diasDelMes: calculoDias.diasDelMes,
+            diasAsistidos: calculoDias.diasAsistidos,
+            diasFaltados: calculoDias.diasFaltados,
+            diasTrabajados: calculoDias.diasTrabajados,
+            faltasInjustificadas: calculoDias.faltasInjustificadas,
+            faltasJustificadas: calculoDias.faltasJustificadas
+          });
+          
           return {
             ...registro,
             // Mapear usando los nombres exactos que devuelve el stored procedure
@@ -115,9 +171,14 @@ const PagosNomina = () => {
             NombreCampaña: registro.Campaña || 'N/A',
             NombreCargo: registro.Cargo || 'N/A',
             SueldoBase: registro.SueldoBaseMensual || 0,
-            DiasTrabajados: 31 - (registro.DiasNoLaborados || 0), // Calcular días trabajados
-            DiasAsistidos: Object.values(registro).filter(val => val === 'A').length, // Contar 'A' (Asistencia)
-            DiasFaltados: Object.values(registro).filter(val => val === 'FI').length, // Contar 'FI' (Falta Injustificada)
+            // Usar la nueva lógica de cálculo
+            DiasTrabajados: calculoDias.diasTrabajados,
+            DiasAsistidos: calculoDias.diasAsistidos,
+            DiasFaltados: calculoDias.diasFaltados,
+            // Información adicional para debug
+            DiasDelMes: calculoDias.diasDelMes,
+            FaltasInjustificadas: calculoDias.faltasInjustificadas,
+            FaltasJustificadas: calculoDias.faltasJustificadas,
             TotalPagar: registro.NetoAPagar || 0
           };
         });
@@ -160,11 +221,34 @@ const PagosNomina = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Reporte Nómina');
       
-      // Obtener TODAS las columnas del primer registro para incluir todo en Excel
+      // Obtener SOLO las columnas originales del SP (excluir columnas calculadas del frontend)
       const primerRegistro = reporteNomina[0];
-      const todasLasColumnas = Object.keys(primerRegistro);
       
-      console.log('🔍 Todas las columnas disponibles para Excel:', todasLasColumnas);
+      // Lista de columnas que NO son del SP (se agregan en el frontend)
+      const columnasCalculadas = [
+        'DiasTrabajados',
+        'DiasAsistidos', 
+        'DiasFaltados',
+        'DiasDelMes',
+        'FaltasInjustificadas',
+        'FaltasJustificadas',
+        'NombreCampaña',
+        'NombreCargo',
+        'SueldoBase',
+        'TotalPagar'
+      ];
+      
+      // Filtrar solo las columnas originales del SP
+      const columnasOriginales = Object.keys(primerRegistro).filter(col => 
+        !columnasCalculadas.includes(col)
+      );
+      
+      console.log('🔍 Columnas originales del SP:', columnasOriginales);
+      console.log('🔍 Columnas calculadas del frontend:', columnasCalculadas);
+      console.log('🔍 Primer registro completo:', primerRegistro);
+      
+      // Usar SOLO las columnas originales del SP
+      const todasLasColumnas = columnasOriginales;
       
       // Definir encabezados - incluir TODAS las columnas del SP
       const headers = todasLasColumnas.map(columna => {
@@ -213,26 +297,37 @@ const PagosNomina = () => {
         };
       });
       
-      // Agregar datos - incluir TODAS las columnas del SP
-      reporteNomina.forEach((registro, index) => {
-        // Crear array con TODAS las columnas del registro
-        const rowData = todasLasColumnas.map(columna => {
-          const valor = registro[columna];
-          
-          // Formatear valores según el tipo de dato
-          if (typeof valor === 'number') {
-            // Si es un número, verificar si es entero o decimal
-            if (Number.isInteger(valor)) {
-              return valor; // Entero
-            } else {
-              return parseFloat(valor).toFixed(2); // Decimal con 2 decimales
-            }
-          } else if (valor === null || valor === undefined) {
-            return ''; // Valor vacío
-          } else {
-            return valor.toString(); // Convertir a string
-          }
-        });
+             // Agregar datos - incluir TODAS las columnas del SP
+       reporteNomina.forEach((registro, index) => {
+         // Crear array con TODAS las columnas del registro
+         const rowData = todasLasColumnas.map(columna => {
+           const valor = registro[columna];
+           
+           // Formatear valores según el tipo de dato
+           if (typeof valor === 'number') {
+             // Si es un número, verificar si es entero o decimal
+             if (Number.isInteger(valor)) {
+               return valor; // Entero
+             } else {
+               return parseFloat(valor).toFixed(2); // Decimal con 2 decimales
+             }
+           } else if (valor === null || valor === undefined) {
+             return ''; // Valor vacío
+           } else if (typeof valor === 'string' && valor.includes('T') && valor.includes('Z')) {
+             // Es una fecha ISO, convertir a formato YYYY-MM-DD
+             try {
+               const fecha = new Date(valor);
+               if (!isNaN(fecha.getTime())) {
+                 return fecha.toISOString().split('T')[0]; // Retorna YYYY-MM-DD
+               }
+             } catch (e) {
+               // Si falla la conversión, retornar el valor original
+             }
+             return valor.toString();
+           } else {
+             return valor.toString(); // Convertir a string
+           }
+         });
         
         const row = worksheet.addRow(rowData);
         
@@ -366,8 +461,17 @@ const PagosNomina = () => {
 
   // Ver detalle del registro
   const verDetalle = (registro) => {
-    setSuccess(`Viendo detalle de ${registro.Nombres} ${registro.ApellidoPaterno}`);
-    // Aquí iría la lógica para mostrar el detalle
+    abrirModalBonos(registro);
+  };
+
+  // Abrir modal de bonos
+  const abrirModalBonos = (empleado) => {
+    setModalBonos({ open: true, empleado });
+  };
+
+  // Cerrar modal de bonos
+  const cerrarModalBonos = () => {
+    setModalBonos({ open: false, empleado: null });
   };
 
   // Editar registro
@@ -486,7 +590,9 @@ const PagosNomina = () => {
           <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
             📊 Resumen del Reporte
           </Typography>
-          <Grid container spacing={3}>
+          
+          {/* KPIs Principales */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
                 <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
@@ -497,16 +603,16 @@ const PagosNomina = () => {
                 </Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} md={3}>
-              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
-                <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
-                  S/ {reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0).toFixed(2)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total a Pagar
-                </Typography>
-              </Box>
-            </Grid>
+                         <Grid item xs={12} md={3}>
+               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
+                 <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
+                   S/ {reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                 </Typography>
+                 <Typography variant="body2" color="text.secondary">
+                   Total a Pagar
+                 </Typography>
+               </Box>
+             </Grid>
             <Grid item xs={12} md={3}>
               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
                 <Typography variant="h4" color="warning.main" sx={{ fontWeight: 'bold' }}>
@@ -528,6 +634,78 @@ const PagosNomina = () => {
               </Box>
             </Grid>
           </Grid>
+
+                     {/* KPIs de Bonos - Detectados automáticamente */}
+           {(() => {
+             // Detectar automáticamente todas las columnas de bonos
+             if (reporteNomina.length === 0) return null;
+             
+             const primerRegistro = reporteNomina[0];
+             const columnasBonos = Object.keys(primerRegistro).filter(columna => 
+               columna.toLowerCase().includes('bono') && 
+               typeof primerRegistro[columna] === 'number'
+             );
+             
+             if (columnasBonos.length === 0) return null;
+             
+             const totalAPagar = reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+             
+             // Calcular totales de bonos y ordenarlos de mayor a menor
+             const bonosConTotales = columnasBonos.map(columnaBono => {
+               const totalBono = reporteNomina.reduce((sum, r) => sum + (r[columnaBono] || 0), 0);
+               return {
+                 columna: columnaBono,
+                 total: totalBono,
+                 porcentaje: totalAPagar > 0 ? ((totalBono / totalAPagar) * 100) : 0
+               };
+             });
+             
+             // Ordenar de mayor a menor por total
+             bonosConTotales.sort((a, b) => b.total - a.total);
+             
+             return (
+               <>
+                 <Typography variant="h6" sx={{ mb: 2, color: '#16a34a', mt: 3 }}>
+                   💰 Análisis de Bonos (Ordenados por Valor)
+                 </Typography>
+                 <Grid container spacing={2}>
+                   {bonosConTotales.map((bono, index) => {
+                     // Mapear nombres de columnas a nombres legibles
+                     const nombreLegible = bono.columna
+                       .replace(/([A-Z])/g, ' $1') // Agregar espacio antes de mayúsculas
+                       .replace(/^./, str => str.toUpperCase()) // Primera letra mayúscula
+                       .trim();
+                     
+                     return (
+                       <Grid item xs={12} sm={6} md={4} lg={3} key={bono.columna}>
+                         <Box sx={{ 
+                           textAlign: 'center', 
+                           p: 2, 
+                           backgroundColor: 'white', 
+                           borderRadius: 2,
+                           border: '1px solid #e0e0e0',
+                           height: '100%',
+                           display: 'flex',
+                           flexDirection: 'column',
+                           justifyContent: 'center'
+                         }}>
+                           <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                             S/ {bono.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                             {nombreLegible}
+                           </Typography>
+                           <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                             {bono.porcentaje.toFixed(1)}% del total
+                           </Typography>
+                         </Box>
+                       </Grid>
+                     );
+                   })}
+                 </Grid>
+               </>
+             );
+           })()}
         </Paper>
       )}
 
@@ -593,13 +771,13 @@ const PagosNomina = () => {
                         {registro.EstadoEmpleado || 'ACTIVO'}
                       </Box>
                     </TableCell>
-                    <TableCell align="right">S/ {parseFloat(registro.SueldoBase || 0).toFixed(2)}</TableCell>
-                    <TableCell align="right">{registro.DiasTrabajados || 0}</TableCell>
-                    <TableCell align="right">{registro.DiasAsistidos || 0}</TableCell>
-                    <TableCell align="right">{registro.DiasFaltados || 0}</TableCell>
-                    <TableCell align="right">
-                      <strong>S/ {parseFloat(registro.TotalPagar || 0).toFixed(2)}</strong>
-                    </TableCell>
+                                         <TableCell align="right">S/ {parseFloat(registro.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                     <TableCell align="right">{registro.DiasTrabajados || 0}</TableCell>
+                     <TableCell align="right">{registro.DiasAsistidos || 0}</TableCell>
+                     <TableCell align="right">{registro.DiasFaltados || 0}</TableCell>
+                     <TableCell align="right">
+                       <strong>S/ {parseFloat(registro.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         <Tooltip title="Ver detalle">
@@ -656,10 +834,157 @@ const PagosNomina = () => {
             El sistema ejecutará el stored procedure <code>GenerarReporteNominaYAsistencia</code> 
             con los parámetros seleccionados.
           </Typography>
-        </Paper>
-      )}
-    </Box>
-  );
-};
+                 </Paper>
+       )}
+
+       {/* Modal de Bonos del Empleado */}
+       <Dialog 
+         open={modalBonos.open} 
+         onClose={cerrarModalBonos}
+         maxWidth="md"
+         fullWidth
+       >
+         <DialogTitle sx={{ 
+           backgroundColor: '#16a34a', 
+           color: 'white',
+           display: 'flex',
+           justifyContent: 'space-between',
+           alignItems: 'center'
+         }}>
+           <Box sx={{ display: 'flex', alignItems: 'center' }}>
+             <Typography variant="h6">
+               💰 Detalle de Bonos - {modalBonos.empleado?.Nombres} {modalBonos.empleado?.ApellidoPaterno}
+             </Typography>
+           </Box>
+           <IconButton onClick={cerrarModalBonos} sx={{ color: 'white' }}>
+             <CloseIcon />
+           </IconButton>
+         </DialogTitle>
+         
+         <DialogContent sx={{ pt: 3 }}>
+           {modalBonos.empleado && (() => {
+             // Obtener todas las columnas de bonos del empleado
+             const columnasBonos = Object.keys(modalBonos.empleado).filter(columna => 
+               columna.toLowerCase().includes('bono') && 
+               typeof modalBonos.empleado[columna] === 'number' &&
+               modalBonos.empleado[columna] > 0
+             );
+             
+             if (columnasBonos.length === 0) {
+               return (
+                 <Box sx={{ textAlign: 'center', py: 4 }}>
+                   <Typography variant="h6" color="text.secondary">
+                     Este empleado no tiene bonos asignados
+                   </Typography>
+                 </Box>
+               );
+             }
+             
+             return (
+               <Box>
+                 {/* Información del empleado */}
+                 <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8fafc' }}>
+                   <Grid container spacing={2}>
+                     <Grid item xs={12} md={6}>
+                       <Typography variant="body2" color="text.secondary">DNI:</Typography>
+                       <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.DNI}</Typography>
+                     </Grid>
+                     <Grid item xs={12} md={6}>
+                       <Typography variant="body2" color="text.secondary">Cargo:</Typography>
+                       <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCargo}</Typography>
+                     </Grid>
+                     <Grid item xs={12} md={6}>
+                       <Typography variant="body2" color="text.secondary">Campaña:</Typography>
+                       <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCampaña}</Typography>
+                     </Grid>
+                     <Grid item xs={12} md={6}>
+                       <Typography variant="body2" color="text.secondary">Total a Pagar:</Typography>
+                       <Typography variant="h6" color="success.main" fontWeight="bold">
+                         S/ {parseFloat(modalBonos.empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </Typography>
+                     </Grid>
+                   </Grid>
+                 </Paper>
+
+                 {/* Lista de bonos */}
+                 <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
+                   📊 Desglose de Bonos
+                 </Typography>
+                 
+                 <Grid container spacing={2}>
+                   {columnasBonos.map((columnaBono) => {
+                     const valorBono = modalBonos.empleado[columnaBono];
+                     const totalAPagar = modalBonos.empleado.TotalPagar || 0;
+                     const porcentajeBono = totalAPagar > 0 ? ((valorBono / totalAPagar) * 100) : 0;
+                     
+                     // Mapear nombres de columnas a nombres legibles
+                     const nombreLegible = columnaBono
+                       .replace(/([A-Z])/g, ' $1')
+                       .replace(/^./, str => str.toUpperCase())
+                       .trim();
+                     
+                     return (
+                       <Grid item xs={12} sm={6} md={4} key={columnaBono}>
+                         <Paper sx={{ 
+                           p: 2, 
+                           textAlign: 'center',
+                           border: '1px solid #e0e0e0',
+                           backgroundColor: 'white'
+                         }}>
+                           <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                             S/ {valorBono.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                             {nombreLegible}
+                           </Typography>
+                           <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                             {porcentajeBono.toFixed(1)}% del total
+                           </Typography>
+                         </Paper>
+                       </Grid>
+                     );
+                   })}
+                 </Grid>
+
+                 {/* Resumen */}
+                 <Paper sx={{ p: 2, mt: 3, backgroundColor: '#f0fdf4' }}>
+                   <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
+                     📋 Resumen
+                   </Typography>
+                   <Grid container spacing={2}>
+                     <Grid item xs={12} md={4}>
+                       <Typography variant="body2" color="text.secondary">Total Bonos:</Typography>
+                       <Typography variant="h6" color="primary" fontWeight="bold">
+                         S/ {columnasBonos.reduce((sum, col) => sum + (modalBonos.empleado[col] || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} md={4}>
+                       <Typography variant="body2" color="text.secondary">Sueldo Base:</Typography>
+                       <Typography variant="h6" color="info.main" fontWeight="bold">
+                         S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} md={4}>
+                       <Typography variant="body2" color="text.secondary">Cantidad de Bonos:</Typography>
+                       <Typography variant="h6" color="warning.main" fontWeight="bold">
+                         {columnasBonos.length}
+                       </Typography>
+                     </Grid>
+                   </Grid>
+                 </Paper>
+               </Box>
+             );
+           })()}
+         </DialogContent>
+         
+         <DialogActions sx={{ p: 2 }}>
+           <Button onClick={cerrarModalBonos} variant="outlined">
+             Cerrar
+           </Button>
+         </DialogActions>
+       </Dialog>
+     </Box>
+   );
+ };
 
 export default PagosNomina;

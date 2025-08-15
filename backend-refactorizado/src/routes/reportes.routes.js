@@ -20,7 +20,7 @@ router.get('/anios-disponibles', requireRole(['analista', 'creador']), reportesC
 router.get('/campanias-disponibles', requireRole(['analista', 'creador']), reportesController.getCampaniasDisponibles);
 
 // Obtener cargos disponibles (solo analistas y creador)
-router.get('/cargos-disponibles', requireRole(['analistas', 'creador']), reportesController.getCargosDisponibles);
+router.get('/cargos-disponibles', requireRole(['analista', 'creador']), reportesController.getCargosDisponibles);
 
 // ========================================
 // GENERAR REPORTE DE ASISTENCIA MAESTRO
@@ -29,7 +29,7 @@ router.get('/cargos-disponibles', requireRole(['analistas', 'creador']), reporte
 // Generar reporte de asistencia maestro (ejecuta SP crítico)
 // SOLO ANALISTAS Y CREADOR pueden ejecutar este SP crítico
 router.post('/asistencia', [
-  requireRole(['analistas', 'creador']),
+  requireRole(['analista', 'creador']),
   // Validación de fechas en el controlador para mayor seguridad
 ], reportesController.generarReporteAsistencia);
 

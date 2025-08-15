@@ -18,6 +18,9 @@ const reportesRoutes = require('./routes/reportes.routes');
 const tardanzasRoutes = require('./routes/tardanzas.routes');
 const permisosRoutes = require('./routes/permisos.routes');
 
+// Importar utilidades de red
+const { printNetworkInfo, getMainIP } = require('./utils/networkUtils');
+
 // Crear aplicación Express
 const app = express();
 
@@ -35,9 +38,9 @@ app.use(helmet({
   },
 }));
 
-// Middleware de CORS
+// Middleware de CORS - Permitir cualquier origen para desarrollo
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: true, // Permitir cualquier origen
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -98,6 +101,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/empleados', require('./routes/empleados.routes'));
 app.use('/api/catalogos', require('./routes/catalogos.routes'));
+app.use('/api/cese', require('./routes/cese.routes'));
 app.use('/api/grupos', require('./routes/grupos.routes'));
 app.use('/api/justificaciones', require('./routes/justificaciones.routes'));
 app.use('/api/ojt', require('./routes/ojt.routes'));
@@ -157,6 +161,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`📊 Rate Limit: ${process.env.RATE_LIMIT_MAX_REQUESTS || 100} requests por ${(parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000 / 60} minutos`);
   console.log('=====================================');
   console.log('🔐 Endpoints disponibles:');
+  console.log('🔐 Endpoints disponibles:');
   console.log('   /api/auth - Autenticación');
   console.log('   /api/empleados - Gestión de empleados');
   console.log('   /api/catalogos - Catálogos del sistema');
@@ -168,6 +173,9 @@ const server = app.listen(PORT, HOST, () => {
   console.log('   /api/reportes - Reportes del sistema');
   console.log('   /api/permisos - Permisos especiales');
   console.log('=====================================');
+  
+  // Mostrar información de red
+  printNetworkInfo(PORT);
 });
 
 // Manejo de señales para cierre graceful
