@@ -72,6 +72,12 @@ const menuItems = [
     path: '/excepciones',
     icon: <ScheduleIcon />,
     adminOnly: true
+  },
+  {
+    title: 'Ejecutar SP',
+    path: '/ejecutar-sp',
+    icon: <AssessmentIcon />,
+    adminOnly: true
   }
 ];
 
@@ -325,66 +331,69 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Control Maestro - Solo para el creador y analistas - AL FINAL */}
-        {(user?.dni === '73766815' || user?.role === 'analista') && (
-          <>
-            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation('/control-maestro')}
-                selected={location.pathname === '/control-maestro'}
-                sx={{
-                  mx: 1,
-                  borderRadius: 1,
-                  backgroundColor: '#fef2f2', // Fondo rojo muy claro
-                  border: '1px solid #fecaca', // Borde rojo claro
-                  '&:hover': {
-                    backgroundColor: '#fee2e2',
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: '#fecaca',
-                    '&:hover': {
-                      backgroundColor: '#fca5a5',
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: '#dc2626', minWidth: open ? 40 : 'auto' }}>
-                  <SecurityIcon />
-                </ListItemIcon>
-                {open && <ListItemText primary="Control Maestro" sx={{ color: '#dc2626', fontWeight: 600 }} />}
-              </ListItemButton>
-            </ListItem>
-            
-            {/* Pagos Nómina - Solo para analistas y creador */}
-            <ListItem disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation('/pagos-nomina')}
-                selected={location.pathname === '/pagos-nomina'}
-                sx={{
-                  mx: 1,
-                  borderRadius: 1,
-                  backgroundColor: '#f0fdf4', // Fondo verde muy claro
-                  border: '1px solid #bbf7d0', // Borde verde claro
-                  '&:hover': {
-                    backgroundColor: '#dcfce7',
-                  },
-                  '&.Mui-selected': {
-                    backgroundColor: '#bbf7d0',
-                    '&:hover': {
-                      backgroundColor: '#86efac',
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: '#16a34a', minWidth: open ? 40 : 'auto' }}>
-                  <AccountBalanceIcon />
-                </ListItemIcon>
-                {open && <ListItemText primary="Pagos Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
-              </ListItemButton>
-            </ListItem>
-          </>
-        )}
+                 {/* Pagos Nómina - Solo para analistas y creador */}
+         {(user?.dni === '73766815' || user?.role === 'analista') && (
+           <>
+             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+             <ListItem disablePadding>
+               <ListItemButton
+                 onClick={() => handleNavigation('/pagos-nomina')}
+                 selected={location.pathname === '/pagos-nomina'}
+                 sx={{
+                   mx: 1,
+                   borderRadius: 1,
+                   backgroundColor: '#f0fdf4', // Fondo verde muy claro
+                   border: '1px solid #bbf7d0', // Borde verde claro
+                   '&:hover': {
+                     backgroundColor: '#dcfce7',
+                   },
+                   '&.Mui-selected': {
+                     backgroundColor: '#bbf7d0',
+                     '&:hover': {
+                       backgroundColor: '#86efac',
+                     },
+                   },
+                 }}
+               >
+                 <ListItemIcon sx={{ color: '#16a34a', minWidth: open ? 40 : 'auto' }}>
+                   <AccountBalanceIcon />
+                 </ListItemIcon>
+                 {open && <ListItemText primary="Pagos Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
+               </ListItemButton>
+             </ListItem>
+           </>
+         )}
+
+         {/* Control Maestro - Solo para el creador y analistas - AL FINAL DEL SIDEBAR */}
+         {(user?.dni === '73766815' || user?.role === 'analista') && (
+           <>
+             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+             <ListItem disablePadding>
+               <ListItemButton
+                 onClick={() => handleNavigation('/control-maestro')}
+                 selected={location.pathname === '/control-maestro'}
+                 sx={{
+                   mx: 1,
+                   borderRadius: 1,
+                   '&:hover': {
+                     backgroundColor: '#f9fafb',
+                   },
+                   '&.Mui-selected': {
+                     backgroundColor: '#f3f4f6',
+                     '&:hover': {
+                       backgroundColor: '#e5e7eb',
+                     },
+                   },
+                 }}
+               >
+                 <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
+                   <SecurityIcon />
+                 </ListItemIcon>
+                 {open && <ListItemText primary="Control Maestro" />}
+               </ListItemButton>
+             </ListItem>
+           </>
+         )}
       </List>
 
       {/* Botón de cerrar sesión */}

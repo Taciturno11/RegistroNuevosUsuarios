@@ -16,6 +16,7 @@ import OJT from './pages/OJT';
 import Excepciones from './pages/Excepciones';
 import ReporteAsistencias from './pages/ReporteAsistencias';
 import ReporteTardanzas from './pages/ReporteTardanzas';
+import EjecutarSP from './pages/EjecutarSP';
 import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
 import PagosNomina from './pages/PagosNomina';
@@ -190,6 +191,13 @@ const AppContent = () => {
           <Route path="/reporte-tardanzas" element={
             <ProtectedRoute requireRole={['analista', 'creador']}>
               <ReporteTardanzas />
+            </ProtectedRoute>
+          } />
+          
+          {/* Ejecutar SP - Solo para analistas y creador */}
+          <Route path="/ejecutar-sp" element={
+            <ProtectedRoute requireRole={['analista', 'creador']}>
+              <EjecutarSP />
             </ProtectedRoute>
           } />
           

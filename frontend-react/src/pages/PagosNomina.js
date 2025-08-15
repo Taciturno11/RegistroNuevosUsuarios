@@ -274,7 +274,7 @@ const PagosNomina = () => {
           </Grid>
           
           <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
+            <FormControl fullWidth sx={{ width: '5rem' }}>
               <InputLabel>Mes</InputLabel>
               <Select
                 value={filtros.mes}

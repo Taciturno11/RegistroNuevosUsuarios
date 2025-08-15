@@ -70,6 +70,17 @@ const Dashboard = () => {
     fechaFin: ''
   });
 
+  // Función para obtener fechas por defecto
+  const getFechasPorDefecto = () => {
+    const hoy = new Date();
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    
+    return {
+      fechaInicio: primerDiaMes.toISOString().split('T')[0], // YYYY-MM-01
+      fechaFin: hoy.toISOString().split('T')[0] // YYYY-MM-DD (hoy)
+    };
+  };
+
   // Cargar estadísticas al montar el componente
   useEffect(() => {
     console.log('🔍 Dashboard useEffect ejecutándose. Ruta actual:', location.pathname);
@@ -366,6 +377,9 @@ const Dashboard = () => {
   const executeAction = (action) => {
     // Special case for reporte-asistencia which doesn't need employee
     if (action === 'reporte-asistencia') {
+      // Establecer fechas por defecto al abrir el modal
+      const fechasPorDefecto = getFechasPorDefecto();
+      setReportDates(fechasPorDefecto);
       setShowReportModal(true);
       return;
     }
@@ -801,50 +815,145 @@ const Dashboard = () => {
 
       {/* Modal para Generar Reporte Asistencia */}
       <Dialog open={showReportModal} onClose={() => setShowReportModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ 
+          backgroundColor: '#f8f9fa', 
+          borderBottom: '2px solid #e9ecef',
+          pb: 2
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <AssessmentIcon sx={{ mr: 2 }} />
-            Generar Reporte de Asistencia
+            <AssessmentIcon sx={{ mr: 2, color: '#1976d2' }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#2c3e50' }}>
+              Generar Reporte de Asistencia
+            </Typography>
           </Box>
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Fecha de Inicio</InputLabel>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'text.primary' }}>
+                Fecha de Inicio *
+              </Typography>
               <TextField
                 type="date"
                 value={reportDates.fechaInicio}
                 onChange={(e) => setReportDates({ ...reportDates, fechaInicio: e.target.value })}
                 fullWidth
+                size="medium"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'white',
+                    borderRadius: 2,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                      borderWidth: 2
+                    }
+                  }
+                }}
               />
-            </FormControl>
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Fecha de Fin</InputLabel>
+            </Box>
+            
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'text.primary' }}>
+                Fecha de Fin *
+              </Typography>
               <TextField
                 type="date"
                 value={reportDates.fechaFin}
                 onChange={(e) => setReportDates({ ...reportDates, fechaFin: e.target.value })}
                 fullWidth
+                size="medium"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'white',
+                    borderRadius: 2,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                      borderWidth: 2
+                    }
+                  }
+                }}
               />
-            </FormControl>
+            </Box>
+            
+            {/* Botón para resetear fechas */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => {
+                  const fechasPorDefecto = getFechasPorDefecto();
+                  setReportDates(fechasPorDefecto);
+                }}
+                sx={{
+                  color: '#6c757d',
+                  '&:hover': {
+                    backgroundColor: '#f8f9fa',
+                    color: '#495057'
+                  }
+                }}
+              >
+                Restablecer fechas por defecto
+              </Button>
+            </Box>
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
-            <Alert severity="info" icon={<InfoIcon />}>
-              <strong>Nota:</strong> El reporte incluirá todas las campañas por defecto.
+            <Alert 
+              severity="info" 
+              icon={<InfoIcon />}
+              sx={{
+                mt: 2,
+                '& .MuiAlert-icon': {
+                  color: '#1976d2'
+                }
+              }}
+            >
+              <Typography variant="body2">
+                <strong>Nota:</strong> El reporte incluirá todas las campañas por defecto.
+              </Typography>
             </Alert>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowReportModal(false)}>
+        <DialogActions sx={{ 
+          p: 3, 
+          backgroundColor: '#f8f9fa', 
+          borderTop: '1px solid #e9ecef' 
+        }}>
+          <Button 
+            onClick={() => setShowReportModal(false)}
+            variant="outlined"
+            sx={{
+              borderColor: '#6c757d',
+              color: '#6c757d',
+              '&:hover': {
+                borderColor: '#5a6268',
+                backgroundColor: '#f8f9fa'
+              }
+            }}
+          >
             Cancelar
           </Button>
           <Button
             onClick={generateReport}
             variant="contained"
-            disabled={loading}
+            disabled={loading || !reportDates.fechaInicio || !reportDates.fechaFin}
+            sx={{
+              backgroundColor: '#28a745',
+              '&:hover': {
+                backgroundColor: '#218838'
+              },
+              '&:disabled': {
+                backgroundColor: '#6c757d'
+              }
+            }}
           >
             {loading ? 'Generando...' : 'Generar Reporte'}
           </Button>

@@ -574,47 +574,376 @@ const ActualizarEmpleado = () => {
             </Button>
           </Box>
 
-          <Grid container spacing={3}>
+          {/* Grid de datos en tarjetas individuales */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gap: 2, 
+            mb: 3 
+          }}>
             {/* Información Personal */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#1e40af' }}>
-                Información Personal
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                DNI
               </Typography>
-              <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 1 }}>
-                <Typography><strong>DNI:</strong> {empleadoActual.DNI}</Typography>
-                <Typography><strong>Nombres:</strong> {empleadoActual.Nombres}</Typography>
-                <Typography><strong>Apellido Paterno:</strong> {empleadoActual.ApellidoPaterno}</Typography>
-                <Typography><strong>Apellido Materno:</strong> {empleadoActual.ApellidoMaterno || 'No especificado'}</Typography>
-                <Typography><strong>Fecha de Contratación:</strong> {empleadoActual.FechaContratacion ? new Date(empleadoActual.FechaContratacion).toLocaleDateString('es-ES') : 'No especificada'}</Typography>
-              </Box>
-            </Grid>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.DNI}
+              </Typography>
+            </Box>
 
-            {/* Información Laboral */}
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#1e40af' }}>
-                Información Laboral
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Nombres
               </Typography>
-              <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 1 }}>
-                <Typography><strong>Jornada:</strong> {catalogos.jornadas?.find(j => j.id === empleadoActual.JornadaID)?.nombre || 'No especificada'}</Typography>
-                <Typography><strong>Campaña:</strong> {catalogos.campanias?.find(c => c.id === empleadoActual.CampañaID)?.nombre || 'No especificada'}</Typography>
-                <Typography><strong>Cargo:</strong> {catalogos.cargos?.find(c => c.id === empleadoActual.CargoID)?.nombre || 'No especificada'}</Typography>
-                <Typography><strong>Modalidad:</strong> {catalogos.modalidades?.find(m => m.id === empleadoActual.ModalidadID)?.nombre || 'No especificada'}</Typography>
-                <Typography><strong>Horario:</strong> {horarioInfo?.NombreGrupo || 'No especificado'}</Typography>
-              </Box>
-            </Grid>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.Nombres}
+              </Typography>
+            </Box>
 
-            {/* DNIs de Referencia */}
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mb: 2, color: '#1e40af' }}>
-                DNIs de Referencia
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Apellido Paterno
               </Typography>
-              <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 1 }}>
-                <Typography><strong>Supervisor:</strong> {empleadoActual.SupervisorDNI || 'No especificado'}</Typography>
-                <Typography><strong>Coordinador:</strong> {empleadoActual.CoordinadorDNI || 'No especificado'}</Typography>
-                <Typography><strong>Jefe:</strong> {empleadoActual.JefeDNI || 'No especificado'}</Typography>
-              </Box>
-            </Grid>
-          </Grid>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.ApellidoPaterno}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Apellido Materno
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.ApellidoMaterno || 'No especificado'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Fecha de Contratación
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.FechaContratacion ? new Date(empleadoActual.FechaContratacion).toLocaleDateString('es-ES') : 'No especificada'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Estado
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.EstadoEmpleado || 'Activo'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Jornada
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {catalogos.jornadas?.find(j => j.id === empleadoActual.JornadaID)?.nombre || 'No especificada'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Campaña
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {catalogos.campanias?.find(c => c.id === empleadoActual.CampañaID)?.nombre || 'No especificada'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Cargo
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {catalogos.cargos?.find(c => c.id === empleadoActual.CargoID)?.nombre || 'No especificada'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Modalidad
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {catalogos.modalidades?.find(m => m.id === empleadoActual.ModalidadID)?.nombre || 'No especificada'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Horario
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {horarioInfo?.NombreGrupo || 'No especificado'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Supervisor DNI
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.SupervisorDNI || 'No especificado'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Coordinador DNI
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.CoordinadorDNI || 'No especificado'}
+              </Typography>
+            </Box>
+
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: '#f8fafc', 
+              border: '1px solid #e2e8f0', 
+              borderRadius: 1,
+              minHeight: '80px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center'
+            }}>
+              <Typography sx={{ 
+                fontWeight: 600, 
+                color: '#64748b', 
+                fontSize: '0.875rem', 
+                mb: 0.5 
+              }}>
+                Jefe DNI
+              </Typography>
+              <Typography sx={{ color: '#1e293b', fontSize: '1rem' }}>
+                {empleadoActual.JefeDNI || 'No especificado'}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Botones de acción */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: 2, 
+            mt: 3 
+          }}>
+            <Button
+              variant="contained"
+              startIcon={<EditIcon />}
+              onClick={iniciarEdicion}
+              sx={{ 
+                px: 4, 
+                py: 1.5,
+                backgroundColor: '#1e40af',
+                '&:hover': { backgroundColor: '#1e3a8a' }
+              }}
+            >
+              Editar Empleado
+            </Button>
+            
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/')}
+              sx={{ 
+                px: 4, 
+                py: 1.5,
+                borderColor: '#64748b',
+                color: '#64748b',
+                '&:hover': { 
+                  borderColor: '#475569',
+                  backgroundColor: '#f8fafc'
+                }
+              }}
+            >
+              Volver al Dashboard
+            </Button>
+          </Box>
         </Paper>
       )}
 

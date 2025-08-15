@@ -236,3 +236,86 @@ exports.getCargosDisponibles = async (req, res) => {
     });
   }
 };
+
+// ========================================
+// GENERAR REPORTE DE ASISTENCIA MAESTRO
+// ========================================
+
+// Generar reporte de asistencia maestro (ejecuta SP crítico)
+exports.generarReporteAsistencia = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.body;
+    
+    console.log('🚀 Generando reporte de asistencia maestro:', { fechaInicio, fechaFin });
+    
+    // Validar fechas
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Fechas de inicio y fin son requeridas',
+        error: 'MISSING_DATES'
+      });
+    }
+
+    // Validar que fechaInicio no sea mayor que fechaFin
+    if (new Date(fechaInicio) > new Date(fechaFin)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'La fecha de inicio no puede ser mayor que la fecha de fin',
+        error: 'INVALID_DATE_RANGE'
+      });
+    }
+
+    // Validar formato de fechas
+    const fechaInicioDate = new Date(fechaInicio);
+    const fechaFinDate = new Date(fechaFin);
+    
+    if (isNaN(fechaInicioDate.getTime()) || isNaN(fechaFinDate.getTime())) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Formato de fecha inválido',
+        error: 'INVALID_DATE_FORMAT'
+      });
+    }
+
+    // Ejecutar el SP crítico con máximo cuidado
+    const result = await executeQuery(
+      'EXEC [dbo].[usp_GenerarReporteAsistenciaMaestro] @FechaInicio, @FechaFin',
+      [
+        { name: 'FechaInicio', type: sql.Date, value: fechaInicioDate },
+        { name: 'FechaFin', type: sql.Date, value: fechaFinDate }
+      ]
+    );
+
+    console.log('✅ SP ejecutado exitosamente. Registros afectados:', result.rowsAffected[0] || 0);
+
+    res.json({ 
+      success: true,
+      message: 'Reporte de asistencia maestro generado exitosamente',
+      data: {
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        registrosGenerados: result.rowsAffected[0] || 0,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error crítico generando reporte de asistencia maestro:', error);
+    
+    // Log detallado del error para debugging
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      state: error.state
+    });
+    
+    res.status(500).json({ 
+      success: false,
+      message: 'Error crítico al generar reporte de asistencia maestro',
+      error: 'CRITICAL_SP_EXECUTION_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
+    });
+  }
+};
