@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box,
   Card,
@@ -16,128 +17,415 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Divider
+  Divider,
+  Chip
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   Edit as EditIcon,
   Save as SaveIcon,
-  Clear as ClearIcon
+  Cancel as CancelIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
-import axios from 'axios';
 
 const ActualizarEmpleado = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { api } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   
   // Estados para los catálogos
   const [catalogos, setCatalogos] = useState({
     jornadas: [],
     campanias: [],
     cargos: [],
-    modalidades: [],
-    grupos: []
+    modalidades: []
   });
+
+  // Cache de grupos y horas
+  const [gruposHorasCache, setGruposHorasCache] = useState([]);
+
+  // Estado del empleado actual
+  const [empleadoActual, setEmpleadoActual] = useState(null);
+  const [horarioInfo, setHorarioInfo] = useState(null);
 
   // Estado del formulario
   const [formData, setFormData] = useState({
-    dni: '',
-    nombres: '',
-    apellidoPaterno: '',
-    apellidoMaterno: '',
-    fechaNacimiento: '',
-    genero: '',
-    direccion: '',
-    telefono: '',
-    email: '',
-    fechaIngreso: '',
-    jornadaID: '',
-    campaniaID: '',
-    cargoID: '',
-    modalidadTrabajoID: '',
-    grupoHorarioID: '',
-    salario: '',
-    estadoCivil: '',
-    numeroHijos: '',
-    tipoSangre: '',
-    alergias: '',
-    observaciones: ''
+    DNI: '',
+    Nombres: '',
+    ApellidoPaterno: '',
+    ApellidoMaterno: '',
+    FechaContratacion: '',
+    JornadaID: '',
+    CampañaID: '',
+    CargoID: '',
+    ModalidadID: '',
+    GrupoHorarioID: '',
+    SupervisorDNI: '',
+    CoordinadorDNI: '',
+    JefeDNI: ''
   });
 
-  // Verificar si se recibió un empleado
+  // Estados para la lógica de horarios
+  const [turnos, setTurnos] = useState([]);
+  const [horarios, setHorarios] = useState([]);
+  const [descansos, setDescansos] = useState([]);
+
+  // Estados para autocompletado
+  const [supervisores, setSupervisores] = useState([]);
+  const [coordinadores, setCoordinadores] = useState([]);
+  const [jefes, setJefes] = useState([]);
+
+  // Mapa de prefijos de jornada
+  const prefijoJornada = { 1: "Full Time", 3: "Part Time", 2: "Semi Full" };
+
+  // Obtener DNI del localStorage
+  const dni = localStorage.getItem('empleadoDNI');
+  const nombreEmpleado = localStorage.getItem('empleadoNombre');
+
+  // Cargar datos al montar el componente
   useEffect(() => {
-    if (!location.state?.employee) {
-      setError('No se seleccionó ningún empleado para actualizar');
+    if (!dni) {
+      setError('No se ha seleccionado un empleado. Regrese al dashboard.');
       return;
     }
 
-    const employee = location.state.employee;
-    setFormData({
-      dni: employee.dni || '',
-      nombres: employee.nombres || '',
-      apellidoPaterno: employee.apellidoPaterno || '',
-      apellidoMaterno: employee.apellidoMaterno || '',
-      fechaNacimiento: employee.fechaNacimiento ? employee.fechaNacimiento.split('T')[0] : '',
-      genero: employee.genero || '',
-      direccion: employee.direccion || '',
-      telefono: employee.telefono || '',
-      email: employee.email || '',
-      fechaIngreso: employee.fechaIngreso ? employee.fechaIngreso.split('T')[0] : '',
-      jornadaID: employee.jornadaID || '',
-      campaniaID: employee.campaniaID || '',
-      cargoID: employee.cargoID || '',
-      modalidadTrabajoID: employee.modalidadTrabajoID || '',
-      grupoHorarioID: employee.grupoHorarioID || '',
-      salario: employee.salario || '',
-      estadoCivil: employee.estadoCivil || '',
-      numeroHijos: employee.numeroHijos || '',
-      tipoSangre: employee.tipoSangre || '',
-      alergias: employee.alergias || '',
-      observaciones: employee.observaciones || ''
-    });
+    cargarDatosIniciales();
+  }, [dni]);
 
-    loadCatalogos();
-  }, [location.state]);
-
-  const loadCatalogos = async () => {
+  // Cargar datos iniciales
+  const cargarDatosIniciales = async () => {
     try {
-      const [
-        jornadasRes,
-        campaniasRes,
-        cargosRes,
-        modalidadesRes,
-        gruposRes
-      ] = await Promise.all([
-        axios.get('http://localhost:5000/api/catalogos/jornadas'),
-        axios.get('http://localhost:5000/api/catalogos/campanias'),
-        axios.get('http://localhost:5000/api/catalogos/cargos'),
-        axios.get('http://localhost:5000/api/catalogos/modalidades'),
-        axios.get('http://localhost:5000/api/catalogos/grupos')
+      await Promise.all([
+        cargarCatalogos(),
+        precargarGruposHoras(),
+        cargarEmpleado()
       ]);
-
-      setCatalogos({
-        jornadas: jornadasRes.data.success ? jornadasRes.data.jornadas : [],
-        campanias: campaniasRes.data.success ? campaniasRes.data.campanias : [],
-        cargos: cargosRes.data.success ? cargosRes.data.cargos : [],
-        modalidades: modalidadesRes.data.success ? modalidadesRes.data.modalidades : [],
-        grupos: gruposRes.data.success ? gruposRes.data.grupos : []
-      });
     } catch (error) {
-      console.error('Error cargando catálogos:', error);
-      setError('Error cargando catálogos. Intente recargar la página.');
+      console.error('Error cargando datos iniciales:', error);
+      setError('Error al cargar datos iniciales');
     }
   };
+
+  // Cargar catálogos
+  const cargarCatalogos = async () => {
+    try {
+      const response = await api.get('/catalogos');
+      if (response.data.success) {
+        setCatalogos(response.data.catalogos);
+      }
+    } catch (error) {
+      console.error('Error cargando catálogos:', error);
+      setError('Error cargando catálogos');
+    }
+  };
+
+  // Precargar grupos y horas
+  const precargarGruposHoras = async () => {
+    try {
+      const response = await api.get('/grupos/horas');
+      if (response.data.success) {
+        setGruposHorasCache(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error precargando grupos y horas:', error);
+    }
+  };
+
+  // Cargar empleado
+  const cargarEmpleado = async () => {
+    try {
+      const response = await api.get(`/empleados/${dni}`);
+      if (response.data.success) {
+        const empleado = response.data.data;
+        setEmpleadoActual(empleado);
+        
+        // Cargar información de horario
+        await cargarHorarioEmpleado(dni);
+        
+        // Llenar formulario con datos actuales
+        setFormData({
+          DNI: empleado.DNI || '',
+          Nombres: empleado.Nombres || '',
+          ApellidoPaterno: empleado.ApellidoPaterno || '',
+          ApellidoMaterno: empleado.ApellidoMaterno || '',
+          FechaContratacion: empleado.FechaContratacion ? empleado.FechaContratacion.split('T')[0] : '',
+          JornadaID: empleado.JornadaID || '',
+          CampañaID: empleado.CampañaID || '',
+          CargoID: empleado.CargoID || '',
+          ModalidadID: empleado.ModalidadID || '',
+          GrupoHorarioID: empleado.GrupoHorarioID || '',
+          SupervisorDNI: empleado.SupervisorDNI || '',
+          CoordinadorDNI: empleado.CoordinadorDNI || '',
+          JefeDNI: empleado.JefeDNI || ''
+        });
+      } else {
+        setError('Error al cargar empleado');
+      }
+    } catch (error) {
+      console.error('Error cargando empleado:', error);
+      setError('Error al cargar empleado');
+    }
+  };
+
+  // Cargar horario del empleado
+  const cargarHorarioEmpleado = async (dni) => {
+    try {
+      const response = await api.get(`/empleados/${dni}/horario`);
+      if (response.data.success) {
+        setHorarioInfo(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error obteniendo horario:', error);
+    }
+  };
+
+  // Al cambiar jornada -> filtrar turnos y horarios
+  const handleJornadaChange = (jornadaID) => {
+    setFormData(prev => ({ ...prev, JornadaID: jornadaID }));
+    
+    const prefijo = prefijoJornada[jornadaID] || "";
+    
+    // Limpiar turnos, horarios y descansos
+    setTurnos([]);
+    setHorarios([]);
+    setDescansos([]);
+    setFormData(prev => ({ 
+      ...prev, 
+      GrupoHorarioID: ''
+    }));
+
+    if (!prefijo) return;
+
+    // ¿existe Mañana? ¿existe Tarde?
+    const hayManana = gruposHorasCache.some(g => g.NombreBase.startsWith(prefijo + " Mañana"));
+    const hayTarde = gruposHorasCache.some(g => g.NombreBase.startsWith(prefijo + " Tarde"));
+
+    const nuevosTurnos = [];
+    if (hayManana) nuevosTurnos.push("Mañana");
+    if (hayTarde) nuevosTurnos.push("Tarde");
+    
+    setTurnos(nuevosTurnos);
+  };
+
+  // Al cambiar turno -> llenar horarios
+  const handleTurnoChange = (turno) => {
+    const prefijo = prefijoJornada[formData.JornadaID] || "";
+    
+    if (!turno) {
+      setHorarios([]);
+      setDescansos([]);
+      return;
+    }
+
+    const filtrados = gruposHorasCache.filter(g =>
+      g.NombreBase.startsWith(`${prefijo} ${turno}`)
+    );
+
+    const nuevosHorarios = filtrados.map(g => ({
+      nombre: g.NombreBase,
+      horaIni: g.HoraIni,
+      horaFin: g.HoraFin
+    }));
+
+    setHorarios(nuevosHorarios);
+    setDescansos([]);
+  };
+
+  // Al cambiar horario -> cargar descansos
+  const handleHorarioChange = async (horarioNombre) => {
+    if (!horarioNombre) {
+      setDescansos([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(`/grupos/${encodeURIComponent(horarioNombre)}`);
+      if (response.data.success) {
+        const desc = response.data.data.variantes;
+        
+        // 1. Mapa Día → objeto
+        const map = desc.reduce((acc, d) => {
+          const dia = d.NombreGrupo.match(/\(Desc\. ([^)]+)\)/i)?.[1] || d.NombreGrupo;
+          acc[dia] = { id: d.GrupoID, texto: dia };
+          return acc;
+        }, {});
+
+        // 2. Orden deseado
+        const orden = ["Dom", "Sab", "Lun", "Mar", "Mie", "Jue", "Vie"];
+
+        // 3. Genera las opciones en ese orden
+        const nuevosDescansos = orden
+          .filter(d => map[d])
+          .map(d => ({ id: map[d].id, texto: map[d].texto }));
+
+        setDescansos(nuevosDescansos);
+      }
+    } catch (error) {
+      console.error('Error cargando descansos:', error);
+      setError('Error cargando opciones de descanso');
+    }
+  };
+
+  // Cargar datalist para autocompletado
+  const cargarDatalist = useCallback(async (cargoID, search = "") => {
+    try {
+      const response = await api.get(`/empleados/lookup?cargo=${cargoID}&search=${search}`);
+      if (response.data.success) {
+        return response.data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error cargando datalist:', error);
+      return [];
+    }
+  }, [api]);
+
+  // Cargar supervisores
+  const cargarSupervisores = useCallback(async (search) => {
+    if (search.length >= 2) {
+      const data = await cargarDatalist("5", search);
+      setSupervisores(data);
+    }
+  }, [cargarDatalist]);
+
+  // Cargar coordinadores
+  const cargarCoordinadores = useCallback(async (search) => {
+    if (search.length >= 2) {
+      const data = await cargarDatalist("2,8", search);
+      setCoordinadores(data);
+    }
+  }, [cargarDatalist]);
+
+  // Cargar jefes
+  const cargarJefes = useCallback(async (search) => {
+    if (search.length >= 2) {
+      const data = await cargarDatalist("8", search);
+      setJefes(data);
+    }
+  }, [cargarDatalist]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    // Lógica específica para cambios de jornada y turno
+    if (field === 'JornadaID') {
+      handleJornadaChange(value);
+    } else if (field === 'turno') {
+      handleTurnoChange(value);
+    } else if (field === 'horario') {
+      handleHorarioChange(value);
+    }
   };
 
+  // Configurar horarios iniciales al editar
+  const configurarHorariosIniciales = async () => {
+    if (!formData.JornadaID || !formData.GrupoHorarioID) return;
+
+    const prefijo = prefijoJornada[formData.JornadaID] || "";
+    
+    // Configurar turnos según jornada
+    const hayManana = gruposHorasCache.some(g => g.NombreBase.startsWith(prefijo + " Mañana"));
+    const hayTarde = gruposHorasCache.some(g => g.NombreBase.startsWith(prefijo + " Tarde"));
+    
+    const nuevosTurnos = [];
+    if (hayManana) nuevosTurnos.push("Mañana");
+    if (hayTarde) nuevosTurnos.push("Tarde");
+    setTurnos(nuevosTurnos);
+
+    // Buscar el horario base actual
+    if (horarioInfo?.NombreBase) {
+      // Determinar turno
+      let turnoActual = '';
+      if (horarioInfo.NombreBase.includes("Mañana")) {
+        turnoActual = "Mañana";
+      } else if (horarioInfo.NombreBase.includes("Tarde")) {
+        turnoActual = "Tarde";
+      }
+
+      if (turnoActual) {
+        // Configurar horario base
+        const filtrados = gruposHorasCache.filter(g =>
+          g.NombreBase.startsWith(`${prefijo} ${turnoActual}`)
+        );
+
+        const nuevosHorarios = filtrados.map(g => ({
+          nombre: g.NombreBase,
+          horaIni: g.HoraIni,
+          horaFin: g.HoraFin
+        }));
+
+        setHorarios(nuevosHorarios);
+
+        // Cargar descansos
+        if (horarioInfo.NombreBase) {
+          try {
+            const response = await api.get(`/grupos/${encodeURIComponent(horarioInfo.NombreBase)}`);
+            if (response.data.success) {
+              const desc = response.data.data.variantes;
+              
+              const map = desc.reduce((acc, d) => {
+                const dia = d.NombreGrupo.match(/\(Desc\. ([^)]+)\)/i)?.[1] || d.NombreGrupo;
+                acc[dia] = { id: d.GrupoID, texto: dia };
+                return acc;
+              }, {});
+              
+              const orden = ["Dom","Sab","Lun","Mar","Mie","Jue","Vie"];
+              
+              const nuevosDescansos = orden
+                .filter(d => map[d])
+                .map(d => ({ 
+                  id: map[d].id, 
+                  texto: map[d].texto 
+                }));
+
+              setDescansos(nuevosDescansos);
+            }
+          } catch (error) {
+            console.error('Error cargando descansos iniciales:', error);
+          }
+        }
+      }
+    }
+  };
+
+  // Iniciar edición
+  const iniciarEdicion = async () => {
+    setIsEditing(true);
+    await configurarHorariosIniciales();
+  };
+
+  // Cancelar edición
+  const cancelarEdicion = () => {
+    setIsEditing(false);
+    // Restaurar datos originales
+    if (empleadoActual) {
+      setFormData({
+        DNI: empleadoActual.DNI || '',
+        Nombres: empleadoActual.Nombres || '',
+        ApellidoPaterno: empleadoActual.ApellidoPaterno || '',
+        ApellidoMaterno: empleadoActual.ApellidoMaterno || '',
+        FechaContratacion: empleadoActual.FechaContratacion ? empleadoActual.FechaContratacion.split('T')[0] : '',
+        JornadaID: empleadoActual.JornadaID || '',
+        CampañaID: empleadoActual.CampañaID || '',
+        CargoID: empleadoActual.CargoID || '',
+        ModalidadID: empleadoActual.ModalidadID || '',
+        GrupoHorarioID: empleadoActual.GrupoHorarioID || '',
+        SupervisorDNI: empleadoActual.SupervisorDNI || '',
+        CoordinadorDNI: empleadoActual.CoordinadorDNI || '',
+        JefeDNI: empleadoActual.JefeDNI || ''
+      });
+    }
+    setError('');
+    setSuccess('');
+  };
+
+  // Actualizar empleado
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -145,15 +433,32 @@ const ActualizarEmpleado = () => {
     setSuccess('');
 
     try {
-      const response = await axios.put(`http://localhost:5000/api/empleados/${formData.dni}`, formData);
+      const payload = {
+        Nombres: formData.Nombres.trim(),
+        ApellidoPaterno: formData.ApellidoPaterno.trim(),
+        ApellidoMaterno: formData.ApellidoMaterno.trim() || null,
+        FechaContratacion: formData.FechaContratacion,
+        JornadaID: parseInt(formData.JornadaID),
+        CampañaID: parseInt(formData.CampañaID),
+        CargoID: parseInt(formData.CargoID),
+        ModalidadID: parseInt(formData.ModalidadID),
+        GrupoHorarioID: parseInt(formData.GrupoHorarioID),
+        SupervisorDNI: formData.SupervisorDNI.trim() || null,
+        CoordinadorDNI: formData.CoordinadorDNI.trim() || null,
+        JefeDNI: formData.JefeDNI.trim() || null
+      };
+
+      console.log('📤 Enviando datos de actualización:', payload);
+      const response = await api.put(`/empleados/${formData.DNI}`, payload);
       
       if (response.data.success) {
         setSuccess('Empleado actualizado exitosamente');
         
-        // Redirigir al dashboard después de 2 segundos
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
+        // Recargar datos del empleado
+        await cargarEmpleado();
+        
+        // Volver a vista de solo lectura
+        setIsEditing(false);
       } else {
         setError(response.data.message || 'Error actualizando empleado');
       }
@@ -164,38 +469,8 @@ const ActualizarEmpleado = () => {
     }
   };
 
-  const handleClear = () => {
-    if (location.state?.employee) {
-      const employee = location.state.employee;
-      setFormData({
-        dni: employee.dni || '',
-        nombres: employee.nombres || '',
-        apellidoPaterno: employee.apellidoPaterno || '',
-        apellidoMaterno: employee.apellidoMaterno || '',
-        fechaNacimiento: employee.fechaNacimiento ? employee.fechaNacimiento.split('T')[0] : '',
-        genero: employee.genero || '',
-        direccion: employee.direccion || '',
-        telefono: employee.telefono || '',
-        email: employee.email || '',
-        fechaIngreso: employee.fechaIngreso ? employee.fechaIngreso.split('T')[0] : '',
-        jornadaID: employee.jornadaID || '',
-        campaniaID: employee.campaniaID || '',
-        cargoID: employee.cargoID || '',
-        modalidadTrabajoID: employee.modalidadTrabajoID || '',
-        grupoHorarioID: employee.grupoHorarioID || '',
-        salario: employee.salario || '',
-        estadoCivil: employee.estadoCivil || '',
-        numeroHijos: employee.numeroHijos || '',
-        tipoSangre: employee.tipoSangre || '',
-        alergias: employee.alergias || '',
-        observaciones: employee.observaciones || ''
-      });
-    }
-    setError('');
-    setSuccess('');
-  };
-
-  if (!location.state?.employee) {
+  // Si no hay empleado seleccionado
+  if (!dni) {
     return (
       <Box>
         <Card sx={{ mb: 4 }}>
@@ -220,7 +495,7 @@ const ActualizarEmpleado = () => {
         
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Alert severity="error" sx={{ mb: 3 }}>
-            No se seleccionó ningún empleado para actualizar
+            No se ha seleccionado un empleado. Regrese al dashboard.
           </Alert>
           <Button
             variant="contained"
@@ -229,6 +504,15 @@ const ActualizarEmpleado = () => {
             Volver al Dashboard
           </Button>
         </Paper>
+      </Box>
+    );
+  }
+
+  // Si está cargando
+  if (!empleadoActual) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <CircularProgress size={60} />
       </Box>
     );
   }
@@ -246,7 +530,7 @@ const ActualizarEmpleado = () => {
           }
           subtitle={
             <Typography variant="body1" sx={{ mt: 1, color: '#64748b' }}>
-              Actualizando datos de: {formData.nombres} {formData.apellidoPaterno} - DNI: {formData.dni}
+              {nombreEmpleado} - DNI: {dni}
             </Typography>
           }
           action={
@@ -261,329 +545,423 @@ const ActualizarEmpleado = () => {
         />
       </Card>
 
-      {/* Formulario */}
-      <Paper sx={{ p: 4 }}>
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            {success}
-          </Alert>
-        )}
+      {/* Mensajes */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {success}
+        </Alert>
+      )}
 
-        <Box component="form" onSubmit={handleSubmit}>
-          {/* Información Personal */}
-          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-            Información Personal
-          </Typography>
-          
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="DNI *"
-                value={formData.dni}
-                onChange={(e) => handleInputChange('dni', e.target.value)}
-                required
-                placeholder="12345678"
-                disabled
-                sx={{ backgroundColor: '#f8fafc' }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Nombres *"
-                value={formData.nombres}
-                onChange={(e) => handleInputChange('nombres', e.target.value)}
-                required
-                placeholder="Juan Carlos"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Apellido Paterno *"
-                value={formData.apellidoPaterno}
-                onChange={(e) => handleInputChange('apellidoPaterno', e.target.value)}
-                required
-                placeholder="García"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Apellido Materno"
-                value={formData.apellidoMaterno}
-                onChange={(e) => handleInputChange('apellidoMaterno', e.target.value)}
-                placeholder="López"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Fecha de Nacimiento *"
-                type="date"
-                value={formData.fechaNacimiento}
-                onChange={(e) => handleInputChange('fechaNacimiento', e.target.value)}
-                required
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Género</InputLabel>
-                <Select
-                  value={formData.genero}
-                  onChange={(e) => handleInputChange('genero', e.target.value)}
-                  label="Género"
-                >
-                  <MenuItem value="M">Masculino</MenuItem>
-                  <MenuItem value="F">Femenino</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Dirección"
-                value={formData.direccion}
-                onChange={(e) => handleInputChange('direccion', e.target.value)}
-                placeholder="Av. Principal 123, Distrito"
-                multiline
-                rows={2}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Teléfono"
-                value={formData.telefono}
-                onChange={(e) => handleInputChange('telefono', e.target.value)}
-                placeholder="999888777"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="juan.garcia@email.com"
-              />
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 4 }} />
-
-          {/* Información Laboral */}
-          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-            Información Laboral
-          </Typography>
-          
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Fecha de Ingreso *"
-                type="date"
-                value={formData.fechaIngreso}
-                onChange={(e) => handleInputChange('fechaIngreso', e.target.value)}
-                required
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Jornada</InputLabel>
-                <Select
-                  value={formData.jornadaID}
-                  onChange={(e) => handleInputChange('jornadaID', e.target.value)}
-                  label="Jornada"
-                >
-                  {catalogos.jornadas.map((jornada) => (
-                    <MenuItem key={jornada.id} value={jornada.id}>
-                      {jornada.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Campaña</InputLabel>
-                <Select
-                  value={formData.campaniaID}
-                  onChange={(e) => handleInputChange('campaniaID', e.target.value)}
-                  label="Campaña"
-                >
-                  {catalogos.campanias.map((campania) => (
-                    <MenuItem key={campania.id} value={campania.id}>
-                      {campania.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Cargo</InputLabel>
-                <Select
-                  value={formData.cargoID}
-                  onChange={(e) => handleInputChange('cargoID', e.target.value)}
-                  label="Cargo"
-                >
-                  {catalogos.cargos.map((cargo) => (
-                    <MenuItem key={cargo.id} value={cargo.id}>
-                      {cargo.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Modalidad de Trabajo</InputLabel>
-                <Select
-                  value={formData.modalidadTrabajoID}
-                  onChange={(e) => handleInputChange('modalidadTrabajoID', e.target.value)}
-                  label="Modalidad de Trabajo"
-                >
-                  {catalogos.modalidades.map((modalidad) => (
-                    <MenuItem key={modalidad.id} value={modalidad.id}>
-                      {modalidad.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth required>
-                <InputLabel>Grupo Horario</InputLabel>
-                <Select
-                  value={formData.grupoHorarioID}
-                  onChange={(e) => handleInputChange('grupoHorarioID', e.target.value)}
-                  label="Grupo Horario"
-                >
-                  {catalogos.grupos.map((grupo) => (
-                    <MenuItem key={grupo.id} value={grupo.id}>
-                      {grupo.nombre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Salario"
-                type="number"
-                value={formData.salario}
-                onChange={(e) => handleInputChange('salario', e.target.value)}
-                placeholder="2500.00"
-                InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>S/</Typography>
-                }}
-              />
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 4 }} />
-
-          {/* Información Adicional */}
-          <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
-            Información Adicional
-          </Typography>
-          
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Estado Civil</InputLabel>
-                <Select
-                  value={formData.estadoCivil}
-                  onChange={(e) => handleInputChange('estadoCivil', e.target.value)}
-                  label="Estado Civil"
-                >
-                  <MenuItem value="Soltero">Soltero</MenuItem>
-                  <MenuItem value="Casado">Casado</MenuItem>
-                  <MenuItem value="Divorciado">Divorciado</MenuItem>
-                  <MenuItem value="Viudo">Viudo</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Número de Hijos"
-                type="number"
-                value={formData.numeroHijos}
-                onChange={(e) => handleInputChange('numeroHijos', e.target.value)}
-                placeholder="0"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Tipo de Sangre"
-                value={formData.tipoSangre}
-                onChange={(e) => handleInputChange('tipoSangre', e.target.value)}
-                placeholder="O+"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Alergias"
-                value={formData.alergias}
-                onChange={(e) => handleInputChange('alergias', e.target.value)}
-                placeholder="Ninguna"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Observaciones"
-                value={formData.observaciones}
-                onChange={(e) => handleInputChange('observaciones', e.target.value)}
-                placeholder="Información adicional relevante..."
-                multiline
-                rows={3}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Botones de acción */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 4 }}>
+      {/* Vista de solo lectura */}
+      {!isEditing && (
+        <Paper sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1e40af' }}>
+              Información del Empleado
+            </Typography>
             <Button
-              type="submit"
               variant="contained"
-              size="large"
-              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-              disabled={loading}
-              sx={{ px: 4, py: 1.5 }}
+              startIcon={<EditIcon />}
+              onClick={iniciarEdicion}
             >
-              {loading ? 'Actualizando...' : 'Actualizar Empleado'}
-            </Button>
-            
-            <Button
-              type="button"
-              variant="outlined"
-              size="large"
-              startIcon={<ClearIcon />}
-              onClick={handleClear}
-              disabled={loading}
-              sx={{ px: 4, py: 1.5 }}
-            >
-              Restaurar Datos
+              Editar Empleado
             </Button>
           </Box>
-        </Box>
-      </Paper>
+
+          <Grid container spacing={3}>
+            {/* Información Personal */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#1e40af' }}>
+                Información Personal
+              </Typography>
+              <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 1 }}>
+                <Typography><strong>DNI:</strong> {empleadoActual.DNI}</Typography>
+                <Typography><strong>Nombres:</strong> {empleadoActual.Nombres}</Typography>
+                <Typography><strong>Apellido Paterno:</strong> {empleadoActual.ApellidoPaterno}</Typography>
+                <Typography><strong>Apellido Materno:</strong> {empleadoActual.ApellidoMaterno || 'No especificado'}</Typography>
+                <Typography><strong>Fecha de Contratación:</strong> {empleadoActual.FechaContratacion ? new Date(empleadoActual.FechaContratacion).toLocaleDateString('es-ES') : 'No especificada'}</Typography>
+              </Box>
+            </Grid>
+
+            {/* Información Laboral */}
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#1e40af' }}>
+                Información Laboral
+              </Typography>
+              <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 1 }}>
+                <Typography><strong>Jornada:</strong> {catalogos.jornadas?.find(j => j.id === empleadoActual.JornadaID)?.nombre || 'No especificada'}</Typography>
+                <Typography><strong>Campaña:</strong> {catalogos.campanias?.find(c => c.id === empleadoActual.CampañaID)?.nombre || 'No especificada'}</Typography>
+                <Typography><strong>Cargo:</strong> {catalogos.cargos?.find(c => c.id === empleadoActual.CargoID)?.nombre || 'No especificada'}</Typography>
+                <Typography><strong>Modalidad:</strong> {catalogos.modalidades?.find(m => m.id === empleadoActual.ModalidadID)?.nombre || 'No especificada'}</Typography>
+                <Typography><strong>Horario:</strong> {horarioInfo?.NombreGrupo || 'No especificado'}</Typography>
+              </Box>
+            </Grid>
+
+            {/* DNIs de Referencia */}
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mb: 2, color: '#1e40af' }}>
+                DNIs de Referencia
+              </Typography>
+              <Box sx={{ backgroundColor: '#f8fafc', p: 2, borderRadius: 1 }}>
+                <Typography><strong>Supervisor:</strong> {empleadoActual.SupervisorDNI || 'No especificado'}</Typography>
+                <Typography><strong>Coordinador:</strong> {empleadoActual.CoordinadorDNI || 'No especificado'}</Typography>
+                <Typography><strong>Jefe:</strong> {empleadoActual.JefeDNI || 'No especificado'}</Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
+      )}
+
+      {/* Formulario de edición */}
+      {isEditing && (
+        <Paper sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h5" sx={{ color: '#1e40af' }}>
+              Editar Empleado
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<CancelIcon />}
+              onClick={cancelarEdicion}
+            >
+              Cancelar Edición
+            </Button>
+          </Box>
+
+          <Box component="form" onSubmit={handleSubmit}>
+            {/* Información Personal */}
+            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+              Información Personal
+            </Typography>
+            
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="DNI *"
+                  value={formData.DNI}
+                  disabled
+                  sx={{ backgroundColor: '#f8fafc' }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Nombres *"
+                  value={formData.Nombres}
+                  onChange={(e) => handleInputChange('Nombres', e.target.value)}
+                  required
+                  placeholder="Juan Carlos"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Apellido Paterno *"
+                  value={formData.ApellidoPaterno}
+                  onChange={(e) => handleInputChange('ApellidoPaterno', e.target.value)}
+                  required
+                  placeholder="García"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Apellido Materno"
+                  value={formData.ApellidoMaterno}
+                  onChange={(e) => handleInputChange('ApellidoMaterno', e.target.value)}
+                  placeholder="López"
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Fecha de Contratación *"
+                  type="date"
+                  value={formData.FechaContratacion}
+                  onChange={(e) => handleInputChange('FechaContratacion', e.target.value)}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Registro del Empleado */}
+            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+              Registro del Empleado
+            </Typography>
+            
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth required>
+                  <InputLabel>Campaña</InputLabel>
+                  <Select
+                    value={formData.CampañaID}
+                    onChange={(e) => handleInputChange('CampañaID', e.target.value)}
+                    label="Campaña"
+                  >
+                    <MenuItem value="" disabled>-- Elegir --</MenuItem>
+                    {catalogos.campanias?.map((campania) => (
+                      <MenuItem key={campania.id} value={campania.id}>
+                        {campania.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth required>
+                  <InputLabel>Cargo</InputLabel>
+                  <Select
+                    value={formData.CargoID}
+                    onChange={(e) => handleInputChange('CargoID', e.target.value)}
+                    label="Cargo"
+                  >
+                    <MenuItem value="" disabled>-- Elegir --</MenuItem>
+                    {catalogos.cargos?.map((cargo) => (
+                      <MenuItem key={cargo.id} value={cargo.id}>
+                        {cargo.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth required>
+                  <InputLabel>Modalidad</InputLabel>
+                  <Select
+                    value={formData.ModalidadID}
+                    onChange={(e) => handleInputChange('ModalidadID', e.target.value)}
+                    label="Modalidad"
+                  >
+                    <MenuItem value="" disabled>-- Elegir --</MenuItem>
+                    {catalogos.modalidades?.map((modalidad) => (
+                      <MenuItem key={modalidad.id} value={modalidad.id}>
+                        {modalidad.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* Registro Horario */}
+            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+              Registro Horario
+            </Typography>
+            
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth required>
+                  <InputLabel>Jornada</InputLabel>
+                  <Select
+                    value={formData.JornadaID}
+                    onChange={(e) => handleInputChange('JornadaID', e.target.value)}
+                    label="Jornada"
+                  >
+                    <MenuItem value="" disabled>-- Elegir --</MenuItem>
+                    {catalogos.jornadas?.map((jornada) => (
+                      <MenuItem key={jornada.id} value={jornada.id}>
+                        {jornada.nombre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+              <FormControl sx={{ width: '8rem' }} required>
+                  <InputLabel>Turno</InputLabel>
+                  <Select
+                    value={formData.turno || ''}
+                    onChange={(e) => handleInputChange('turno', e.target.value)}
+                    label="Turno"
+                    disabled={!formData.JornadaID}
+                  >
+                    <MenuItem value="" disabled>-- Elegir --</MenuItem>
+                    {turnos.map((turno) => (
+                      <MenuItem key={turno} value={turno}>
+                        {turno}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+              <FormControl sx={{ width: '8rem' }} required>
+                  <InputLabel>Horario</InputLabel>
+                  <Select
+                    value={formData.horario || ''}
+                    onChange={(e) => handleInputChange('horario', e.target.value)}
+                    label="Horario"
+                    disabled={!formData.turno}
+                  >
+                    <MenuItem value="" disabled>-- Elegir --</MenuItem>
+                    {horarios.map((horario) => (
+                      <MenuItem key={horario.nombre} value={horario.nombre}>
+                        {horario.horaIni} - {horario.horaFin}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+              <FormControl sx={{ width: '8rem' }} required>
+                  <InputLabel>Descanso</InputLabel>
+                  <Select
+                    value={formData.GrupoHorarioID}
+                    onChange={(e) => handleInputChange('GrupoHorarioID', e.target.value)}
+                    label="Descanso"
+                    disabled={!formData.horario}
+                  >
+                    <MenuItem value="" disabled>-- Elegir descanso --</MenuItem>
+                    {descansos.map((descanso) => (
+                      <MenuItem key={descanso.id} value={descanso.id}>
+                        {descanso.texto}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* DNIs de Referencia */}
+            <Typography variant="h6" sx={{ mb: 3, color: '#1e40af' }}>
+              DNIs de Referencia
+            </Typography>
+            
+            <Grid container spacing={3} sx={{ mb: 4 }}>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Supervisor DNI"
+                  value={formData.SupervisorDNI}
+                  onChange={(e) => {
+                    handleInputChange('SupervisorDNI', e.target.value);
+                    cargarSupervisores(e.target.value);
+                  }}
+                  placeholder="Buscar supervisor..."
+                />
+                {/* Lista de sugerencias */}
+                {supervisores.length > 0 && (
+                  <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                    {supervisores.map((supervisor, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          p: 1,
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#f1f5f9' },
+                          borderBottom: index < supervisores.length - 1 ? '1px solid #e2e8f0' : 'none'
+                        }}
+                        onClick={() => {
+                          handleInputChange('SupervisorDNI', supervisor.DNI);
+                          setSupervisores([]);
+                        }}
+                      >
+                        {supervisor.DNI} - {supervisor.NOMBRECOMPLETO || supervisor.NombreCompleto || 'Sin nombre'}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Coordinador DNI"
+                  value={formData.CoordinadorDNI}
+                  onChange={(e) => {
+                    handleInputChange('CoordinadorDNI', e.target.value);
+                    cargarCoordinadores(e.target.value);
+                  }}
+                  placeholder="Buscar coordinador..."
+                />
+                {/* Lista de sugerencias */}
+                {coordinadores.length > 0 && (
+                  <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                    {coordinadores.map((coordinador, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          p: 1,
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#f1f5f9' },
+                          borderBottom: index < coordinadores.length - 1 ? '1px solid #e2e8f0' : 'none'
+                        }}
+                        onClick={() => {
+                          handleInputChange('CoordinadorDNI', coordinador.DNI);
+                          setCoordinadores([]);
+                        }}
+                      >
+                        {coordinador.DNI} - {coordinador.NOMBRECOMPLETO || coordinador.NombreCompleto || 'Sin nombre'}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Jefe DNI"
+                  value={formData.JefeDNI}
+                  onChange={(e) => {
+                    handleInputChange('JefeDNI', e.target.value);
+                    cargarJefes(e.target.value);
+                  }}
+                  placeholder="Buscar jefe..."
+                />
+                {/* Lista de sugerencias */}
+                {jefes.length > 0 && (
+                  <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                    {jefes.map((jefe, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          p: 1,
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#f1f5f9' },
+                          borderBottom: index < jefes.length - 1 ? '1px solid #e2e8f0' : 'none'
+                        }}
+                        onClick={() => {
+                          handleInputChange('JefeDNI', jefe.DNI);
+                          setJefes([]);
+                        }}
+                      >
+                        {jefe.DNI} - {jefe.NOMBRECOMPLETO || jefe.NombreCompleto || 'Sin nombre'}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Grid>
+            </Grid>
+
+            {/* Botones de acción */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                disabled={loading}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                {loading ? 'Actualizando...' : 'Actualizar Empleado'}
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
     </Box>
   );
 };
