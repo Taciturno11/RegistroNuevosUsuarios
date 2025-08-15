@@ -253,21 +253,22 @@ const RegistrarEmpleado = () => {
 
     try {
       const payload = {
-        DNI: formData.DNI.trim(),
-        Nombres: formData.Nombres.trim(),
-        ApellidoPaterno: formData.ApellidoPaterno.trim(),
-        ApellidoMaterno: formData.ApellidoMaterno.trim() || null,
-        FechaContratacion: formData.FechaContratacion,
-        JornadaID: parseInt(formData.JornadaID),
-        CampañaID: parseInt(formData.CampañaID),
-        CargoID: parseInt(formData.CargoID),
-        ModalidadID: parseInt(formData.ModalidadID),
-        GrupoHorarioID: parseInt(formData.GrupoHorarioID),
-        SupervisorDNI: formData.SupervisorDNI.trim() || null,
-        CoordinadorDNI: formData.CoordinadorDNI.trim() || null,
-        JefeDNI: formData.JefeDNI.trim() || null
+        dni: formData.DNI.trim(),
+        nombres: formData.Nombres.trim(),
+        apellidoPaterno: formData.ApellidoPaterno.trim(),
+        apellidoMaterno: formData.ApellidoMaterno.trim() || null,
+        fechaContratacion: formData.FechaContratacion,
+        jornadaID: parseInt(formData.JornadaID),
+        campañaID: parseInt(formData.CampañaID),
+        cargoID: parseInt(formData.CargoID),
+        modalidadID: parseInt(formData.ModalidadID),
+        grupoHorarioID: parseInt(formData.GrupoHorarioID),
+        supervisorDNI: formData.SupervisorDNI.trim() || null,
+        coordinadorDNI: formData.CoordinadorDNI.trim() || null,
+        jefeDNI: formData.JefeDNI.trim() || null
       };
 
+      console.log('📤 Enviando datos al backend:', payload);
       const response = await api.post('/empleados', payload);
       
       if (response.data.success) {
@@ -294,10 +295,7 @@ const RegistrarEmpleado = () => {
         setHorarios([]);
         setDescansos([]);
         
-        // Redirigir al dashboard después de 2 segundos
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
+        // No redirigir, solo mostrar mensaje de éxito
       } else {
         setError(response.data.message || 'Error registrando empleado');
       }
@@ -660,113 +658,142 @@ const RegistrarEmpleado = () => {
             
             <Grid container spacing={2}>
               <Grid item xs={12} md={4}>
-                <Autocomplete
-                  freeSolo
-                  options={supervisores}
-                  getOptionLabel={(option) => {
-                    if (typeof option === 'string') return option;
-                    return `${option.DNI} - ${option.NOMBRECOMPLETO || option.NombreCompleto || 'Sin nombre'}`;
-                  }}
-                  inputValue={formData.SupervisorDNI}
-                  onInputChange={(event, newInputValue) => {
-                    handleInputChange('SupervisorDNI', newInputValue);
-                    cargarSupervisores(newInputValue);
-                  }}
-                  onChange={(event, newValue) => {
-                    if (newValue && typeof newValue === 'object') {
-                      handleInputChange('SupervisorDNI', newValue.DNI);
-                    }
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Supervisor DNI"
-                      placeholder="Buscar supervisor..."
-                      sx={{ width: '12rem' }}
-                    />
-                  )}
-                />
+                                 <TextField
+                   fullWidth
+                   label="Supervisor DNI"
+                   value={formData.SupervisorDNI}
+                   onChange={(e) => {
+                     handleInputChange('SupervisorDNI', e.target.value);
+                     cargarSupervisores(e.target.value);
+                   }}
+                   placeholder="Buscar supervisor..."
+                 />
+                 {/* Lista de sugerencias */}
+                 {supervisores.length > 0 && (
+                   <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                     {supervisores.map((supervisor, index) => (
+                       <Box
+                         key={index}
+                         sx={{
+                           p: 1,
+                           cursor: 'pointer',
+                           '&:hover': { backgroundColor: '#f1f5f9' },
+                           borderBottom: index < supervisores.length - 1 ? '1px solid #e2e8f0' : 'none'
+                         }}
+                         onClick={() => {
+                           handleInputChange('SupervisorDNI', supervisor.DNI);
+                           setSupervisores([]);
+                         }}
+                       >
+                         {supervisor.DNI} - {supervisor.NOMBRECOMPLETO || supervisor.NombreCompleto || 'Sin nombre'}
+                       </Box>
+                     ))}
+                   </Box>
+                 )}
               </Grid>
               <Grid item xs={12} md={4}>
-                <Autocomplete
-                  freeSolo
-                  options={coordinadores}
-                  getOptionLabel={(option) => {
-                    if (typeof option === 'string') return option;
-                    return `${option.DNI} - ${option.NOMBRECOMPLETO || option.NombreCompleto || 'Sin nombre'}`;
-                  }}
-                  inputValue={formData.CoordinadorDNI}
-                  onInputChange={(event, newInputValue) => {
-                    handleInputChange('CoordinadorDNI', newInputValue);
-                    cargarCoordinadores(newInputValue);
-                  }}
-                  onChange={(event, newValue) => {
-                    if (newValue && typeof newValue === 'object') {
-                      handleInputChange('CoordinadorDNI', newValue.DNI);
-                    }
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Coordinador DNI"
-                      placeholder="Buscar coordinador..."
-                      sx={{ width: '12rem' }}
-                    />
-                  )}
-                />
+                                 <TextField
+                   fullWidth
+                   label="Coordinador DNI"
+                   value={formData.CoordinadorDNI}
+                   onChange={(e) => {
+                     handleInputChange('CoordinadorDNI', e.target.value);
+                     cargarCoordinadores(e.target.value);
+                   }}
+                   placeholder="Buscar coordinador..."
+                 />
+                 {/* Lista de sugerencias */}
+                 {coordinadores.length > 0 && (
+                   <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                     {coordinadores.map((coordinador, index) => (
+                       <Box
+                         key={index}
+                         sx={{
+                           p: 1,
+                           cursor: 'pointer',
+                           '&:hover': { backgroundColor: '#f1f5f9' },
+                           borderBottom: index < coordinadores.length - 1 ? '1px solid #e2e8f0' : 'none'
+                         }}
+                         onClick={() => {
+                           handleInputChange('CoordinadorDNI', coordinador.DNI);
+                           setCoordinadores([]);
+                         }}
+                       >
+                         {coordinador.DNI} - {coordinador.NOMBRECOMPLETO || coordinador.NombreCompleto || 'Sin nombre'}
+                       </Box>
+                     ))}
+                   </Box>
+                 )}
               </Grid>
               <Grid item xs={12} md={4}>
-                <Autocomplete
-                  freeSolo
-                  options={jefes}
-                  getOptionLabel={(option) => {
-                    if (typeof option === 'string') return option;
-                    return `${option.DNI} - ${option.NOMBRECOMPLETO || option.NombreCompleto || 'Sin nombre'}`;
-                  }}
-                  inputValue={formData.JefeDNI}
-                  onInputChange={(event, newInputValue) => {
-                    handleInputChange('JefeDNI', newInputValue);
-                    cargarJefes(newInputValue);
-                  }}
-                  onChange={(event, newValue) => {
-                    if (newValue && typeof newValue === 'object') {
-                      handleInputChange('JefeDNI', newValue.DNI);
-                    }
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Jefe DNI"
-                      placeholder="Buscar jefe..."
-                      sx={{ width: '12rem' }}
-                    />
-                  )}
-                />
+                                 <TextField
+                   fullWidth
+                   label="Jefe DNI"
+                   value={formData.JefeDNI}
+                   onChange={(e) => {
+                     handleInputChange('JefeDNI', e.target.value);
+                     cargarJefes(e.target.value);
+                   }}
+                   placeholder="Buscar jefe..."
+                 />
+                 {/* Lista de sugerencias */}
+                 {jefes.length > 0 && (
+                   <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                     {jefes.map((jefe, index) => (
+                       <Box
+                         key={index}
+                         sx={{
+                           p: 1,
+                           cursor: 'pointer',
+                           '&:hover': { backgroundColor: '#f1f5f9' },
+                           borderBottom: index < jefes.length - 1 ? '1px solid #e2e8f0' : 'none'
+                         }}
+                         onClick={() => {
+                           handleInputChange('JefeDNI', jefe.DNI);
+                           setJefes([]);
+                         }}
+                       >
+                         {jefe.DNI} - {jefe.NOMBRECOMPLETO || jefe.NombreCompleto || 'Sin nombre'}
+                       </Box>
+                     ))}
+                   </Box>
+                 )}
               </Grid>
             </Grid>
           </Box>
 
-          {/* Botones de acción */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/')}
-            >
-              Volver al Dashboard
-            </Button>
-            
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
-              disabled={loading}
-              sx={{ px: 4, py: 1.5 }}
-            >
-              {loading ? 'Guardando...' : 'Guardar Empleado'}
-            </Button>
-          </Box>
+                     {/* Botones de acción */}
+           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
+             <Button
+               variant="outlined"
+               startIcon={<ArrowBackIcon />}
+               onClick={() => navigate('/')}
+             >
+               Volver al Dashboard
+             </Button>
+             
+             <Box sx={{ display: 'flex', gap: 2 }}>
+               <Button
+                 variant="outlined"
+                 color="secondary"
+                 onClick={handleClear}
+                 disabled={loading}
+               >
+                 Limpiar Formulario
+               </Button>
+               
+               <Button
+                 type="submit"
+                 variant="contained"
+                 size="large"
+                 startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+                 disabled={loading}
+                 sx={{ px: 4, py: 1.5 }}
+               >
+                 {loading ? 'Guardando...' : 'Guardar Empleado'}
+               </Button>
+             </Box>
+           </Box>
         </Box>
       </Paper>
     </Box>
