@@ -31,9 +31,9 @@ export async function descargarExcel({ tablaDatos, dias, capCount }) {
   // Datos
   tablaDatos.forEach(p => {
     ws.addRow([
-      p.nombre,
+      `${p.nombres} ${p.apellidos}`,
       p.dni,
-      p.numero,
+      p.numero || "",
       ...p.asistencia,
       p.resultadoFinal || ""
     ]);
@@ -98,46 +98,41 @@ export async function descargarExcel({ tablaDatos, dias, capCount }) {
     const p = tablaDatos[r-4];
     const idxDesercion = p.asistencia.findIndex(est => est === "Deserción");
     const esDesercion = idxDesercion !== -1;
+    
     for (let c = 1; c <= 4 + dias.length; ++c) {
       const cell = ws.getCell(r, c);
-      // Nombre a la izquierda, resto centrado
-      if (c === 1) cell.alignment = { vertical: 'middle', horizontal: 'left' };
-      else cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      
+      // Fondo rojo para filas con deserción
+      if (esDesercion) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorRed } };
+      }
+      
+      // Bordes
       cell.border = {
         top: { style: 'thin', color: { argb: 'CCCCCC' } },
         left: { style: 'thin', color: { argb: 'CCCCCC' } },
         bottom: { style: 'thin', color: { argb: 'CCCCCC' } },
         right: { style: 'thin', color: { argb: 'CCCCCC' } },
       };
-      // Si es deserción: rojo solo en las 3 primeras columnas, gris oscuro en fechas
-      if (esDesercion) {
-        if (c <= 3) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorRed } };
-        if (c > 3 && c <= 3 + dias.length) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorGrayDark } };
-      }
-      // Celda de deserción: gris oscuro
-      if (c > 3 && c <= 3 + dias.length && esDesercion && (c-4) === idxDesercion) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorGrayDark } };
+      
+      // Alineación
+      if (c === 1) {
+        cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      } else if (c <= 3) {
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      } else {
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
       }
     }
-    // Resultado Final: azul si no es deserción, gris si es deserción
-    const cellRes = ws.getCell(r, colRes);
-    if (esDesercion) cellRes.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorGray } };
-    else cellRes.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorBlue } };
-    cellRes.font = { color: { argb: colorBlueText } };
-    cellRes.alignment = { vertical: 'middle', horizontal: 'center' };
   }
 
-  // Descargar archivo
+  // Generar archivo
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'asistencia.xlsx';
-  document.body.appendChild(a);
+  a.download = `Asistencia_${new Date().toISOString().split('T')[0]}.xlsx`;
   a.click();
-  setTimeout(() => {
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  }, 0);
+  window.URL.revokeObjectURL(url);
 }

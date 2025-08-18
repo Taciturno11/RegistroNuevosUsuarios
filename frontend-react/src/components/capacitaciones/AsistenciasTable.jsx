@@ -1,49 +1,6 @@
-import React, { useState, useRef } from "react";
-import { createPortal } from "react-dom";
+import React from "react";
 
-function PopoverPortal({ anchorRef, children, open }) {
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
-  const popoverRef = useRef(null);
-
-  // Calcular posición cuando se abre
-  React.useLayoutEffect(() => {
-    if (open && anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      setPos({
-        top: rect.bottom + window.scrollY + 4, // 4px de margen
-        left: rect.left + window.scrollX + rect.width / 2,
-        width: rect.width
-      });
-    }
-  }, [open, anchorRef]);
-
-  if (!open) return null;
-  return createPortal(
-    <div
-      ref={popoverRef}
-      style={{
-        position: "absolute",
-        top: pos.top,
-        left: pos.left,
-        transform: "translateX(-50%)",
-        zIndex: 9999,
-        minWidth: 260,
-        maxWidth: 320
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-}
-
-export default function AsistenciasTable({ compact, dniCap, CampañaID, mes, fechaInicio, capaNum, horariosBase, jornadaFiltro = "Todos", tablaDatos, dias, onAsistenciaChange, onDesercion, capCount = 5 }) {
-  // Estado local para popover
-  const [popover, setPopover] = useState({ open: false, row: null, col: null });
-  const [motivo, setMotivo] = useState("");
-  const [guardando, setGuardando] = useState(false);
-  const popoverAnchorRefs = useRef({}); // {row_col: ref}
-
+export default function AsistenciasTable({ compact, dniCap, CampañaID, mes, fechaInicio, capaNum, horariosBase, jornadaFiltro = "Todos", tablaDatos, dias, onAsistenciaChange, onDesercion, onAbrirPopoverDesercion, capCount = 5 }) {
   // Si no hay datos, mostrar mensaje
   if (!tablaDatos || !tablaDatos.length) {
     return (
@@ -93,32 +50,13 @@ export default function AsistenciasTable({ compact, dniCap, CampañaID, mes, fec
   const tdBase = manyColumns ? "border px-1 py-1 min-w-0 text-xs" : compact ? "border px-2 py-1 min-w-0" : "border px-4 py-2";
   const selectBase = manyColumns ? "w-full h-full px-0.5 py-0.5 min-w-0 focus:outline-none bg-transparent text-xs" : compact ? "w-full h-full px-1 py-0.5 min-w-0 focus:outline-none bg-transparent text-xs" : "w-full h-full px-1 focus:outline-none bg-transparent";
 
-  // Guardar motivo y deserción
-  const handleGuardarMotivo = async () => {
-    if (popover.row !== null && popover.col !== null && onDesercion) {
-      setGuardando(true);
-      try {
-        // Llamar a la función del componente padre
-        onDesercion(popover.row, popover.col, motivo);
-        
-        setPopover({ open: false, row: null, col: null });
-        setMotivo("");
-        alert("Deserción guardada exitosamente");
-      } catch (error) {
-        console.error("Error guardando deserción:", error);
-        alert("Error guardando deserción");
-      } finally {
-        setGuardando(false);
-      }
-    }
-  };
-
   // Función para cambiar asistencia
   const handleAsistenciaChange = (rowIndex, colIndex, newValue) => {
     if (newValue === "Deserción") {
-      // Abrir popover para motivo
-      setPopover({ open: true, row: rowIndex, col: colIndex });
-      setMotivo("");
+      // Abrir popover para motivo usando la función del padre
+      if (onAbrirPopoverDesercion) {
+        onAbrirPopoverDesercion(rowIndex, colIndex);
+      }
     } else if (onAsistenciaChange) {
       // Llamar a la función del componente padre
       onAsistenciaChange(rowIndex, colIndex, newValue);
@@ -188,8 +126,11 @@ export default function AsistenciasTable({ compact, dniCap, CampañaID, mes, fec
                       : "bg-[#f9f6f2]/80")
                   }
                 >
-                  <td className={`${tdBase} text-left min-w-0 truncate`} title={`${postulante.nombres} ${postulante.apellidos}`}>
+                  <td className={`${tdBase} text-left min-w-0 truncate relative`} title={`${postulante.nombres} ${postulante.apellidos}`}>
                     {postulante.nombres} {postulante.apellidos}
+                    {postulante.dirty && (
+                      <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                    )}
                   </td>
                   <td className={`${tdBase} text-center min-w-0`}>
                     {postulante.dni}
@@ -241,8 +182,10 @@ export default function AsistenciasTable({ compact, dniCap, CampañaID, mes, fec
                           value={valor}
                           onChange={e => {
                             if (e.target.value === "Deserción") {
-                              setPopover({ open: true, row: r, col: c });
-                              setMotivo("");
+                              // Usar la función del padre para abrir popover
+                              if (onAbrirPopoverDesercion) {
+                                onAbrirPopoverDesercion(r, c);
+                              }
                             } else if (onAsistenciaChange) {
                               onAsistenciaChange(r, c, e.target.value);
                             }
@@ -277,40 +220,6 @@ export default function AsistenciasTable({ compact, dniCap, CampañaID, mes, fec
           </tbody>
         </table>
       </div>
-
-      {/* Popover para motivo de deserción */}
-      {popover.open && (
-        <PopoverPortal
-          anchorRef={popoverAnchorRefs.current[`${popover.row}_${popover.col}`]}
-          open={popover.open}
-        >
-          <div className="z-20 bg-white border border-gray-300 rounded-lg shadow-lg p-4 w-64 flex flex-col">
-            <label className="mb-2 font-semibold text-sm text-gray-700">Motivo de la deserción:</label>
-            <textarea
-              className="border rounded p-1 mb-2 text-sm resize-none"
-              rows={3}
-              value={motivo}
-              onChange={e => setMotivo(e.target.value)}
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                className="px-3 py-1 rounded bg-green-500 text-white text-sm hover:bg-green-600"
-                onClick={handleGuardarMotivo}
-                disabled={!motivo.trim() || guardando}
-              >
-                {guardando ? "Guardando..." : "Guardar"}
-              </button>
-              <button
-                className="px-3 py-1 rounded bg-gray-300 text-gray-700 text-sm hover:bg-gray-400"
-                onClick={() => setPopover({ open: false, row: null, col: null })}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </PopoverPortal>
-      )}
     </div>
   );
 }

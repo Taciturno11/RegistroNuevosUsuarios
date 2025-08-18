@@ -213,6 +213,8 @@ const getDeserciones = async (req, res) => {
       });
     }
 
+    console.log('🔍 Buscando deserciones para:', { dniCap, campaniaID, mes, capa });
+
     const pool = await getConnection();
     const result = await pool.request()
       .input("dniCap", sql.VarChar(20), dniCap)
@@ -231,19 +233,15 @@ const getDeserciones = async (req, res) => {
                d.fecha_inicio
         FROM Deserciones_Formacion d
         JOIN Postulantes_En_Formacion p ON p.DNI = d.postulante_dni
-          AND p.CampañaID = @camp
-          AND CONVERT(varchar, p.FechaInicio, 23) = CONVERT(varchar, d.fecha_inicio, 23)
-          AND d.CampañaID = @camp
         LEFT JOIN PRI.Campanias c ON d.CampañaID = c.CampañaID
         WHERE p.DNI_Capacitador = @dniCap
           AND p.CampañaID = @camp
           AND FORMAT(p.FechaInicio,'yyyy-MM') = @prefijo
           AND d.capa_numero = @capa
-          AND d.CampañaID = @camp
-          AND CONVERT(varchar, p.FechaInicio, 23) = CONVERT(varchar, d.fecha_inicio, 23)
         ORDER BY d.fecha_desercion
       `);
 
+    console.log('✅ Deserciones encontradas:', result.recordset.length);
     res.json(result.recordset);
     
   } catch (error) {
@@ -333,19 +331,61 @@ const getHorariosBase = async (req, res) => {
 
 // Guardar asistencias en lote
 const saveAsistencias = async (req, res) => {
+  console.log('🚀 saveAsistencias INICIADO - Backend funcionando correctamente');
+  
   try {
     const asistencias = req.body;
     
+    console.log('🔄 saveAsistencias llamado con:', {
+      bodyType: typeof req.body,
+      bodyLength: Array.isArray(req.body) ? req.body.length : 'No es array',
+      body: JSON.stringify(req.body, null, 2)
+    });
+    
     if (!Array.isArray(asistencias) || asistencias.length === 0) {
+      console.log('❌ Validación falló:', {
+        isArray: Array.isArray(asistencias),
+        length: asistencias?.length
+      });
       return res.status(400).json({ error: 'Datos de asistencia inválidos' });
     }
 
+    console.log('✅ Validación pasó, procesando asistencias...');
+    console.log('📥 Primera asistencia:', asistencias[0]);
+    console.log('📥 Total de asistencias a procesar:', asistencias.length);
+
     const pool = await getConnection();
+    console.log('✅ Conexión a base de datos establecida');
+    
     const tx = new sql.Transaction(pool);
     await tx.begin();
+    console.log('✅ Transacción iniciada');
     
     try {
-      for (const asistencia of asistencias) {
+      for (let i = 0; i < asistencias.length; i++) {
+        const asistencia = asistencias[i];
+        console.log(`🔄 Procesando asistencia ${i + 1}/${asistencias.length}:`, asistencia);
+        
+        // Validar campos requeridos
+        if (!asistencia.postulante_dni || !asistencia.fecha || !asistencia.estado_asistencia) {
+          console.log('❌ Campos faltantes en asistencia:', {
+            postulante_dni: !!asistencia.postulante_dni,
+            fecha: !!asistencia.fecha,
+            estado_asistencia: !!asistencia.estado_asistencia
+          });
+          throw new Error(`Campos faltantes en asistencia: ${JSON.stringify(asistencia)}`);
+        }
+        
+        console.log('🔄 Ejecutando query para asistencia:', {
+          dni: asistencia.postulante_dni,
+          fecha: asistencia.fecha,
+          etapa: asistencia.etapa,
+          estado: asistencia.estado_asistencia,
+          capa: asistencia.capa_numero,
+          fechaInicio: asistencia.fecha_inicio,
+          CampañaID: asistencia.CampañaID
+        });
+        
         await tx.request()
           .input("dni", sql.VarChar(20), asistencia.postulante_dni)
           .input("fecha", sql.Date, asistencia.fecha)
@@ -364,67 +404,132 @@ const saveAsistencias = async (req, res) => {
               INSERT (postulante_dni,fecha,etapa,estado_asistencia,capa_numero,fecha_inicio,CampañaID)
               VALUES (@dni,@fecha,@etapa,@estado,@capa,@fechaInicio,@CampañaID);
           `);
+        
+        console.log(`✅ Asistencia ${i + 1} procesada exitosamente`);
       }
       
+      console.log('✅ Todas las asistencias procesadas, haciendo commit...');
       await tx.commit();
+      console.log('✅ Transacción commitada exitosamente');
+      
       res.json({ success: true, message: 'Asistencias guardadas correctamente' });
       
     } catch (error) {
+      console.log('❌ Error durante el procesamiento, haciendo rollback...');
       await tx.rollback();
+      console.log('✅ Rollback completado');
       throw error;
     }
     
   } catch (error) {
-    console.error('Error en saveAsistencias:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error en saveAsistencias:', error);
+    console.error('❌ Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message,
+      stack: error.stack
+    });
   }
 };
 
 // Guardar deserciones en lote
 const saveDeserciones = async (req, res) => {
+  console.log('🚀 saveDeserciones INICIADO - Backend funcionando correctamente');
+  
   try {
     const deserciones = req.body;
     
+    console.log('🔄 saveDeserciones llamado con:', {
+      bodyType: typeof req.body,
+      bodyLength: Array.isArray(req.body) ? req.body.length : 'No es array',
+      body: JSON.stringify(req.body, null, 2)
+    });
+    
     if (!Array.isArray(deserciones) || deserciones.length === 0) {
+      console.log('❌ Validación falló:', {
+        isArray: Array.isArray(deserciones),
+        length: deserciones?.length
+      });
       return res.status(400).json({ error: 'Datos de deserción inválidos' });
     }
 
+    console.log('✅ Validación pasó, procesando deserciones...');
+    console.log('📥 Primera deserción:', deserciones[0]);
+    console.log('📥 Total de deserciones a procesar:', deserciones.length);
+
     const pool = await getConnection();
+    console.log('✅ Conexión a base de datos establecida');
+    
     const tx = new sql.Transaction(pool);
     await tx.begin();
+    console.log('✅ Transacción iniciada');
     
     try {
-      for (const desercion of deserciones) {
+      for (let i = 0; i < deserciones.length; i++) {
+        const desercion = deserciones[i];
+        console.log(`🔄 Procesando deserción ${i + 1}/${deserciones.length}:`, desercion);
+        
+        // Validar campos requeridos
+        if (!desercion.postulante_dni || !desercion.fecha_desercion || !desercion.motivo) {
+          console.log('❌ Campos faltantes en deserción:', {
+            postulante_dni: !!desercion.postulante_dni,
+            fecha_desercion: !!desercion.fecha_desercion,
+            motivo: !!desercion.motivo
+          });
+          throw new Error(`Campos faltantes en deserción: ${JSON.stringify(desercion)}`);
+        }
+        
+        console.log('🔄 Ejecutando query para deserción:', {
+          dni: desercion.postulante_dni,
+          fecha: desercion.fecha_desercion,
+          motivo: desercion.motivo,
+          capa: desercion.capa_numero,
+          fechaInicio: desercion.fecha_inicio,
+          CampañaID: desercion.CampañaID
+        });
+        
         await tx.request()
           .input("dni", sql.VarChar(20), desercion.postulante_dni)
-          .input("fechaDes", sql.Date, desercion.fecha_desercion)
-          .input("mot", sql.NVarChar(250), desercion.motivo)
-          .input("capa", sql.Int, desercion.capa_numero)
-          .input("CampañaID", sql.Int, desercion.CampañaID)
+          .input("fecha", sql.Date, desercion.fecha_desercion)
+          .input("motivo", sql.NVarChar(500), desercion.motivo)
+          .input("capa", sql.Int, Number(desercion.capa_numero))
           .input("fechaInicio", sql.Date, desercion.fecha_inicio)
+          .input("CampañaID", sql.Int, desercion.CampañaID)
           .query(`
             MERGE Deserciones_Formacion AS T
-            USING (SELECT @dni AS dni, @capa AS capa, @CampañaID AS CampañaID, @fechaInicio AS fechaInicio, @fechaDes AS fechaDes) AS S
-              ON T.postulante_dni = S.dni AND T.capa_numero = S.capa AND T.CampañaID = S.CampañaID AND T.fecha_inicio = S.fechaInicio AND T.fecha_desercion = S.fechaDes
+            USING (SELECT @dni AS dni, @capa AS capa, @CampañaID AS CampañaID) AS S
+              ON T.postulante_dni = S.dni AND T.capa_numero = S.capa AND T.CampañaID = S.CampañaID
             WHEN MATCHED THEN
-              UPDATE SET motivo = @mot
+              UPDATE SET fecha_desercion = @fecha, motivo = @motivo, fecha_inicio = @fechaInicio
             WHEN NOT MATCHED THEN
-              INSERT (postulante_dni, capa_numero, fecha_desercion, motivo, CampañaID, fecha_inicio)
-              VALUES (@dni, @capa, @fechaDes, @mot, @CampañaID, @fechaInicio);
+              INSERT (postulante_dni,fecha_desercion,motivo,capa_numero,fecha_inicio,CampañaID)
+              VALUES (@dni,@fecha,@motivo,@capa,@fechaInicio,@CampañaID);
           `);
+        
+        console.log(`✅ Deserción ${i + 1} procesada exitosamente`);
       }
       
+      console.log('✅ Todas las deserciones procesadas, haciendo commit...');
       await tx.commit();
+      console.log('✅ Transacción commitada exitosamente');
+      
       res.json({ success: true, message: 'Deserciones guardadas correctamente' });
       
     } catch (error) {
+      console.log('❌ Error durante el procesamiento, haciendo rollback...');
       await tx.rollback();
+      console.log('✅ Rollback completado');
       throw error;
     }
     
   } catch (error) {
-    console.error('Error en saveDeserciones:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error en saveDeserciones:', error);
+    console.error('❌ Stack trace:', error.stack);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message,
+      stack: error.stack
+    });
   }
 };
 

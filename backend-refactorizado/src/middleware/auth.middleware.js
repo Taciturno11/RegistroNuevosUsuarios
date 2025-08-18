@@ -3,6 +3,8 @@ const { executeQuery, sql } = require('../config/database');
 
 // Middleware de autenticación JWT
 const authMiddleware = async (req, res, next) => {
+  console.log('🔐 authMiddleware ejecutándose para:', req.method, req.path);
+  
   try {
     // Obtener el token del header Authorization
     const authHeader = req.headers.authorization;
@@ -94,6 +96,8 @@ const authMiddleware = async (req, res, next) => {
 
       // Log de autenticación exitosa
       console.log(`🔐 Usuario autenticado: ${user.DNI} - ${user.Nombres} ${user.ApellidoPaterno}`);
+      console.log(`🔐 req.user.dni: ${req.user.dni}`);
+      console.log(`🔐 payload.dni: ${payload.dni}`);
 
       next();
       
@@ -200,6 +204,8 @@ const optionalAuthMiddleware = async (req, res, next) => {
 // Middleware para verificar roles específicos
 const requireRole = (allowedRoles) => {
   return (req, res, next) => {
+    console.log('🔐 requireRole ejecutándose para roles:', allowedRoles, 'Usuario actual:', req.user?.role);
+    
     if (!req.user) {
       return res.status(401).json({
         success: false,
