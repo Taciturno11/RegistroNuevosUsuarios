@@ -1567,102 +1567,105 @@ const PagosNomina = () => {
              
              return (
                <Box>
-                 {/* Información del empleado */}
-                 <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8fafc' }}>
-                   <Grid container spacing={2}>
-                     <Grid item xs={12} md={6}>
-                       <Typography variant="body2" color="text.secondary">DNI:</Typography>
-                       <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.DNI}</Typography>
-                     </Grid>
-                     <Grid item xs={12} md={6}>
-                       <Typography variant="body2" color="text.secondary">Cargo:</Typography>
-                       <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCargo}</Typography>
-                     </Grid>
-                     <Grid item xs={12} md={6}>
-                       <Typography variant="body2" color="text.secondary">Campaña:</Typography>
-                       <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCampaña}</Typography>
-                     </Grid>
-                     <Grid item xs={12} md={6}>
-                       <Typography variant="body2" color="text.secondary">Total a Pagar:</Typography>
-                       <Typography variant="h6" color="success.main" fontWeight="bold">
-                         S/ {parseFloat(modalBonos.empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                       </Typography>
-                     </Grid>
-                   </Grid>
-                 </Paper>
+                                                     {/* Información del empleado */}
+                  <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8fafc' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">DNI:</Typography>
+                        <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.DNI}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Cargo:</Typography>
+                        <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCargo}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Campaña:</Typography>
+                        <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCampaña}</Typography>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="body2" color="text.secondary">Total a Pagar:</Typography>
+                        <Typography variant="h6" color="success.main" fontWeight="bold">
+                          S/ {parseFloat(modalBonos.empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Paper>
 
-                 {/* Información de Asistencia */}
-                 <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f0f9ff' }}>
-                   <Typography variant="h6" sx={{ mb: 2, color: '#0369a1' }}>
-                     📅 Información de Asistencia
-                   </Typography>
-                   <Grid container spacing={2}>
-                     <Grid item xs={12} sm={6} md={4}>
-                       <Typography variant="body2" color="text.secondary">Días Asistidos:</Typography>
-                       <Typography variant="h6" color="info.main" fontWeight="bold">
-                         {modalBonos.empleado.DiasAsistidos || 0}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
-                       <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
-                       <Typography variant="h6" color="error.main" fontWeight="bold">
-                         {modalBonos.empleado.DiasFaltados || 0}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
-                       <Typography variant="body2" color="text.secondary">Tardanzas:</Typography>
-                       <Typography variant="h6" color="warning.main" fontWeight="bold">
-                         {modalBonos.empleado.Tardanzas || 0}
-                       </Typography>
-                     </Grid>
-                   </Grid>
-                 </Paper>
+                  {/* Información de Asistencia y Descuentos en la misma línea */}
+                  <Grid container spacing={3} sx={{ mb: 3 }}>
+                    {/* Información de Asistencia */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 2, backgroundColor: '#f0f9ff', height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: '#0369a1' }}>
+                          📅 Información de Asistencia
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" color="text.secondary">Días Asistidos:</Typography>
+                            <Typography variant="h6" color="info.main" fontWeight="bold">
+                              {modalBonos.empleado.DiasAsistidos || 0}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
+                            <Typography variant="h6" color="error.main" fontWeight="bold">
+                              {modalBonos.empleado.DiasFaltados || 0}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" color="text.secondary">Tardanzas:</Typography>
+                            <Typography variant="h6" color="warning.main" fontWeight="bold">
+                              {modalBonos.empleado.Tardanzas || 0}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                      </Paper>
+                    </Grid>
 
-                 {/* Información de Descuentos */}
-                 <Paper sx={{ p: 2, mb: 3, backgroundColor: '#fef2f2' }}>
-                   <Typography variant="h6" sx={{ mb: 2, color: '#dc2626' }}>
-                     💸 Información de Descuentos
-                   </Typography>
-                   <Grid container spacing={2}>
-                     <Grid item xs={12} sm={6} md={4}>
-                       <Typography variant="body2" color="text.secondary">Sueldo Base Mensual:</Typography>
-                       <Typography variant="h6" color="info.main" fontWeight="bold">
-                         S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
-                       <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
-                       <Typography variant="h6" color="error.main" fontWeight="bold">
-                         {modalBonos.empleado.DiasFaltados || 0}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} sm={6} md={4}>
-                       <Typography variant="body2" color="text.secondary">Descuento Total:</Typography>
-                       <Typography variant="h6" color="error.main" fontWeight="bold">
-                         S/ {parseFloat(modalBonos.empleado.DescuentoDiasNoPagados || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                       </Typography>
-                     </Grid>
-                   </Grid>
-                   
-                   {/* Fórmula del descuento */}
-                   <Box sx={{ mt: 2, p: 2, backgroundColor: '#fef2f2', borderRadius: 1, border: '1px solid #fecaca' }}>
-                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
-                       📐 Fórmula del Descuento:
-                     </Typography>
-                     <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                       Descuento = (Sueldo Base ÷ 30) × Días Faltados
-                     </Typography>
-                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
-                       = (S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE')} ÷ 30) × {modalBonos.empleado.DiasFaltados || 0}
-                     </Typography>
-                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
-                       = S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)} × {modalBonos.empleado.DiasFaltados || 0}
-                     </Typography>
-                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace', fontWeight: 600 }}>
-                       = S/ {parseFloat(modalBonos.empleado.DescuentoDiasNoPagados || 0).toFixed(2)}
-                     </Typography>
-                   </Box>
-                 </Paper>
+                    {/* Información de Descuentos */}
+                    <Grid item xs={12} md={6}>
+                      <Paper sx={{ p: 2, backgroundColor: '#fef2f2', height: '100%' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: '#dc2626' }}>
+                          💸 Información de Descuentos
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
+                            <Typography variant="h6" color="error.main" fontWeight="bold">
+                              {modalBonos.empleado.DiasFaltados || 0}
+                            </Typography>
+                          </Grid>
+                                                     <Grid item xs={12} sm={6}>
+                             <Typography variant="body2" color="text.secondary">Descuento Total:</Typography>
+                             <Typography variant="h6" color="error.main" fontWeight="bold">
+                               S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)}
+                             </Typography>
+                           </Grid>
+                        </Grid>
+                        
+                                                 {/* Fórmula del descuento */}
+                         <Box sx={{ mt: 2, p: 2, backgroundColor: '#fef2f2', borderRadius: 1, border: '1px solid #fecaca' }}>
+                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                             📐 Fórmula del Descuento:
+                           </Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                             Descuento = (Sueldo Base ÷ 30) × Días Faltados
+                           </Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
+                             = (S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE')} ÷ 30) × {modalBonos.empleado.DiasFaltados || 0}
+                           </Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
+                             = S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30)).toFixed(2)} × {modalBonos.empleado.DiasFaltados || 0}
+                           </Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace', fontWeight: 600 }}>
+                             = S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)}
+                           </Typography>
+                         </Box>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+
+                  
 
                  {/* Lista de bonos */}
                  <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
@@ -1704,32 +1707,67 @@ const PagosNomina = () => {
                    })}
                  </Grid>
 
-                 {/* Resumen */}
-                 <Paper sx={{ p: 2, mt: 3, backgroundColor: '#f0fdf4' }}>
-                   <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
-                     📋 Resumen
-                   </Typography>
-                   <Grid container spacing={2}>
-                     <Grid item xs={12} md={4}>
-                       <Typography variant="body2" color="text.secondary">Total Bonos:</Typography>
-                       <Typography variant="h6" color="primary" fontWeight="bold">
-                         S/ {columnasBonos.reduce((sum, col) => sum + (modalBonos.empleado[col] || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} md={4}>
-                       <Typography variant="body2" color="text.secondary">Sueldo Base:</Typography>
-                       <Typography variant="h6" color="info.main" fontWeight="bold">
-                         S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                       </Typography>
-                     </Grid>
-                     <Grid item xs={12} md={4}>
-                       <Typography variant="body2" color="text.secondary">Cantidad de Bonos:</Typography>
-                       <Typography variant="h6" color="warning.main" fontWeight="bold">
-                         {columnasBonos.length}
-                       </Typography>
-                     </Grid>
-                   </Grid>
-                 </Paper>
+                                   {/* Resumen Detallado */}
+                  <Paper sx={{ p: 3, mt: 3, backgroundColor: '#f0fdf4' }}>
+                    <Typography variant="h6" sx={{ mb: 3, color: '#16a34a', textAlign: 'center' }}>
+                      📋 Resumen del Cálculo de Nómina
+                    </Typography>
+                    
+                    
+                    
+                    {/* Desglose detallado */}
+                    <Grid container spacing={3}>
+                      {/* Sueldo Base */}
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            💰 Sueldo Base
+                          </Typography>
+                          <Typography variant="h6" color="info.main" fontWeight="bold">
+                            S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      {/* Total Bonos */}
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            🎁 Total Bonos
+                          </Typography>
+                          <Typography variant="h6" color="primary" fontWeight="bold">
+                            + S/ {columnasBonos.reduce((sum, col) => sum + (modalBonos.empleado[col] || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                                             {/* Descuentos */}
+                       <Grid item xs={12} sm={6} md={3}>
+                         <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                             💸 Descuentos
+                           </Typography>
+                           <Typography variant="h6" color="error.main" fontWeight="bold">
+                             - S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)}
+                           </Typography>
+                         </Box>
+                       </Grid>
+                      
+                      {/* Total a Pagar */}
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f0fdf4', borderRadius: 2, border: '2px solid #16a34a' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                            🎯 Total a Pagar
+                          </Typography>
+                          <Typography variant="h5" color="success.main" fontWeight="bold">
+                            S/ {parseFloat(modalBonos.empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                    
+                    
+                  </Paper>
                </Box>
              );
            })()}
