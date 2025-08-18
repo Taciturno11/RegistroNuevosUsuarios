@@ -149,18 +149,61 @@ const PagosNomina = () => {
 
   // Función para calcular días correctamente
   const calcularDias = (registro) => {
-    // Calcular días reales del mes
+    // Calcular días reales del mes (INCLUYENDO del día 1 al 30, EXCLUYENDO solo el día 31)
     const fecha = new Date(parseInt(filtros.anio), parseInt(filtros.mes) - 1, 1);
     const diasDelMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).getDate();
     
-    // Identificar solo columnas que representen días del mes
-    const columnasDias = Object.keys(registro).filter(col => 
-      col.startsWith('Dia') && /^Dia\d+$/.test(col)
-    );
+    // Log detallado de todas las columnas del registro
+    console.log('🔍 TODAS las columnas del registro:', Object.keys(registro));
+    console.log('🔍 Valores de las primeras 10 columnas:', Object.entries(registro).slice(0, 10));
+    
+    // Identificar columnas que representen días del mes (formato YYYY-MM-DD)
+    // IMPORTANTE: INCLUIR del día 1 al 30, EXCLUIR solo el día 31
+    const columnasDias = Object.keys(registro).filter(col => {
+      // Buscar columnas con formato de fecha YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(col)) {
+        // Parsear la fecha de manera más robusta para evitar problemas de zona horaria
+        const [anioStr, mesStr, diaStr] = col.split('-');
+        const anioColumna = parseInt(anioStr);
+        const mesColumna = parseInt(mesStr);
+        const diaColumna = parseInt(diaStr);
+        
+        // Log de debug para cada columna de fecha
+        console.log(`🔍 Debug columna ${col}:`, {
+          col,
+          anioColumna,
+          mesColumna,
+          diaColumna,
+          filtrosMes: parseInt(filtros.mes),
+          filtrosAnio: parseInt(filtros.anio),
+          condicion1: mesColumna === parseInt(filtros.mes),
+          condicion2: anioColumna === parseInt(filtros.anio),
+          condicion3: diaColumna >= 1 && diaColumna <= 30,
+          resultado: mesColumna === parseInt(filtros.mes) && 
+                     anioColumna === parseInt(filtros.anio) &&
+                     diaColumna >= 1 && diaColumna <= 30
+        });
+        
+        // Verificar que la fecha corresponda al mes y año seleccionados
+        // Y EXCLUIR SOLO el día 31 (incluir del 1 al 30)
+        return mesColumna === parseInt(filtros.mes) && 
+               anioColumna === parseInt(filtros.anio) &&
+               diaColumna >= 1 && diaColumna <= 30; // INCLUIR del 1 al 30, NO el 31
+      }
+      return false;
+    });
+    
+    console.log('🔍 Columnas de días encontradas (del 1 al 30):', columnasDias);
+    console.log('🔍 Registro completo:', registro);
     
     // Contar diferentes tipos de asistencia y faltas
+    // IMPORTANTE: Las tardanzas (T) NO cuentan como asistencia completa
     const diasAsistidos = columnasDias.filter(dia => 
-      ['A', 'T', 'ST', 'P'].includes(registro[dia])
+      registro[dia] === 'A'  // Solo asistencias completas
+    ).length;
+    
+    const tardanzas = columnasDias.filter(dia => 
+      registro[dia] === 'T'
     ).length;
     
     const faltasInjustificadas = columnasDias.filter(dia => 
@@ -171,16 +214,44 @@ const PagosNomina = () => {
       registro[dia] === 'FJ'
     ).length;
     
+    const diasDescanso = columnasDias.filter(dia => 
+      registro[dia] === 'D'
+    ).length;
+    
     const totalFaltas = faltasInjustificadas + faltasJustificadas;
-    const diasTrabajados = diasDelMes - totalFaltas;
+    
+    // Los días trabajados son 30 (mes laboral del 1 al 30) menos las faltas
+    const diasTrabajados = 30 - totalFaltas;
+    
+    // Log detallado del cálculo
+    console.log('🔍 Cálculo de días (del 1 al 30):', {
+      diasDelMes: diasDelMes,
+      diasDelMesSin31: 30,
+      columnasDias,
+      diasAsistidos,
+      tardanzas,
+      faltasInjustificadas,
+      faltasJustificadas,
+      diasDescanso,
+      totalFaltas,
+      diasTrabajados: `30 - ${totalFaltas} = ${diasTrabajados}`
+    });
+    
+    // Log de cada día para debug
+    console.log('🔍 Detalle día por día (del 1 al 30):');
+    columnasDias.forEach(dia => {
+      console.log(`  ${dia}: ${registro[dia]}`);
+    });
     
     return {
-      diasDelMes,
+      diasDelMes: 30, // Retornar 30 días laborales (del 1 al 30)
       diasAsistidos,
       diasFaltados: totalFaltas,
       diasTrabajados,
+      tardanzas,
       faltasInjustificadas,
-      faltasJustificadas
+      faltasJustificadas,
+      diasDescanso
     };
   };
 
@@ -304,6 +375,7 @@ const PagosNomina = () => {
             diasAsistidos: calculoDias.diasAsistidos,
             diasFaltados: calculoDias.diasFaltados,
             diasTrabajados: calculoDias.diasTrabajados,
+            tardanzas: calculoDias.tardanzas,
             faltasInjustificadas: calculoDias.faltasInjustificadas,
             faltasJustificadas: calculoDias.faltasJustificadas
           });
@@ -322,6 +394,7 @@ const PagosNomina = () => {
             DiasTrabajados: calculoDias.diasTrabajados,
             DiasAsistidos: calculoDias.diasAsistidos,
             DiasFaltados: calculoDias.diasFaltados,
+            Tardanzas: calculoDias.tardanzas,
             // Información adicional para debug
             DiasDelMes: calculoDias.diasDelMes,
             FaltasInjustificadas: calculoDias.faltasInjustificadas,
@@ -376,6 +449,7 @@ const PagosNomina = () => {
         'DiasTrabajados',
         'DiasAsistidos', 
         'DiasFaltados',
+        'Tardanzas',
         'DiasDelMes',
         'FaltasInjustificadas',
         'FaltasJustificadas',
@@ -1118,9 +1192,9 @@ const PagosNomina = () => {
                                 <TableCell sx={{ fontWeight: 700 }}>Cargo</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Sueldo Base</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }} align="right">Días Trabajados</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Días Asistidos</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Días Faltados</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Tardanzas</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }} align="right">Total a Pagar</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
                               </TableRow>
@@ -1150,9 +1224,9 @@ const PagosNomina = () => {
                                   <TableCell align="right">
                                     S/ {(empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </TableCell>
-                                  <TableCell align="right">{empleado.DiasTrabajados || 0}</TableCell>
                                   <TableCell align="right">{empleado.DiasAsistidos || 0}</TableCell>
                                   <TableCell align="right">{empleado.DiasFaltados || 0}</TableCell>
+                                  <TableCell align="right">{empleado.Tardanzas || 0}</TableCell>
                                   <TableCell align="right">
                                     S/ {(empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </TableCell>
@@ -1515,6 +1589,79 @@ const PagosNomina = () => {
                        </Typography>
                      </Grid>
                    </Grid>
+                 </Paper>
+
+                 {/* Información de Asistencia */}
+                 <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f0f9ff' }}>
+                   <Typography variant="h6" sx={{ mb: 2, color: '#0369a1' }}>
+                     📅 Información de Asistencia
+                   </Typography>
+                   <Grid container spacing={2}>
+                     <Grid item xs={12} sm={6} md={4}>
+                       <Typography variant="body2" color="text.secondary">Días Asistidos:</Typography>
+                       <Typography variant="h6" color="info.main" fontWeight="bold">
+                         {modalBonos.empleado.DiasAsistidos || 0}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6} md={4}>
+                       <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
+                       <Typography variant="h6" color="error.main" fontWeight="bold">
+                         {modalBonos.empleado.DiasFaltados || 0}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6} md={4}>
+                       <Typography variant="body2" color="text.secondary">Tardanzas:</Typography>
+                       <Typography variant="h6" color="warning.main" fontWeight="bold">
+                         {modalBonos.empleado.Tardanzas || 0}
+                       </Typography>
+                     </Grid>
+                   </Grid>
+                 </Paper>
+
+                 {/* Información de Descuentos */}
+                 <Paper sx={{ p: 2, mb: 3, backgroundColor: '#fef2f2' }}>
+                   <Typography variant="h6" sx={{ mb: 2, color: '#dc2626' }}>
+                     💸 Información de Descuentos
+                   </Typography>
+                   <Grid container spacing={2}>
+                     <Grid item xs={12} sm={6} md={4}>
+                       <Typography variant="body2" color="text.secondary">Sueldo Base Mensual:</Typography>
+                       <Typography variant="h6" color="info.main" fontWeight="bold">
+                         S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6} md={4}>
+                       <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
+                       <Typography variant="h6" color="error.main" fontWeight="bold">
+                         {modalBonos.empleado.DiasFaltados || 0}
+                       </Typography>
+                     </Grid>
+                     <Grid item xs={12} sm={6} md={4}>
+                       <Typography variant="body2" color="text.secondary">Descuento Total:</Typography>
+                       <Typography variant="h6" color="error.main" fontWeight="bold">
+                         S/ {parseFloat(modalBonos.empleado.DescuentoDiasNoPagados || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </Typography>
+                     </Grid>
+                   </Grid>
+                   
+                   {/* Fórmula del descuento */}
+                   <Box sx={{ mt: 2, p: 2, backgroundColor: '#fef2f2', borderRadius: 1, border: '1px solid #fecaca' }}>
+                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                       📐 Fórmula del Descuento:
+                     </Typography>
+                     <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                       Descuento = (Sueldo Base ÷ 30) × Días Faltados
+                     </Typography>
+                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
+                       = (S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE')} ÷ 30) × {modalBonos.empleado.DiasFaltados || 0}
+                     </Typography>
+                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
+                       = S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)} × {modalBonos.empleado.DiasFaltados || 0}
+                     </Typography>
+                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace', fontWeight: 600 }}>
+                       = S/ {parseFloat(modalBonos.empleado.DescuentoDiasNoPagados || 0).toFixed(2)}
+                     </Typography>
+                   </Box>
                  </Paper>
 
                  {/* Lista de bonos */}
