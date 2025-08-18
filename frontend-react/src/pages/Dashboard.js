@@ -98,23 +98,43 @@ const Dashboard = () => {
     const dniGuardado = localStorage.getItem('empleadoDNI');
     const nombreGuardado = localStorage.getItem('empleadoNombre');
     
-    console.log('🔍 Dashboard montado, verificando localStorage:', { dniGuardado, nombreGuardado });
-    
     if (dniGuardado && nombreGuardado) {
-      console.log('✅ Empleado encontrado en localStorage, restaurando...');
-      // Restaurar el DNI en la barra de búsqueda
-      setSearchTerm(dniGuardado);
-      
-      // Limpiar sugerencias inmediatamente para evitar que aparezcan
-      setSuggestions([]);
-      setSelectedSuggestionIndex(-1);
-      
-      // Buscar y cargar el empleado guardado
-      buscarEmpleado(dniGuardado);
-    } else {
-      console.log('❌ No hay empleado guardado en localStorage');
+      setSelectedEmployee({
+        DNI: dniGuardado,
+        Nombres: nombreGuardado
+      });
+      setShowActions(true);
     }
   }, [location.pathname]);
+
+  // Inyectar estilos CSS para el dropdown de sugerencias
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .search-container {
+        z-index: 99999 !important;
+        position: relative !important;
+      }
+      .search-container .MuiPaper-root {
+        z-index: 99999 !important;
+        position: absolute !important;
+        isolation: isolate !important;
+      }
+      .search-container .MuiPaper-root * {
+        z-index: 99999 !important;
+      }
+      .MuiPaper-root[data-testid="suggestions-dropdown"] {
+        z-index: 99999 !important;
+        position: absolute !important;
+        isolation: isolate !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   // Cerrar sugerencias al hacer clic fuera
   useEffect(() => {
@@ -544,13 +564,25 @@ const Dashboard = () => {
       </Card>
 
       {/* Sección de búsqueda */}
-      <Paper sx={{ p: 4, mb: 4, textAlign: 'center' }}>
+      <Paper sx={{ 
+        p: 4, 
+        mb: 4, 
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 1
+      }}>
         <Typography variant="h5" sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <SearchIcon sx={{ mr: 2 }} />
           Buscar Empleado
         </Typography>
         
-        <Box sx={{ maxWidth: 600, mx: 'auto', position: 'relative' }} className="search-container">
+        <Box sx={{ 
+          maxWidth: 600, 
+          mx: 'auto', 
+          position: 'relative',
+          zIndex: 99999,
+          isolation: 'isolate'
+        }} className="search-container">
           <Box sx={{ display: 'flex' }}>
             <TextField
               fullWidth
@@ -591,15 +623,20 @@ const Dashboard = () => {
           {/* Dropdown de sugerencias */}
           {suggestions.length > 0 && (
             <Paper
+              data-testid="suggestions-dropdown"
               sx={{
                 position: 'absolute',
                 top: '100%',
                 left: 0,
                 right: 0,
-                zIndex: 1000,
+                zIndex: 99999,
                 maxHeight: 200,
                 overflow: 'auto',
-                mt: 1
+                mt: 1,
+                backgroundColor: 'white',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                border: '1px solid #e2e8f0',
+                borderRadius: 1
               }}
             >
               {suggestions.map((emp, index) => (

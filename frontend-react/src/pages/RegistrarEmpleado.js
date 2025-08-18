@@ -670,7 +670,17 @@ const RegistrarEmpleado = () => {
                  />
                  {/* Lista de sugerencias */}
                  {supervisores.length > 0 && (
-                   <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                   <Box sx={{ 
+                     mt: 1, 
+                     maxHeight: 200, 
+                     overflow: 'auto', 
+                     border: '1px solid #e2e8f0', 
+                     borderRadius: 1,
+                     backgroundColor: 'white',
+                     position: 'relative',
+                     zIndex: 9999,
+                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                   }}>
                      {supervisores.map((supervisor, index) => (
                        <Box
                          key={index}
@@ -704,7 +714,17 @@ const RegistrarEmpleado = () => {
                  />
                  {/* Lista de sugerencias */}
                  {coordinadores.length > 0 && (
-                   <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                   <Box sx={{ 
+                     mt: 1, 
+                     maxHeight: 200, 
+                     overflow: 'auto', 
+                     border: '1px solid #e2e8f0', 
+                     borderRadius: 1,
+                     backgroundColor: 'white',
+                     position: 'relative',
+                     zIndex: 9999,
+                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                   }}>
                      {coordinadores.map((coordinador, index) => (
                        <Box
                          key={index}
@@ -738,7 +758,17 @@ const RegistrarEmpleado = () => {
                  />
                  {/* Lista de sugerencias */}
                  {jefes.length > 0 && (
-                   <Box sx={{ mt: 1, maxHeight: 200, overflow: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                   <Box sx={{ 
+                     mt: 1, 
+                     maxHeight: 200, 
+                     overflow: 'auto', 
+                     border: '1px solid #e2e8f0', 
+                     borderRadius: 1,
+                     backgroundColor: 'white',
+                     position: 'relative',
+                     zIndex: 9999,
+                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                   }}>
                      {jefes.map((jefe, index) => (
                        <Box
                          key={index}

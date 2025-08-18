@@ -843,7 +843,16 @@ const Justificaciones = () => {
                       }}
                     />
                     {aprobadorSuggestions.length > 0 && (
-                      <Paper sx={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, mt: 0.5 }}>
+                      <Paper sx={{ 
+                        position: 'absolute', 
+                        top: '100%', 
+                        left: 0, 
+                        right: 0, 
+                        zIndex: 9999, 
+                        mt: 0.5,
+                        backgroundColor: 'white',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                      }}>
                         {aprobadorSuggestions.map((emp, idx) => (
                           <Box
                             key={emp.DNI || emp.dni}
