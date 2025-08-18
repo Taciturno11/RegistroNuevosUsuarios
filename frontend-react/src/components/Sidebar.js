@@ -31,7 +31,8 @@ import {
   AccountCircle as AccountCircleIcon,
   Security as SecurityIcon,
   TableChart as TableChartIcon,
-  AccountBalance as AccountBalanceIcon
+  AccountBalance as AccountBalanceIcon,
+  School as SchoolIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -99,6 +100,9 @@ const Sidebar = () => {
   // Verificar si el usuario es analista (para reporte de asistencias)
   const isAnalista = user?.role === 'analista';
 
+  // Ocultar sidebar completamente en la vista de capacitaciones
+  const isCapacitacionesView = location.pathname === '/capacitaciones';
+
   const handleNavigation = (path) => {
     navigate(path);
   };
@@ -117,6 +121,11 @@ const Sidebar = () => {
     handleNavigation('/');
     setAdminMenuOpen(!adminMenuOpen);
   };
+
+  // Si estamos en la vista de capacitaciones, no renderizar el sidebar
+  if (isCapacitacionesView) {
+    return null;
+  }
 
   return (
     <Drawer
@@ -359,6 +368,39 @@ const Sidebar = () => {
                    <AccountBalanceIcon />
                  </ListItemIcon>
                  {open && <ListItemText primary="Pagos Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
+               </ListItemButton>
+             </ListItem>
+           </>
+         )}
+
+         {/* Capacitaciones - Solo para capacitadores y coordinadoras */}
+         {(user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'admin' || user?.dni === '73766815') && (
+           <>
+             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+             <ListItem disablePadding>
+               <ListItemButton
+                 onClick={() => handleNavigation('/capacitaciones')}
+                 selected={location.pathname === '/capacitaciones'}
+                 sx={{
+                   mx: 1,
+                   borderRadius: 1,
+                   backgroundColor: '#fef3c7', // Fondo amarillo muy claro
+                   border: '1px solid #fde68a', // Borde amarillo claro
+                   '&:hover': {
+                     backgroundColor: '#fde68a',
+                   },
+                   '&.Mui-selected': {
+                     backgroundColor: '#fbbf24',
+                     '&:hover': {
+                       backgroundColor: '#f59e0b',
+                     },
+                   },
+                 }}
+               >
+                 <ListItemIcon sx={{ color: '#d97706', minWidth: open ? 40 : 'auto' }}>
+                   <SchoolIcon />
+                 </ListItemIcon>
+                 {open && <ListItemText primary="Capacitaciones" sx={{ color: '#d97706', fontWeight: 600 }} />}
                </ListItemButton>
              </ListItem>
            </>

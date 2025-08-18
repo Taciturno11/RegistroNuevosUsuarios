@@ -1,13 +1,13 @@
 const sql = require('mssql');
 require('dotenv').config();
 
-// Configuración de la base de datos - USANDO LA MISMA CONFIGURACIÓN DEL PROYECTO ACTUAL
+// Configuración de la base de datos - USANDO LA CONFIGURACIÓN DEL PROYECTO ORIGINAL CAPACITACIONES_BACK
 const dbConfig = {
-  server: process.env.DB_HOST || '127.0.0.1',        // Mismo host del proyecto actual
-  database: process.env.DB_NAME || 'Partner',         // Misma base de datos (Partner)
-  user: process.env.DB_USER || 'tu_usuario',          // Mismo usuario del .env
-  password: process.env.DB_PASS || 'tu_password',     // Misma contraseña del .env
-  port: parseInt(process.env.DB_PORT || '1433'),      // Mismo puerto (1433)
+  server: process.env.SQL_SERVER || '127.0.0.1',        // SQL_SERVER del .env original
+  database: process.env.SQL_DATABASE || 'Partner',       // SQL_DATABASE del .env original
+  user: process.env.SQL_USER || 'tu_usuario',            // SQL_USER del .env original
+  password: process.env.SQL_PASSWORD || 'tu_password',   // SQL_PASSWORD del .env original
+  port: parseInt(process.env.SQL_PORT || '1433'),        // SQL_PORT del .env original
   options: {
     encrypt: false,                                    // Misma configuración
     trustServerCertificate: true,                      // Misma configuración
@@ -102,5 +102,6 @@ module.exports = {
   closeConnection,
   executeQuery,
   executeStoredProcedure,
-  sql
+  sql,
+  pool
 };

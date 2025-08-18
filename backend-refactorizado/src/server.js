@@ -17,6 +17,7 @@ const gruposRoutes = require('./routes/grupos.routes');
 const reportesRoutes = require('./routes/reportes.routes');
 const tardanzasRoutes = require('./routes/tardanzas.routes');
 const permisosRoutes = require('./routes/permisos.routes');
+const capacitacionesRoutes = require('./routes/capacitaciones.routes');
 
 // Importar utilidades de red
 const { printNetworkInfo, getMainIP } = require('./utils/networkUtils');
@@ -81,7 +82,8 @@ app.get('/', (req, res) => {
       grupos: '/api/grupos',
       reportes: '/api/reportes',
       tardanzas: '/api/tardanzas',
-      permisos: '/api/permisos'
+      permisos: '/api/permisos',
+      capacitaciones: '/api/capacitaciones'
     }
   });
 });
@@ -109,6 +111,7 @@ app.use('/api/excepciones', require('./routes/excepciones.routes'));
 app.use('/api/reportes', require('./routes/reportes.routes'));
 app.use('/api/tardanzas', require('./routes/tardanzas.routes'));
 app.use('/api/nomina', require('./routes/nomina.routes'));
+app.use('/api/capacitaciones', capacitacionesRoutes);
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
@@ -142,7 +145,8 @@ app.use('*', (req, res) => {
       '/api/grupos',
       '/api/reportes',
       '/api/tardanzas',
-      '/api/permisos'
+      '/api/permisos',
+      '/api/capacitaciones'
     ],
     timestamp: new Date().toISOString()
   });
@@ -172,6 +176,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log('   /api/grupos - Gestión de grupos');
   console.log('   /api/reportes - Reportes del sistema');
   console.log('   /api/permisos - Permisos especiales');
+  console.log('   /api/capacitaciones - Sistema de capacitaciones');
   console.log('=====================================');
   
   // Mostrar información de red

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { Box, Typography } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -20,6 +20,7 @@ import EjecutarSP from './pages/EjecutarSP';
 import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
 import PagosNomina from './pages/PagosNomina';
+import CapacitacionesFullscreen from './pages/CapacitacionesFullscreen';
 import './App.css';
 
 // Tema personalizado que mantiene la estética del proyecto original
@@ -91,6 +92,7 @@ const BasicProtectedRoute = ({ children }) => {
 // Componente principal de la aplicación
 const AppContent = () => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
   
   console.log('🏠 AppContent renderizándose:', { 
     isAuthenticated, 
@@ -126,6 +128,20 @@ const AppContent = () => {
 
   console.log('✅ AppContent: Usuario autenticado, mostrando aplicación principal');
   
+  // Si estamos en capacitaciones, mostrar solo el componente sin layout principal
+  if (location.pathname === '/capacitaciones') {
+    return (
+      <Routes>
+        <Route path="/capacitaciones" element={
+          <ProtectedRoute requireRole={['capacitador', 'coordinadora', 'admin', 'creador']}>
+            <CapacitacionesFullscreen />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    );
+  }
+  
+  // Layout normal para todas las demás rutas
   return (
     <div style={{ display: 'flex' }}>
       <Sidebar />
@@ -207,6 +223,7 @@ const AppContent = () => {
               <PagosNomina />
             </ProtectedRoute>
           } />
+          
           {/* Rutas no encontradas van al Dashboard en lugar de crear un loop */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
