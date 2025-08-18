@@ -61,7 +61,6 @@ const ReporteAsistencias = () => {
   // Estados principales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [reporteData, setReporteData] = useState(null);
   
   // Estados para filtros
@@ -114,7 +113,6 @@ const ReporteAsistencias = () => {
       if (reporteGuardado) {
         const reporteRestaurado = JSON.parse(reporteGuardado);
         setReporteData(reporteRestaurado);
-        setSuccess('🔄 Datos del reporte restaurados desde la sesión anterior');
       }
 
       // Restaurar paginación
@@ -312,20 +310,6 @@ const ReporteAsistencias = () => {
     return estado.toString();
   };
 
-  // Función para limpiar filtros
-  const limpiarFiltros = () => {
-    setMes(new Date().getMonth() + 1);
-    setAnio(new Date().getFullYear());
-    setCampania('todas');
-    setCargo('todos');
-    setPaginaActual(1);
-    setReporteData(null);
-    setError('');
-    setSuccess('');
-    // Limpiar también el localStorage
-    limpiarEstadoPersistente();
-  };
-
   const meses = [
     { value: 1, label: 'Enero' },
     { value: 2, label: 'Febrero' },
@@ -385,21 +369,6 @@ const ReporteAsistencias = () => {
           }}>
             <TableChartIcon />
             Reporte de Asistencias
-            {reporteData && (
-              <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ 
-                  width: 8, 
-                  height: 8, 
-                  borderRadius: '50%', 
-                  backgroundColor: '#10b981',
-                  mr: 1,
-                  animation: 'pulse 2s infinite'
-                }} />
-                <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                  Datos persistentes
-                </Typography>
-              </Box>
-            )}
           </Typography>
           
           <Box sx={{ width: 80 }} />
@@ -545,7 +514,7 @@ const ReporteAsistencias = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={2}>
+            <Grid item xs={3}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}
@@ -564,26 +533,6 @@ const ReporteAsistencias = () => {
                 {loading ? 'Generando...' : 'Generar Reporte'}
               </Button>
             </Grid>
-            
-            <Grid item xs={1}>
-              <Button
-                variant="outlined"
-                onClick={limpiarFiltros}
-                disabled={loading}
-                fullWidth
-                title="Limpiar solo los filtros, mantiene los datos del reporte"
-                sx={{
-                  borderColor: '#6b7280',
-                  color: '#6b7280',
-                  '&:hover': {
-                    borderColor: '#374151',
-                    backgroundColor: '#f9fafb'
-                  }
-                }}
-              >
-                Limpiar
-              </Button>
-            </Grid>
           </Grid>
         </Box>
 
@@ -594,12 +543,6 @@ const ReporteAsistencias = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
         </Alert>
       )}
 
@@ -720,7 +663,7 @@ const ReporteAsistencias = () => {
                         size="small"
                       />
                     </TableCell>
-                                            {reporteData.metadata.fechasColumnas.map((fecha) => {
+                                        {reporteData.metadata.fechasColumnas.map((fecha) => {
                         const estado = empleado[fecha];
                         
                         // Debug: log del estado para el primer empleado

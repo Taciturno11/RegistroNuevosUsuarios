@@ -180,7 +180,6 @@ const PagosNomina = () => {
       if (reporteGuardado) {
         const reporteRestaurado = JSON.parse(reporteGuardado);
         setReporteNomina(reporteRestaurado);
-        setSuccess('🔄 Datos del reporte restaurados desde la sesión anterior');
       }
 
       // Restaurar estado de expansión de áreas
@@ -923,23 +922,16 @@ const PagosNomina = () => {
          <CardHeader
            title={
              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-               <AccountBalanceIcon sx={{ mr: 2, fontSize: '2rem', color: '#16a34a' }} />
-               <Typography variant="h4">Reporte de Nómina y Asistencia</Typography>
-               {reporteNomina.length > 0 && (
-                 <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
-                   <Box sx={{ 
-                     width: 8, 
-                     height: 8, 
-                     borderRadius: '50%', 
-                     backgroundColor: '#10b981',
-                     mr: 1,
-                     animation: 'pulse 2s infinite'
-                   }} />
-                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                     Datos persistentes
-                   </Typography>
-                 </Box>
-               )}
+               <Box sx={{ 
+                 display: 'flex', 
+                 alignItems: 'center', 
+                 gap: 2 
+               }}>
+                 <AccountBalanceIcon sx={{ fontSize: 28, color: '#16a34a' }} />
+                 <Typography variant="h5" sx={{ fontWeight: 600, color: '#16a34a' }}>
+                   💰 Pagos Nómina
+                 </Typography>
+               </Box>
              </Box>
            }
            action={
@@ -1054,15 +1046,15 @@ const PagosNomina = () => {
 
       {/* Estadísticas del Reporte */}
       {reporteNomina.length > 0 && (
-        <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f0fdf4' }}>
+        <Paper sx={{ p: 3, mb: 3, backgroundColor: 'white' }}>
           <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
             📊 Resumen del Reporte
           </Typography>
           
           {/* KPIs Principales */}
-          <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid container spacing={3} sx={{ mb: 3, justifyContent: 'center' }}>
             <Grid item xs={12} md={3}>
-              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
                 <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
                   {reporteNomina.length}
                 </Typography>
@@ -1072,7 +1064,7 @@ const PagosNomina = () => {
               </Box>
             </Grid>
                          <Grid item xs={12} md={3}>
-               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
+               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
                  <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
                    S/ {reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                  </Typography>
@@ -1082,7 +1074,7 @@ const PagosNomina = () => {
                </Box>
              </Grid>
             <Grid item xs={12} md={3}>
-              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
                 <Typography variant="h4" color="warning.main" sx={{ fontWeight: 'bold' }}>
                   {reporteNomina.filter(r => r.EstadoEmpleado === 'CESE').length}
                 </Typography>
@@ -1092,7 +1084,7 @@ const PagosNomina = () => {
               </Box>
             </Grid>
             <Grid item xs={12} md={3}>
-              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2 }}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
                 <Typography variant="h4" color="info.main" sx={{ fontWeight: 'bold' }}>
                   {reporteNomina.filter(r => r.EstadoEmpleado !== 'CESE').length}
                 </Typography>

@@ -65,7 +65,6 @@ const ReporteTardanzas = () => {
   // Estados principales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [reporteData, setReporteData] = useState(null);
   
   // Estados para la funcionalidad expandible
@@ -132,7 +131,6 @@ const ReporteTardanzas = () => {
       if (reporteGuardado) {
         const reporteRestaurado = JSON.parse(reporteGuardado);
         setReporteData(reporteRestaurado);
-        setSuccess('🔄 Datos del reporte restaurados desde la sesión anterior');
       }
 
       // Restaurar paginación
@@ -246,14 +244,6 @@ const ReporteTardanzas = () => {
         console.log('📊 Total empleados recibidos:', response.data.data.empleados.length);
         console.log('👥 Total tardanzas:', response.data.data.metadata.totalTardanzas);
         
-        // Debug: mostrar todos los empleados recibidos
-        if (response.data.data.empleados && response.data.data.empleados.length > 0) {
-          console.log('📋 Lista de empleados resumidos:');
-          response.data.data.empleados.forEach((emp, index) => {
-            console.log(`  ${index + 1}. ${emp.NombreCompleto} - ${emp.Campaña} - ${emp.Cargo} - ${emp.TotalTardanzas} tardanzas`);
-          });
-        }
-        
         // LIMPIAR datos anteriores antes de establecer nuevos
         setReporteData(null);
         setEmpleadoExpandido(null);
@@ -298,6 +288,12 @@ const ReporteTardanzas = () => {
     setPaginaActual(nuevaPagina);
   }, []);
 
+  // Cambiar elementos por página
+  const cambiarElementosPorPagina = useCallback((nuevosElementos) => {
+    setElementosPorPagina(nuevosElementos);
+    setPaginaActual(1); // Resetear a la primera página
+  }, []);
+
   // Función para limpiar filtros
   const limpiarFiltros = () => {
     setFechaInicio(() => {
@@ -314,16 +310,9 @@ const ReporteTardanzas = () => {
     setPaginaActual(1);
     setReporteData(null);
     setError('');
-    setSuccess('');
     // Limpiar también el localStorage
     limpiarEstadoPersistente();
   };
-
-  // Cambiar elementos por página
-  const cambiarElementosPorPagina = useCallback((nuevosElementos) => {
-    setElementosPorPagina(nuevosElementos);
-    setPaginaActual(1); // Resetear a la primera página
-  }, []);
 
   // Función para obtener detalles de tardanzas de un empleado específico
   const obtenerDetallesEmpleado = async (dni) => {
@@ -523,21 +512,6 @@ const ReporteTardanzas = () => {
           }}>
             <ScheduleIcon />
             Reporte de Tardanzas
-            {reporteData && (
-              <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ 
-                  width: 8, 
-                  height: 8, 
-                  borderRadius: '50%', 
-                  backgroundColor: '#10b981',
-                  mr: 1,
-                  animation: 'pulse 2s infinite'
-                }} />
-                <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                  Datos persistentes
-                </Typography>
-              </Box>
-            )}
           </Typography>
           
           <Box sx={{ width: 80 }} />
@@ -687,7 +661,7 @@ const ReporteTardanzas = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={2.5}>
+            <Grid item xs={3.5}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}
@@ -706,26 +680,6 @@ const ReporteTardanzas = () => {
                 {loading ? 'Generando...' : 'Generar Reporte'}
               </Button>
             </Grid>
-            
-            <Grid item xs={1}>
-              <Button
-                variant="outlined"
-                onClick={limpiarFiltros}
-                disabled={loading}
-                fullWidth
-                title="Limpiar solo los filtros, mantiene los datos del reporte"
-                sx={{
-                  borderColor: '#6b7280',
-                  color: '#6b7280',
-                  '&:hover': {
-                    borderColor: '#374151',
-                    backgroundColor: '#f9fafb'
-                  }
-                }}
-              >
-                Limpiar
-              </Button>
-            </Grid>
           </Grid>
         </Box>
       </Paper>
@@ -734,12 +688,6 @@ const ReporteTardanzas = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </Alert>
-      )}
-      
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
         </Alert>
       )}
 
@@ -1107,8 +1055,6 @@ const ReporteTardanzas = () => {
           </Box>
         </Paper>
       )}
-
-
 
       {/* Mensaje cuando no hay datos */}
       {!loading && reporteData && reporteData.empleados.length === 0 && (
