@@ -38,6 +38,34 @@ import {
   Edit as EditIcon,
   Close as CloseIcon
 } from '@mui/icons-material';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+  ArcElement,
+  BarElement
+} from 'chart.js';
+import { Doughnut, Bar, Line } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  ChartTooltip,
+  Legend,
+  ArcElement,
+  BarElement,
+  ChartDataLabels
+);
 
 const PagosNomina = () => {
   const navigate = useNavigate();
@@ -573,6 +601,112 @@ const PagosNomina = () => {
     setModalBonos({ open: true, empleado });
   };
 
+  // Función para generar datos del gráfico de distribución por áreas
+  const generarDatosGraficoAreas = useCallback(() => {
+    if (!reporteNomina || reporteNomina.length === 0) return null;
+    
+    const pagosPorAreas = calcularPagosPorAreas();
+    if (!pagosPorAreas.areas) return null;
+    
+    const areas = Object.keys(pagosPorAreas.areas).filter(area => area !== 'OTROS');
+    const totales = areas.map(area => pagosPorAreas.areas[area].total);
+    const porcentajes = areas.map(area => pagosPorAreas.areas[area].porcentaje);
+    
+    return {
+      labels: areas,
+      datasets: [
+        {
+          data: totales,
+          backgroundColor: [
+            '#3b82f6', // OUTBOUND - Azul
+            '#8b5cf6', // INBOUND - Morado
+            '#f59e0b'  // STAFF - Anaranjado
+          ],
+          borderColor: [
+            '#1d4ed8',
+            '#7c3aed',
+            '#d97706'
+          ],
+          borderWidth: 2,
+          hoverBackgroundColor: [
+            '#2563eb',
+            '#9333ea',
+            '#ea580c'
+          ]
+        }
+      ]
+    };
+  }, [reporteNomina, calcularPagosPorAreas]);
+
+  // Función para generar datos del gráfico de bonos
+  const generarDatosGraficoBonos = useCallback(() => {
+    if (!reporteNomina || reporteNomina.length === 0) return null;
+    
+    const primerRegistro = reporteNomina[0];
+    const columnasBonos = Object.keys(primerRegistro).filter(columna => 
+      columna.toLowerCase().includes('bono') && 
+      typeof primerRegistro[columna] === 'number'
+    );
+    
+    if (columnasBonos.length === 0) return null;
+    
+    const totalesBonos = columnasBonos.map(columna => 
+      reporteNomina.reduce((sum, r) => sum + (r[columna] || 0), 0)
+    );
+    
+    const nombresLegibles = columnasBonos.map(columna => 
+      columna
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim()
+    );
+    
+    return {
+      labels: nombresLegibles,
+      datasets: [
+        {
+          label: 'Total de Bonos (S/)',
+          data: totalesBonos,
+          backgroundColor: 'rgba(59, 130, 246, 0.8)',
+          borderColor: 'rgba(59, 130, 246, 1)',
+          borderWidth: 2,
+          borderRadius: 4,
+          borderSkipped: false
+        }
+      ]
+    };
+  }, [reporteNomina]);
+
+  // Función para calcular estadísticas generales
+  const calcularEstadisticasGenerales = useCallback(() => {
+    if (!reporteNomina || reporteNomina.length === 0) return {};
+    
+    const totalEmpleados = reporteNomina.length;
+    const totalAPagar = reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+    const empleadosActivos = reporteNomina.filter(r => !r.FechaCesePorBaja).length;
+    const empleadosCese = reporteNomina.filter(r => r.FechaCesePorBaja).length;
+    
+    // Calcular promedios
+    const promedioSueldo = totalEmpleados > 0 ? totalAPagar / totalEmpleados : 0;
+    const promedioAsistencia = totalEmpleados > 0 ? 
+      reporteNomina.reduce((sum, r) => sum + (r.DiasAsistidos || 0), 0) / totalEmpleados : 0;
+    
+    // Calcular porcentajes
+    const porcentajeActivos = totalEmpleados > 0 ? (empleadosActivos / totalEmpleados) * 100 : 0;
+    const porcentajeCese = totalEmpleados > 0 ? (empleadosCese / totalEmpleados) * 100 : 0;
+    
+    return {
+      totalEmpleados,
+      totalAPagar,
+      empleadosActivos,
+      empleadosCese,
+      promedioSueldo,
+      promedioAsistencia,
+      porcentajeActivos,
+      porcentajeCese
+    };
+  }, [reporteNomina]);
+
   // Cerrar modal de bonos
   const cerrarModalBonos = () => {
     setModalBonos({ open: false, empleado: null });
@@ -1022,6 +1156,241 @@ const PagosNomina = () => {
                 </Box>
               );
             })}
+          </Paper>
+        );
+      })()}
+
+      {/* Estadísticas y Gráficos */}
+      {reporteNomina.length > 0 && (() => {
+        const datosGraficoAreas = generarDatosGraficoAreas();
+        const datosGraficoBonos = generarDatosGraficoBonos();
+        const estadisticas = calcularEstadisticasGenerales();
+        
+        return (
+          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8fafc' }}>
+            <Typography variant="h6" sx={{ mb: 3, color: '#16a34a', textAlign: 'center' }}>
+              📊 Estadísticas y Análisis Visual
+            </Typography>
+            
+            <Grid container spacing={3}>
+              {/* Gráfico de Distribución por Áreas */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ 
+                  p: 3, 
+                  backgroundColor: 'white', 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  textAlign: 'center',
+                  height: '400px'
+                }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
+                    🏢 Distribución de Pagos por Áreas
+                  </Typography>
+                  {datosGraficoAreas ? (
+                    <Box sx={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Doughnut 
+                        data={datosGraficoAreas}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: {
+                                padding: 20,
+                                usePointStyle: true
+                              }
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.label || '';
+                                  const value = context.parsed;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((value / total) * 100).toFixed(1);
+                                  return `${label}: S/ ${value.toLocaleString('es-PE')} (${percentage}%)`;
+                                }
+                              }
+                            },
+                            datalabels: {
+                              display: true,
+                              color: '#ffffff',
+                              anchor: 'center',
+                              align: 'center',
+                              font: {
+                                weight: 'bold',
+                                size: 14
+                              },
+                              formatter: function(value, context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${percentage}%`;
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No hay datos para mostrar el gráfico
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+
+              {/* Gráfico de Análisis de Bonos */}
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  p: 3, 
+                  backgroundColor: 'white', 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  textAlign: 'center',
+                  height: '400px',
+                  width: '100%'
+                }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
+                    💰 Análisis de Bonos
+                  </Typography>
+                  {datosGraficoBonos ? (
+                    <Box sx={{ 
+                      height: '300px', 
+                      width: '100%',
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center' 
+                    }}>
+                      <Bar 
+                        data={datosGraficoBonos}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              display: false
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const value = context.parsed.y;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = ((value / total) * 100).toFixed(1);
+                                  return `S/ ${value.toLocaleString('es-PE')} (${percentage}%)`;
+                                }
+                              }
+                            },
+                            datalabels: {
+                              display: true,
+                              color: '#1e40af',
+                              anchor: 'end',
+                              align: 'top',
+                              offset: 4,
+                              font: {
+                                weight: 'bold',
+                                size: 12
+                              },
+                              formatter: function(value) {
+                                return 'S/ ' + value.toLocaleString('es-PE');
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                callback: function(value) {
+                                  return 'S/ ' + value.toLocaleString('es-PE');
+                                }
+                              }
+                            }
+                          }
+                        }}
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No hay datos de bonos para mostrar
+                    </Typography>
+                  )}
+                </Box>
+              </Grid>
+
+              {/* Estadísticas Generales */}
+              <Grid item xs={12} md={6}>
+                <Box sx={{ 
+                  p: 3, 
+                  backgroundColor: 'white', 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  height: '300px'
+                }}>
+                  <Typography variant="h6" sx={{ mb: 3, color: '#16a34a', textAlign: 'center' }}>
+                    📈 Estadísticas Generales
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                          {estadisticas.totalEmpleados || 0}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Empleados
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
+                          S/ {(estadisticas.totalAPagar || 0).toLocaleString('es-PE')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Total a Pagar
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h5" color="info.main" sx={{ fontWeight: 'bold' }}>
+                          {estadisticas.empleadosActivos || 0}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Empleados Activos
+                        </Typography>
+                        <Typography variant="caption" color="success.main">
+                          ({estadisticas.porcentajeActivos?.toFixed(1) || 0}%)
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h5" color="warning.main" sx={{ fontWeight: 'bold' }}>
+                          {estadisticas.empleadosCese || 0}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Empleados en Cese
+                        </Typography>
+                        <Typography variant="caption" color="warning.main">
+                          ({estadisticas.porcentajeCese?.toFixed(1) || 0}%)
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold' }}>
+                          S/ {(estadisticas.promedioSueldo || 0).toLocaleString('es-PE')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Promedio Sueldo
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Grid>
+            </Grid>
           </Paper>
         );
       })()}
