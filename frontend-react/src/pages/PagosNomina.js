@@ -241,21 +241,36 @@ const PagosNomina = () => {
     return { areas, totalGeneral };
   }, [reporteNomina, areasCampañas]);
 
-  // Función para alternar expansión de área
+  // Función para alternar expansión de área (funciona como acordeón)
   const toggleArea = (area) => {
-    setAreasExpandidas(prev => ({
-      ...prev,
-      [area]: !prev[area]
-    }));
+    setAreasExpandidas(prev => {
+      // Si la área ya está expandida, la cerramos
+      if (prev[area]) {
+        return { [area]: false };
+      }
+      // Si no está expandida, cerramos todas las demás y expandimos solo esta
+      return { [area]: true };
+    });
   };
 
-  // Función para alternar expansión de campaña
+  // Función para alternar expansión de campaña (funciona como acordeón por área)
   const toggleCampaña = (area, campaña) => {
     const key = `${area}-${campaña}`;
-    setCampañasExpandidas(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setCampañasExpandidas(prev => {
+      // Si la campaña ya está expandida, la cerramos
+      if (prev[key]) {
+        return { [key]: false };
+      }
+      // Si no está expandida, cerramos todas las campañas del mismo área y expandimos solo esta
+      const newState = {};
+      Object.keys(prev).forEach(existingKey => {
+        if (existingKey.startsWith(`${area}-`)) {
+          newState[existingKey] = false; // Cerrar todas las campañas del área
+        }
+      });
+      newState[key] = true; // Expandir solo la campaña seleccionada
+      return newState;
+    });
   };
 
   // Generar reporte de nómina
@@ -1041,22 +1056,25 @@ const PagosNomina = () => {
                     📋 Campañas de {area}
                   </Typography>
                   
-                  <Grid container spacing={2}>
+                  {/* Menú fijo de campañas */}
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
                     {Object.keys(datosArea.campañas).map((campaña) => {
                       const datosCampaña = datosArea.campañas[campaña];
                       const isCampañaExpanded = campañasExpandidas[`${area}-${campaña}`];
                       
                       return (
-                        <Grid item xs={12} key={campaña}>
+                        <Grid item xs={12} sm={6} md={4} lg={3} key={campaña}>
                           <Box sx={{ 
                             p: 2, 
-                            backgroundColor: 'white',
+                            backgroundColor: isCampañaExpanded ? '#f0fdf4' : 'white',
                             borderRadius: 2,
-                            border: '1px solid #e0e0e0',
+                            border: `2px solid ${isCampañaExpanded ? colorArea : '#e0e0e0'}`,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             '&:hover': { 
-                              borderColor: colorArea
+                              borderColor: colorArea,
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)'
                             }
                           }}
                           onClick={() => toggleCampaña(area, campaña)}
@@ -1072,87 +1090,94 @@ const PagosNomina = () => {
                                 {datosCampaña.empleados} empleados | {datosCampaña.porcentaje.toFixed(1)}% del área
                               </Typography>
                             </Box>
-
-                            {/* Empleados expandidos */}
-                            {isCampañaExpanded && (
-                              <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e5e7eb' }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2, textAlign: 'center', color: colorArea }}>
-                                  👥 Empleados de {campaña}
-                                </Typography>
-                                
-                                <TableContainer>
-                                  <Table size="small">
-                                    <TableHead>
-                                      <TableRow sx={{ backgroundColor: '#f1f5f9' }}>
-                                        <TableCell sx={{ fontWeight: 700 }}>DNI</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Empleado</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Cargo</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }} align="right">Sueldo Base</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }} align="right">Días Trabajados</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }} align="right">Días Asistidos</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }} align="right">Días Faltados</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }} align="right">Total a Pagar</TableCell>
-                                        <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {datosCampaña.registros.map((empleado, index) => (
-                                        <TableRow key={index} hover>
-                                          <TableCell>{empleado.DNI || 'N/A'}</TableCell>
-                                          <TableCell>
-                                            {`${empleado.Nombres || ''} ${empleado.ApellidoPaterno || ''} ${empleado.ApellidoMaterno || ''}`.trim() || 'N/A'}
-                                          </TableCell>
-                                          <TableCell>{empleado.NombreCargo || 'N/A'}</TableCell>
-                                          <TableCell>
-                                            <Box sx={{ 
-                                              px: 1, 
-                                              py: 0.5, 
-                                              borderRadius: 1, 
-                                              backgroundColor: empleado.FechaCesePorBaja ? '#fef2f2' : '#f0fdf4',
-                                              color: empleado.FechaCesePorBaja ? '#dc2626' : '#16a34a',
-                                              fontSize: '0.75rem',
-                                              fontWeight: 600,
-                                              textAlign: 'center'
-                                            }}>
-                                              {empleado.FechaCesePorBaja ? 'CESE' : 'ACTIVO'}
-                                            </Box>
-                                          </TableCell>
-                                          <TableCell align="right">
-                                            S/ {(empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </TableCell>
-                                          <TableCell align="right">{empleado.DiasTrabajados || 0}</TableCell>
-                                          <TableCell align="right">{empleado.DiasAsistidos || 0}</TableCell>
-                                          <TableCell align="right">{empleado.DiasFaltados || 0}</TableCell>
-                                          <TableCell align="right">
-                                            S/ {(empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                          </TableCell>
-                                          <TableCell>
-                                            <Tooltip title="Ver bonos del empleado">
-                                              <IconButton
-                                                size="small"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setModalBonos({ open: true, empleado });
-                                                }}
-                                                sx={{ color: colorArea }}
-                                              >
-                                                <VisibilityIcon />
-                                              </IconButton>
-                                            </Tooltip>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </TableContainer>
-                              </Box>
-                            )}
                           </Box>
                         </Grid>
                       );
                     })}
                   </Grid>
+
+                  {/* Registros de empleados (aparecen debajo de todas las campañas) */}
+                  {Object.keys(datosArea.campañas).map((campaña) => {
+                    const isCampañaExpanded = campañasExpandidas[`${area}-${campaña}`];
+                    if (!isCampañaExpanded) return null;
+                    
+                    const datosCampaña = datosArea.campañas[campaña];
+                    
+                    return (
+                      <Box key={`${area}-${campaña}`} sx={{ mt: 3, pt: 3, borderTop: '2px solid #e5e7eb' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, textAlign: 'center', color: colorArea }}>
+                          👥 Empleados de {campaña}
+                        </Typography>
+                        
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ backgroundColor: '#f1f5f9' }}>
+                                <TableCell sx={{ fontWeight: 700 }}>DNI</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Empleado</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Cargo</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Sueldo Base</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Días Trabajados</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Días Asistidos</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Días Faltados</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="right">Total a Pagar</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Acciones</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {datosCampaña.registros.map((empleado, index) => (
+                                <TableRow key={index} hover>
+                                  <TableCell>{empleado.DNI || 'N/A'}</TableCell>
+                                  <TableCell>
+                                    {`${empleado.Nombres || ''} ${empleado.ApellidoPaterno || ''} ${empleado.ApellidoMaterno || ''}`.trim() || 'N/A'}
+                                  </TableCell>
+                                  <TableCell>{empleado.NombreCargo || 'N/A'}</TableCell>
+                                  <TableCell>
+                                    <Box sx={{ 
+                                      px: 1, 
+                                      py: 0.5, 
+                                      borderRadius: 1, 
+                                      backgroundColor: empleado.FechaCesePorBaja ? '#fef2f2' : '#f0fdf4',
+                                      color: empleado.FechaCesePorBaja ? '#dc2626' : '#16a34a',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      textAlign: 'center'
+                                    }}>
+                                      {empleado.FechaCesePorBaja ? 'CESE' : 'ACTIVO'}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="right">
+                                    S/ {(empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell align="right">{empleado.DiasTrabajados || 0}</TableCell>
+                                  <TableCell align="right">{empleado.DiasAsistidos || 0}</TableCell>
+                                  <TableCell align="right">{empleado.DiasFaltados || 0}</TableCell>
+                                  <TableCell align="right">
+                                    S/ {(empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Tooltip title="Ver bonos del empleado">
+                                      <IconButton
+                                        size="small"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setModalBonos({ open: true, empleado });
+                                        }}
+                                        sx={{ color: colorArea }}
+                                      >
+                                        <VisibilityIcon />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    );
+                  })}
                 </Box>
               );
             })}
