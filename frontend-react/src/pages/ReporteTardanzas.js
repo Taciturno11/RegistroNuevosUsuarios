@@ -40,12 +40,32 @@ import {
 
 const ReporteTardanzas = () => {
   console.log('🚀 ReporteTardanzas: Componente montándose');
+  
+  // Estilos CSS para animaciones
+  React.useEffect(() => {
+    // Agregar estilos CSS para la animación de pulso
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const navigate = useNavigate();
   const { user, api } = useAuth();
   
   // Estados principales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [reporteData, setReporteData] = useState(null);
   
   // Estados para la funcionalidad expandible
@@ -87,9 +107,102 @@ const ReporteTardanzas = () => {
     
     console.log('✅ ReporteTardanzas: Permisos OK, cargando datos');
     cargarOpcionesFiltros();
-    // Cargar reporte automáticamente
-    generarReporte();
+    restaurarEstadoPersistente();
+    // Solo generar reporte si no hay datos restaurados
+    if (!localStorage.getItem('reporteTardanzas_datos')) {
+      generarReporte();
+    }
   }, [user, navigate]);
+
+  // Función para restaurar estado persistente desde localStorage
+  const restaurarEstadoPersistente = () => {
+    try {
+      // Restaurar filtros
+      const filtrosGuardados = localStorage.getItem('reporteTardanzas_filtros');
+      if (filtrosGuardados) {
+        const filtrosRestaurados = JSON.parse(filtrosGuardados);
+        setFechaInicio(filtrosRestaurados.fechaInicio);
+        setFechaFin(filtrosRestaurados.fechaFin);
+        setCampania(filtrosRestaurados.campania);
+        setCargo(filtrosRestaurados.cargo);
+      }
+
+      // Restaurar datos del reporte
+      const reporteGuardado = localStorage.getItem('reporteTardanzas_datos');
+      if (reporteGuardado) {
+        const reporteRestaurado = JSON.parse(reporteGuardado);
+        setReporteData(reporteRestaurado);
+        setSuccess('🔄 Datos del reporte restaurados desde la sesión anterior');
+      }
+
+      // Restaurar paginación
+      const paginacionGuardada = localStorage.getItem('reporteTardanzas_paginacion');
+      if (paginacionGuardada) {
+        const paginacionRestaurada = JSON.parse(paginacionGuardada);
+        setPaginaActual(paginacionRestaurada.paginaActual);
+        setElementosPorPagina(paginacionRestaurada.elementosPorPagina);
+        setTotalElementos(paginacionRestaurada.totalElementos);
+      }
+
+      // Restaurar estado de expansión
+      const expansionGuardada = localStorage.getItem('reporteTardanzas_expansion');
+      if (expansionGuardada) {
+        const expansionRestaurada = JSON.parse(expansionGuardada);
+        setEmpleadoExpandido(expansionRestaurada.empleadoExpandido);
+        setDetallesTardanzas(expansionRestaurada.detallesTardanzas);
+      }
+    } catch (error) {
+      console.error('Error restaurando estado persistente:', error);
+      // Si hay error, limpiar localStorage corrupto
+      limpiarEstadoPersistente();
+    }
+  };
+
+  // Función para guardar estado en localStorage
+  const guardarEstadoPersistente = () => {
+    try {
+      // Guardar filtros
+      localStorage.setItem('reporteTardanzas_filtros', JSON.stringify({
+        fechaInicio,
+        fechaFin,
+        campania,
+        cargo
+      }));
+      
+      // Guardar datos del reporte
+      if (reporteData) {
+        localStorage.setItem('reporteTardanzas_datos', JSON.stringify(reporteData));
+      }
+      
+      // Guardar paginación
+      localStorage.setItem('reporteTardanzas_paginacion', JSON.stringify({
+        paginaActual,
+        elementosPorPagina,
+        totalElementos
+      }));
+
+      // Guardar estado de expansión
+      localStorage.setItem('reporteTardanzas_expansion', JSON.stringify({
+        empleadoExpandido,
+        detallesTardanzas
+      }));
+    } catch (error) {
+      console.error('Error guardando estado persistente:', error);
+    }
+  };
+
+  // Función para limpiar estado persistente
+  const limpiarEstadoPersistente = () => {
+    localStorage.removeItem('reporteTardanzas_filtros');
+    localStorage.removeItem('reporteTardanzas_datos');
+    localStorage.removeItem('reporteTardanzas_paginacion');
+    localStorage.removeItem('reporteTardanzas_expansion');
+  };
+
+  // Guardar estado cada vez que cambien los datos importantes
+  useEffect(() => {
+    guardarEstadoPersistente();
+  }, [fechaInicio, fechaFin, campania, cargo, reporteData, paginaActual, elementosPorPagina, totalElementos, empleadoExpandido, detallesTardanzas]);
 
   const cargarOpcionesFiltros = async () => {
     try {
@@ -184,6 +297,27 @@ const ReporteTardanzas = () => {
   const cambiarPagina = useCallback((nuevaPagina) => {
     setPaginaActual(nuevaPagina);
   }, []);
+
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setFechaInicio(() => {
+      const fecha = new Date();
+      fecha.setDate(1);
+      return fecha.toISOString().split('T')[0];
+    });
+    setFechaFin(() => {
+      const fecha = new Date();
+      return fecha.toISOString().split('T')[0];
+    });
+    setCampania('todas');
+    setCargo('todos');
+    setPaginaActual(1);
+    setReporteData(null);
+    setError('');
+    setSuccess('');
+    // Limpiar también el localStorage
+    limpiarEstadoPersistente();
+  };
 
   // Cambiar elementos por página
   const cambiarElementosPorPagina = useCallback((nuevosElementos) => {
@@ -389,6 +523,21 @@ const ReporteTardanzas = () => {
           }}>
             <ScheduleIcon />
             Reporte de Tardanzas
+            {reporteData && (
+              <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ 
+                  width: 8, 
+                  height: 8, 
+                  borderRadius: '50%', 
+                  backgroundColor: '#10b981',
+                  mr: 1,
+                  animation: 'pulse 2s infinite'
+                }} />
+                <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                  Datos persistentes
+                </Typography>
+              </Box>
+            )}
           </Typography>
           
           <Box sx={{ width: 80 }} />
@@ -538,7 +687,7 @@ const ReporteTardanzas = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={3.5}>
+            <Grid item xs={2.5}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}
@@ -557,9 +706,42 @@ const ReporteTardanzas = () => {
                 {loading ? 'Generando...' : 'Generar Reporte'}
               </Button>
             </Grid>
+            
+            <Grid item xs={1}>
+              <Button
+                variant="outlined"
+                onClick={limpiarFiltros}
+                disabled={loading}
+                fullWidth
+                title="Limpiar solo los filtros, mantiene los datos del reporte"
+                sx={{
+                  borderColor: '#6b7280',
+                  color: '#6b7280',
+                  '&:hover': {
+                    borderColor: '#374151',
+                    backgroundColor: '#f9fafb'
+                  }
+                }}
+              >
+                Limpiar
+              </Button>
+            </Grid>
           </Grid>
         </Box>
       </Paper>
+
+      {/* Alertas */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {success}
+        </Alert>
+      )}
 
       {/* Indicador de carga */}
       {loading && (
@@ -926,12 +1108,7 @@ const ReporteTardanzas = () => {
         </Paper>
       )}
 
-      {/* Mensaje de error */}
-      {error && (
-        <Alert severity="error" sx={{ mt: 2, borderRadius: '12px' }}>
-          {error}
-        </Alert>
-      )}
+
 
       {/* Mensaje cuando no hay datos */}
       {!loading && reporteData && reporteData.empleados.length === 0 && (

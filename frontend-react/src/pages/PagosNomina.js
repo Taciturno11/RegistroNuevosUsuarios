@@ -68,6 +68,23 @@ ChartJS.register(
 );
 
 const PagosNomina = () => {
+  // Estilos CSS para animaciones
+  React.useEffect(() => {
+    // Agregar estilos CSS para la animación de pulso
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
   const navigate = useNavigate();
   const { api } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -145,7 +162,78 @@ const PagosNomina = () => {
   // Cargar años disponibles al montar el componente
   useEffect(() => {
     cargarAniosDisponibles();
+    restaurarEstadoPersistente();
   }, [cargarAniosDisponibles]);
+
+  // Función para restaurar estado persistente desde localStorage
+  const restaurarEstadoPersistente = () => {
+    try {
+      // Restaurar filtros
+      const filtrosGuardados = localStorage.getItem('pagosNomina_filtros');
+      if (filtrosGuardados) {
+        const filtrosRestaurados = JSON.parse(filtrosGuardados);
+        setFiltros(filtrosRestaurados);
+      }
+
+      // Restaurar datos del reporte
+      const reporteGuardado = localStorage.getItem('pagosNomina_datos');
+      if (reporteGuardado) {
+        const reporteRestaurado = JSON.parse(reporteGuardado);
+        setReporteNomina(reporteRestaurado);
+        setSuccess('🔄 Datos del reporte restaurados desde la sesión anterior');
+      }
+
+      // Restaurar estado de expansión de áreas
+      const areasGuardadas = localStorage.getItem('pagosNomina_areasExpandidas');
+      if (areasGuardadas) {
+        setAreasExpandidas(JSON.parse(areasGuardadas));
+      }
+
+      // Restaurar estado de expansión de campañas
+      const campañasGuardadas = localStorage.getItem('pagosNomina_campañasExpandidas');
+      if (campañasGuardadas) {
+        setCampañasExpandidas(JSON.parse(campañasGuardadas));
+      }
+    } catch (error) {
+      console.error('Error restaurando estado persistente:', error);
+      // Si hay error, limpiar localStorage corrupto
+      limpiarEstadoPersistente();
+    }
+  };
+
+  // Función para guardar estado en localStorage
+  const guardarEstadoPersistente = () => {
+    try {
+      // Guardar filtros
+      localStorage.setItem('pagosNomina_filtros', JSON.stringify(filtros));
+      
+      // Guardar datos del reporte
+      if (reporteNomina.length > 0) {
+        localStorage.setItem('pagosNomina_datos', JSON.stringify(reporteNomina));
+      }
+      
+      // Guardar estado de expansión de áreas
+      localStorage.setItem('pagosNomina_areasExpandidas', JSON.stringify(areasExpandidas));
+      
+      // Guardar estado de expansión de campañas
+      localStorage.setItem('pagosNomina_campañasExpandidas', JSON.stringify(campañasExpandidas));
+    } catch (error) {
+      console.error('Error guardando estado persistente:', error);
+    }
+  };
+
+  // Función para limpiar estado persistente
+  const limpiarEstadoPersistente = () => {
+    localStorage.removeItem('pagosNomina_filtros');
+    localStorage.removeItem('pagosNomina_datos');
+    localStorage.removeItem('pagosNomina_areasExpandidas');
+    localStorage.removeItem('pagosNomina_campañasExpandidas');
+  };
+
+  // Guardar estado cada vez que cambien los datos importantes
+  useEffect(() => {
+    guardarEstadoPersistente();
+  }, [filtros, reporteNomina, areasExpandidas, campañasExpandidas]);
 
   // Función para calcular días correctamente
   const calcularDias = (registro) => {
@@ -351,6 +439,21 @@ const PagosNomina = () => {
       return;
     }
 
+    // Verificar si ya tenemos datos para estos filtros
+    const filtrosGuardados = localStorage.getItem('pagosNomina_filtros');
+    const reporteGuardado = localStorage.getItem('pagosNomina_datos');
+    
+    if (filtrosGuardados && reporteGuardado) {
+      const filtrosAnteriores = JSON.parse(filtrosGuardados);
+      if (filtrosAnteriores.anio === filtros.anio && filtrosAnteriores.mes === filtros.mes) {
+        // Los filtros son los mismos, restaurar datos existentes
+        const reporteExistente = JSON.parse(reporteGuardado);
+        setReporteNomina(reporteExistente);
+        setSuccess('Reporte restaurado desde la sesión anterior');
+        return;
+      }
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -416,6 +519,8 @@ const PagosNomina = () => {
     }
   };
 
+
+
   // Limpiar filtros
   const limpiarFiltros = () => {
     setFiltros({
@@ -425,7 +530,11 @@ const PagosNomina = () => {
     setReporteNomina([]);
     setError('');
     setSuccess('');
+    // Limpiar también el localStorage
+    limpiarEstadoPersistente();
   };
+
+
 
   // Exportar a Excel
   const exportarExcel = async () => {
@@ -809,26 +918,41 @@ const PagosNomina = () => {
 
   return (
     <Box>
-      {/* Header */}
-      <Card sx={{ mb: 4 }}>
-        <CardHeader
-          title={
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AccountBalanceIcon sx={{ mr: 2, fontSize: '2rem', color: '#16a34a' }} />
-              <Typography variant="h4">Reporte de Nómina y Asistencia</Typography>
-            </Box>
-          }
-          action={
-            <Button
-              variant="outlined"
-              startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/')}
-            >
-              Volver al Dashboard
-            </Button>
-          }
-        />
-      </Card>
+             {/* Header */}
+       <Card sx={{ mb: 4 }}>
+         <CardHeader
+           title={
+             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+               <AccountBalanceIcon sx={{ mr: 2, fontSize: '2rem', color: '#16a34a' }} />
+               <Typography variant="h4">Reporte de Nómina y Asistencia</Typography>
+               {reporteNomina.length > 0 && (
+                 <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
+                   <Box sx={{ 
+                     width: 8, 
+                     height: 8, 
+                     borderRadius: '50%', 
+                     backgroundColor: '#10b981',
+                     mr: 1,
+                     animation: 'pulse 2s infinite'
+                   }} />
+                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                     Datos persistentes
+                   </Typography>
+                 </Box>
+               )}
+             </Box>
+           }
+           action={
+             <Button
+               variant="outlined"
+               startIcon={<ArrowBackIcon />}
+               onClick={() => navigate('/')}
+             >
+               Volver al Dashboard
+             </Button>
+           }
+         />
+       </Card>
 
       {/* Filtros */}
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -886,13 +1010,14 @@ const PagosNomina = () => {
                 {loading ? 'Generando...' : 'Generar Reporte'}
               </Button>
               
-              <Button
-                variant="outlined"
-                onClick={limpiarFiltros}
-                disabled={loading}
-              >
-                Limpiar
-              </Button>
+                             <Button
+                 variant="outlined"
+                 onClick={limpiarFiltros}
+                 disabled={loading}
+                 title="Limpiar solo los filtros, mantiene los datos del reporte"
+               >
+                 Limpiar Filtros
+               </Button>
               
               {reporteNomina.length > 0 && (
                 <Button

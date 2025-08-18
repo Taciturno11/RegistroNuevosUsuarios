@@ -37,12 +37,31 @@ import {
 } from '@mui/icons-material';
 
 const ReporteAsistencias = () => {
+  // Estilos CSS para animaciones
+  React.useEffect(() => {
+    // Agregar estilos CSS para la animación de pulso
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const navigate = useNavigate();
   const { user, api } = useAuth();
   
   // Estados principales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [reporteData, setReporteData] = useState(null);
   
   // Estados para filtros
@@ -70,9 +89,87 @@ const ReporteAsistencias = () => {
     }
     
     cargarOpcionesFiltros();
-    // Cargar reporte del mes actual por defecto
-    generarReporte();
+    restaurarEstadoPersistente();
+    // Solo generar reporte si no hay datos restaurados
+    if (!localStorage.getItem('reporteAsistencias_datos')) {
+      generarReporte();
+    }
   }, [user, navigate]);
+
+  // Función para restaurar estado persistente desde localStorage
+  const restaurarEstadoPersistente = () => {
+    try {
+      // Restaurar filtros
+      const filtrosGuardados = localStorage.getItem('reporteAsistencias_filtros');
+      if (filtrosGuardados) {
+        const filtrosRestaurados = JSON.parse(filtrosGuardados);
+        setMes(filtrosRestaurados.mes);
+        setAnio(filtrosRestaurados.anio);
+        setCampania(filtrosRestaurados.campania);
+        setCargo(filtrosRestaurados.cargo);
+      }
+
+      // Restaurar datos del reporte
+      const reporteGuardado = localStorage.getItem('reporteAsistencias_datos');
+      if (reporteGuardado) {
+        const reporteRestaurado = JSON.parse(reporteGuardado);
+        setReporteData(reporteRestaurado);
+        setSuccess('🔄 Datos del reporte restaurados desde la sesión anterior');
+      }
+
+      // Restaurar paginación
+      const paginacionGuardada = localStorage.getItem('reporteAsistencias_paginacion');
+      if (paginacionGuardada) {
+        const paginacionRestaurada = JSON.parse(paginacionGuardada);
+        setPaginaActual(paginacionRestaurada.paginaActual);
+        setElementosPorPagina(paginacionRestaurada.elementosPorPagina);
+        setTotalElementos(paginacionRestaurada.totalElementos);
+      }
+    } catch (error) {
+      console.error('Error restaurando estado persistente:', error);
+      // Si hay error, limpiar localStorage corrupto
+      limpiarEstadoPersistente();
+    }
+  };
+
+  // Función para guardar estado en localStorage
+  const guardarEstadoPersistente = () => {
+    try {
+      // Guardar filtros
+      localStorage.setItem('reporteAsistencias_filtros', JSON.stringify({
+        mes,
+        anio,
+        campania,
+        cargo
+      }));
+      
+      // Guardar datos del reporte
+      if (reporteData) {
+        localStorage.setItem('reporteAsistencias_datos', JSON.stringify(reporteData));
+      }
+      
+      // Guardar paginación
+      localStorage.setItem('reporteAsistencias_paginacion', JSON.stringify({
+        paginaActual,
+        elementosPorPagina,
+        totalElementos
+      }));
+    } catch (error) {
+      console.error('Error guardando estado persistente:', error);
+    }
+  };
+
+  // Función para limpiar estado persistente
+  const limpiarEstadoPersistente = () => {
+    localStorage.removeItem('reporteAsistencias_filtros');
+    localStorage.removeItem('reporteAsistencias_datos');
+    localStorage.removeItem('reporteAsistencias_paginacion');
+  };
+
+  // Guardar estado cada vez que cambien los datos importantes
+  useEffect(() => {
+    guardarEstadoPersistente();
+  }, [mes, anio, campania, cargo, reporteData, paginaActual, elementosPorPagina, totalElementos]);
 
   const cargarOpcionesFiltros = async () => {
     try {
@@ -215,6 +312,20 @@ const ReporteAsistencias = () => {
     return estado.toString();
   };
 
+  // Función para limpiar filtros
+  const limpiarFiltros = () => {
+    setMes(new Date().getMonth() + 1);
+    setAnio(new Date().getFullYear());
+    setCampania('todas');
+    setCargo('todos');
+    setPaginaActual(1);
+    setReporteData(null);
+    setError('');
+    setSuccess('');
+    // Limpiar también el localStorage
+    limpiarEstadoPersistente();
+  };
+
   const meses = [
     { value: 1, label: 'Enero' },
     { value: 2, label: 'Febrero' },
@@ -274,6 +385,21 @@ const ReporteAsistencias = () => {
           }}>
             <TableChartIcon />
             Reporte de Asistencias
+            {reporteData && (
+              <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ 
+                  width: 8, 
+                  height: 8, 
+                  borderRadius: '50%', 
+                  backgroundColor: '#10b981',
+                  mr: 1,
+                  animation: 'pulse 2s infinite'
+                }} />
+                <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                  Datos persistentes
+                </Typography>
+              </Box>
+            )}
           </Typography>
           
           <Box sx={{ width: 80 }} />
@@ -419,7 +545,7 @@ const ReporteAsistencias = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={3}>
+            <Grid item xs={2}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}
@@ -438,11 +564,44 @@ const ReporteAsistencias = () => {
                 {loading ? 'Generando...' : 'Generar Reporte'}
               </Button>
             </Grid>
+            
+            <Grid item xs={1}>
+              <Button
+                variant="outlined"
+                onClick={limpiarFiltros}
+                disabled={loading}
+                fullWidth
+                title="Limpiar solo los filtros, mantiene los datos del reporte"
+                sx={{
+                  borderColor: '#6b7280',
+                  color: '#6b7280',
+                  '&:hover': {
+                    borderColor: '#374151',
+                    backgroundColor: '#f9fafb'
+                  }
+                }}
+              >
+                Limpiar
+              </Button>
+            </Grid>
           </Grid>
         </Box>
 
 
       </Paper>
+
+      {/* Alertas */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {success}
+        </Alert>
+      )}
 
       {/* Tabla de reporte - Inmediatamente después del header */}
       {reporteData && (
