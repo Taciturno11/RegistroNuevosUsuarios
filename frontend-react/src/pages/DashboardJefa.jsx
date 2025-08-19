@@ -401,134 +401,123 @@ export default function DashboardJefa() {
 
   return (
     <Box sx={{ minHeight: '100vh', background: '#f7f9fd' }}>
-      {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        px: 8, 
-        py: 3, 
-        bgcolor: 'white', 
-        boxShadow: 2, 
-        borderRadius: '0 0 24px 24px', 
-        mb: 4 
-      }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box component="img" 
-              src="/partner.svg" 
-              alt="logo" 
-              sx={{ 
-                width: 40, 
-                height: 40
-              }} 
-            />
-            <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#22314a' }}>
-              Panel de Jefa de Capacitaciones
-            </Typography>
-          </Box>
-          <Typography variant="h6" sx={{ ml: 12, color: '#22314a', fontWeight: 'bold' }}>
-            {nombreCompleto} 👋
-          </Typography>
-        </Box>
-        
-        {/* Botón para regresar al sidebar */}
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={() => window.history.back()}
-          startIcon={<RefreshIcon />}
-          sx={{
-            borderRadius: 2,
-            px: 3,
-            py: 1.5,
-            fontWeight: 'bold',
-            borderWidth: 2,
-            '&:hover': {
-              borderWidth: 2,
-              transform: 'translateY(-2px)',
-              boxShadow: 3
-            },
-            transition: 'all 0.2s ease-in-out'
-          }}
-        >
-          Regresar al Sidebar
-        </Button>
-      </Box>
+             {/* Header */}
+       <Box sx={{ 
+         display: 'flex', 
+         alignItems: 'center', 
+         justifyContent: 'space-between', 
+         px: 8, 
+         py: 2, 
+         bgcolor: 'white', 
+         boxShadow: 2, 
+         borderRadius: '0 0 24px 24px', 
+         mb: 4 
+       }}>
+         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+             <Box component="img" 
+               src="/partner.svg" 
+               alt="logo" 
+               sx={{ 
+                 width: 32, 
+                 height: 32
+               }} 
+             />
+             <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#22314a' }}>
+               Panel de Jefa de Capacitaciones
+             </Typography>
+           </Box>
+           <Typography variant="body1" sx={{ ml: 10, color: '#22314a', fontWeight: 'bold' }}>
+             {nombreCompleto} 👋
+           </Typography>
+         </Box>
+         
+         {/* Botón para regresar al sidebar - Estilo similar al de capacitadores */}
+         <Button
+           variant="contained"
+           onClick={() => window.history.back()}
+           sx={{
+             backgroundColor: '#297373',
+             color: 'white',
+             borderRadius: '50px',
+             px: 4,
+             py: 1.5,
+             fontWeight: 'bold',
+             boxShadow: 2,
+             border: '1px solid #297373',
+             '&:hover': {
+               backgroundColor: 'rgba(41, 115, 115, 0.8)',
+               transform: 'translateY(-1px)',
+               boxShadow: 3
+             },
+             transition: 'all 0.2s ease-in-out'
+           }}
+         >
+           ← Volver al Dashboard
+         </Button>
+       </Box>
 
-      {/* Filtros */}
-      <Box sx={{ display: 'flex', gap: 4, px: 8, mb: 4 }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>Campaña</InputLabel>
-          <Select
+                           {/* Filtros - Estilo exacto del proyecto anterior */}
+        <div className="flex gap-4 px-8 mb-4">
+          <select
+            className="px-4 py-2 rounded-xl border border-blue-200 bg-white/80 text-blue-900 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
             value={campania}
-            onChange={(e) => setCampania(e.target.value)}
-            label="Campaña"
+            onChange={e => setCampania(e.target.value)}
           >
-            <MenuItem value="">Todas las campañas</MenuItem>
+            <option value="">Todas las campañas</option>
             {Array.isArray(campanias) && campanias.length > 0 ? campanias.map(c => (
-              <MenuItem key={`camp-${c.id}`} value={c.id}>
+              <option key={`camp-${c.id}`} value={c.id}>
                 {c.nombre}
-              </MenuItem>
+              </option>
             )) : (
-              <MenuItem disabled>No hay campañas disponibles</MenuItem>
+              <option disabled>No hay campañas disponibles</option>
             )}
-          </Select>
-        </FormControl>
-        
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>Mes</InputLabel>
-          <Select
+          </select>
+          
+          <select
+            className="px-4 py-2 rounded-xl border border-blue-200 bg-white/80 text-blue-900 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
             value={mes}
-            onChange={(e) => setMes(e.target.value)}
-            label="Mes"
+            onChange={e => setMes(e.target.value)}
           >
-            <MenuItem value="">Todos los meses</MenuItem>
+            <option value="">Todos los meses</option>
             {Array.isArray(meses) && meses.length > 0 ? meses.map(m => (
-              <MenuItem key={`mes-${m.mes}`} value={m.mes}>
+              <option key={`mes-${m.mes}`} value={m.mes}>
                 {m.nombre}
-              </MenuItem>
+              </option>
             )) : (
-              <MenuItem disabled>No hay meses disponibles</MenuItem>
+              <option disabled>No hay meses disponibles</option>
             )}
-          </Select>
-        </FormControl>
-      </Box>
+          </select>
+        </div>
 
-      {/* KPIs */}
-      <Grid container spacing={2} sx={{ px: 8, mb: 6 }}>
-        {Array.isArray(kpi) && kpi.length > 0 ? kpi.map((k, i) => (
-          <Grid item key={`kpi-${i}`} sx={{ width: { xs: '100%', sm: '50%', md: '14.28%' } }}>
-            <Card sx={{ 
-              textAlign: 'center', 
-              p: 2, 
-              boxShadow: 2,
-              border: `2px solid ${k.color}`,
-              borderRadius: 2,
-              minHeight: 100
-            }}>
-              <CardContent sx={{ p: '8px !important' }}>
-                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, color: k.color }}>
-                  {k.value}
-                </Typography>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', lineHeight: 1.2 }}>
-                  {k.label}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        )) : (
-          <Grid item sx={{ width: '100%' }}>
-            <Card sx={{ textAlign: 'center', p: 4, boxShadow: 3 }}>
-              <CardContent>
-                <Typography variant="h6" color="text.secondary">
-                  No hay datos para mostrar en los KPIs
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-      </Grid>
+        {/* KPIs - Estilo exacto del proyecto anterior */}
+        <div className="grid grid-cols-7 gap-4 px-8 mb-8">
+          {Array.isArray(kpi) && kpi.length > 0 ? kpi.map((k, i) => {
+            // Colores exactos del proyecto anterior
+            const kpiColors = [
+              "bg-blue-100 text-blue-800",      // Capacitadores activos
+              "bg-emerald-100 text-emerald-800", // Postulantes totales
+              "bg-rose-100 text-rose-800",      // Deserciones
+              "bg-orange-100 text-orange-800",  // Deserciones ATH1
+              "bg-red-100 text-red-800",        // Deserciones ATH2
+              "bg-purple-100 text-purple-800",  // Deserciones Formación
+              "bg-yellow-100 text-yellow-800"   // % Éxito
+            ];
+            
+            const colorClass = kpiColors[i] || "bg-gray-100 text-gray-800";
+            
+            return (
+              <div key={`kpi-${i}`} className={`rounded-2xl p-4 shadow-lg flex flex-col items-center ${colorClass}`}>
+                <span className="text-2xl font-bold mb-1">{k.value}</span>
+                <span className="text-sm font-semibold text-center">{k.label}</span>
+              </div>
+            );
+          }) : (
+            <div className="col-span-7 text-center py-8 text-gray-500">
+              No hay datos para mostrar en los KPIs
+            </div>
+          )}
+        </div>
 
       {/* Resumen de Capacitaciones */}
       <div className="px-8 mb-8">
