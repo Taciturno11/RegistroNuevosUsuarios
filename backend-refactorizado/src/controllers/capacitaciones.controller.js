@@ -1,13 +1,7 @@
 const sql = require('mssql');
 const { getConnection } = require('../config/database');
 
-// Helper: new Request() con pool global (igual que el proyecto original)
-const R = async () => {
-  const pool = await getConnection();
-  return pool.request();
-};
-
-// Duración de campañas (idéntico al original)
+// Duración de campañas (idéntico al proyecto original)
 const DURACION = {
   "Unificado"         : { cap: 14, ojt: 5 },
   "Renovacion"        : { cap: 5 , ojt: 5 },
@@ -61,6 +55,12 @@ function obtenerDuracion(campania) {
   
   return resultado;
 }
+
+// Helper: new Request() con pool global (igual que el proyecto original)
+const R = async () => {
+  const pool = await getConnection();
+  return pool.request();
+};
 
 // Obtener capas disponibles para un capacitador
 const getCapas = async (req, res) => {
@@ -1329,6 +1329,321 @@ const obtenerCapasDashboardJefa = async (req, res) => {
   }
 };
 
+/**
+ * Obtener resumen de capacitaciones para la jefa con paginación
+ * GET /api/capacitaciones/resumen-jefe
+ */
+const obtenerResumenJefa = async (req, res) => {
+  try {
+    // Parámetros de paginación y filtros
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const campania = req.query.campania;
+    const formador = req.query.formador;
+    const estado = req.query.estado;
+    
+    console.log('📊 Obteniendo resumen de capacitaciones para jefa con filtros:', { campania, formador, estado, page, pageSize });
+    
+    // Construir query base con filtros
+    let query = `
+      SELECT pf.CampañaID, pf.FechaInicio, pf.DNI_Capacitador, c.NombreCampaña, m.NombreModalidad,
+             pf.DNI_Capacitador AS formadorDNI, pf.FechaInicio AS inicioCapa,
+             pf.ModalidadID, pf.CampañaID,
+             e.Nombres + ' ' + e.ApellidoPaterno + ' ' + e.ApellidoMaterno AS formador
+      FROM Postulantes_En_Formacion pf
+      LEFT JOIN PRI.Campanias c ON pf.CampañaID = c.CampañaID
+      LEFT JOIN PRI.ModalidadesTrabajo m ON pf.ModalidadID = m.ModalidadID
+      LEFT JOIN PRI.Empleados e ON pf.DNI_Capacitador = e.DNI
+      WHERE pf.FechaInicio IS NOT NULL
+    `;
+    
+    // Agregar filtros si están presentes
+    if (campania) {
+      query += ` AND c.NombreCampaña = @campania`;
+    }
+    if (formador) {
+      query += ` AND e.Nombres + ' ' + e.ApellidoPaterno + ' ' + e.ApellidoMaterno = @formador`;
+    }
+    
+    query += ` GROUP BY pf.CampañaID, pf.FechaInicio, pf.DNI_Capacitador, c.NombreCampaña, m.NombreModalidad, pf.ModalidadID, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno`;
+    
+    // Ejecutar query con parámetros
+    const pool = await getConnection();
+    const request = pool.request();
+    if (campania) request.input('campania', sql.VarChar(100), campania);
+    if (formador) request.input('formador', sql.VarChar(200), formador);
+    
+    const lotes = await request.query(query);
+    let rows = lotes.recordset;
+    console.log(`📊 Lotes encontrados: ${rows.length}`);
+
+    // 2. Traer Q ENTRE para cada lote (por ahora usar 0 como valor por defecto)
+    const qEntreMap = {};
+    rows.forEach(lote => {
+      const key = `${lote.CampañaID}_${lote.FechaInicio.toISOString().slice(0,10)}_${lote.DNI_Capacitador}`;
+      qEntreMap[key] = 0; // Valor por defecto, se puede implementar tabla QEntre_Jefe después
+    });
+
+    // 3. Traer lista de postulantes por lote
+    const postRows = await pool.request().query(`
+      SELECT CampañaID, FechaInicio, DNI_Capacitador, COUNT(*) AS lista
+      FROM Postulantes_En_Formacion
+      WHERE FechaInicio IS NOT NULL
+      GROUP BY CampañaID, FechaInicio, DNI_Capacitador
+    `);
+    const listaMap = {};
+    postRows.recordset.forEach(p => {
+      listaMap[`${p.CampañaID}_${p.FechaInicio.toISOString().slice(0,10)}_${p.DNI_Capacitador}`] = p.lista;
+    });
+
+    // 4. Traer asistencias por lote y día
+    const asisRows = await pool.request().query(`
+      SELECT DISTINCT p.CampañaID, p.FechaInicio, a.fecha, a.estado_asistencia, p.DNI_Capacitador, a.postulante_dni
+      FROM Asistencia_Formacion a
+      JOIN Postulantes_En_Formacion p ON a.postulante_dni = p.DNI 
+        AND a.fecha_inicio = p.FechaInicio
+        AND a.CampañaID = p.CampañaID
+      WHERE p.FechaInicio IS NOT NULL
+    `);
+    
+    const asisMap = {};
+    asisRows.recordset.forEach(a => {
+      const key = `${a.CampañaID}_${a.FechaInicio.toISOString().slice(0,10)}_${a.DNI_Capacitador}`;
+      if (!asisMap[key]) asisMap[key] = {};
+      if (!asisMap[key][a.fecha.toISOString().slice(0,10)]) {
+        asisMap[key][a.fecha.toISOString().slice(0,10)] = [];
+      }
+      asisMap[key][a.fecha.toISOString().slice(0,10)].push(a.estado_asistencia);
+    });
+
+    // 5. Traer bajas por lote (solo del día 3 en adelante)
+    const todasDeserciones = await pool.request().query(`
+      SELECT d.postulante_dni, d.fecha_desercion, p.CampañaID, p.FechaInicio, p.DNI_Capacitador
+      FROM Deserciones_Formacion d
+      JOIN Postulantes_En_Formacion p ON p.DNI = d.postulante_dni 
+        AND p.CampañaID = d.CampañaID
+        AND p.FechaInicio = d.fecha_inicio
+      WHERE p.FechaInicio IS NOT NULL
+    `);
+    
+    // Función para calcular días laborables entre dos fechas
+    const calcularDiasLaborables = (fechaInicio, fechaDesercion) => {
+      const inicio = new Date(fechaInicio);
+      const desercion = new Date(fechaDesercion);
+      let diasLaborables = 0;
+      let fechaActual = new Date(inicio);
+      
+      while (fechaActual <= desercion) {
+        if (fechaActual.getDay() !== 0) { // Excluir domingos
+          diasLaborables++;
+        }
+        fechaActual.setDate(fechaActual.getDate() + 1);
+      }
+      return diasLaborables;
+    };
+    
+    // Filtrar deserciones del día 3 en adelante (días laborables)
+    const desercionesFiltradas = todasDeserciones.recordset.filter(d => {
+      const diasLaborables = calcularDiasLaborables(d.FechaInicio, d.fecha_desercion);
+      return diasLaborables >= 3;
+    });
+    
+    // Agrupar por lote
+    const bajasMap = {};
+    desercionesFiltradas.forEach(d => {
+      const key = `${d.CampañaID}_${d.FechaInicio.toISOString().slice(0,10)}_${d.DNI_Capacitador}`;
+      if (!bajasMap[key]) bajasMap[key] = 0;
+      bajasMap[key]++;
+    });
+
+    // 6. Armar los datos finales
+    let allRows = rows.map(lote => {
+      const campaniaId = String(lote.CampañaID).split(',')[0];
+      const key = `${campaniaId}_${lote.FechaInicio.toISOString().slice(0,10)}_${lote.DNI_Capacitador}`;
+      
+      const qEntre = qEntreMap[key] || 0;
+      const esperado = qEntre * 2;
+      const lista = listaMap[key] || 0;
+      
+      // Primer día (asistencia)
+      const primerDiaFecha = lote.FechaInicio.toISOString().slice(0,10);
+      let primerDia = 0;
+      if (asisMap[key] && asisMap[key][primerDiaFecha]) {
+        primerDia = asisMap[key][primerDiaFecha].filter(estado => estado === 'A').length;
+      }
+      
+      // % EFEC ATH
+      const porcentajeEfec = esperado > 0 ? Math.round((primerDia / esperado) * 100) : 0;
+      let riesgoAth = 'Sin riesgo';
+      if (porcentajeEfec < 60) riesgoAth = 'Riesgo alto';
+      else if (porcentajeEfec < 85) riesgoAth = 'Riesgo medio';
+      
+      // Días - calcular asistencias reales por día (excluyendo domingos)
+      const asistencias = Array(31).fill(0);
+      if (asisMap[key]) {
+        // Función para obtener siguiente fecha excluyendo domingos
+        const nextDate = (iso) => {
+          const [y,m,d] = iso.split("-").map(Number);
+          const dt = new Date(y, m-1, d);
+          do { dt.setDate(dt.getDate()+1); } while (dt.getDay()===0);
+          return dt.toISOString().slice(0,10);
+        };
+        
+        // Calcular fechas consecutivas sin domingos
+        let fechasConsecutivas = [lote.FechaInicio.toISOString().slice(0,10)];
+        for (let i = 1; i < 31; i++) {
+          fechasConsecutivas.push(nextDate(fechasConsecutivas[i-1]));
+        }
+        
+        // Para cada día consecutivo, contar cuántos tienen asistencia 'A'
+        for (let dia = 0; dia < 31; dia++) {
+          const fechaStr = fechasConsecutivas[dia];
+          if (asisMap[key][fechaStr]) {
+            asistencias[dia] = asisMap[key][fechaStr].filter(estado => estado === 'A').length;
+          }
+        }
+      }
+      
+      // Activos = lista - bajas
+      const qBajas = bajasMap[key] || 0;
+      const activos = lista - qBajas;
+      
+      // Calcular porcentaje de deserción
+      let postulantesDia2 = 0;
+      let dia2Laborable = new Date(lote.FechaInicio);
+      let diasAvanzados = 0;
+      while (diasAvanzados < 2) {
+        dia2Laborable.setDate(dia2Laborable.getDate() + 1);
+        if (dia2Laborable.getDay() !== 0) {
+          diasAvanzados++;
+        }
+      }
+      
+      const dia2Fecha = dia2Laborable.toISOString().slice(0,10);
+      if (asisMap[key] && asisMap[key][dia2Fecha]) {
+        postulantesDia2 = asisMap[key][dia2Fecha].filter(estado => 
+          estado === 'A' || estado === 'F' || estado === 'J' || estado === 'T'
+        ).length;
+      }
+      
+      const porcentajeDeser = postulantesDia2 > 0 ? Math.round((qBajas / postulantesDia2) * 100) : 0;
+      
+      // Calcular fecha fin OJT basada en la duración de la campaña
+      const duracion = obtenerDuracion(lote.NombreCampaña);
+      const fechaInicio = new Date(lote.FechaInicio);
+      
+      // Función para obtener siguiente fecha excluyendo domingos
+      const nextDate = (iso) => {
+        const [y,m,d] = iso.split("-").map(Number);
+        const dt = new Date(y, m-1, d);
+        do { dt.setDate(dt.getDate()+1); } while (dt.getDay()===0);
+        return dt.toISOString().slice(0,10);
+      };
+      
+      // Calcular fecha fin OJT excluyendo domingos
+      let fechaFinOJT = new Date(fechaInicio);
+      const totalDias = duracion.cap + duracion.ojt - 1;
+      
+      for (let i = 0; i < totalDias; i++) {
+        const fechaStr = fechaFinOJT.toISOString().slice(0,10);
+        fechaFinOJT = new Date(nextDate(fechaStr));
+      }
+      
+      // Determinar si está finalizada
+      const fechaActual = new Date();
+      const finalizado = fechaActual > fechaFinOJT;
+      
+      return {
+        id: key,
+        campania: lote.NombreCampaña,
+        modalidad: lote.NombreModalidad,
+        formador: lote.formador,
+        inicioCapa: lote.FechaInicio.toISOString().slice(0,10),
+        finOjt: fechaFinOJT.toISOString().slice(0,10),
+        finalizado,
+        qEntre,
+        lista,
+        primerDia,
+        asistencias,
+        activos,
+        qBajas,
+        porcentajeDeser,
+        riesgoForm: riesgoAth
+      };
+    });
+
+    // Aplicar filtro de estado si está presente
+    if (estado) {
+      allRows = allRows.filter(row => {
+        if (estado === 'En curso') {
+          return !row.finalizado;
+        } else if (estado === 'Finalizado') {
+          return row.finalizado;
+        }
+        return true;
+      });
+    }
+    
+    // Ordenar por fechaInicio descendente
+    allRows.sort((a, b) => new Date(b.inicioCapa) - new Date(a.inicioCapa));
+    
+    // Paginación
+    const paginated = allRows.slice((page - 1) * pageSize, page * pageSize);
+    
+    console.log(`📊 Resumen procesado: ${allRows.length} total, ${paginated.length} en página ${page}`);
+    
+    res.json({
+      data: paginated,
+      total: allRows.length,
+      page,
+      pageSize
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en obtenerResumenJefa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener resumen de capacitaciones',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Guardar o actualizar Q ENTRE para una capacitación
+ * POST /api/capacitaciones/qentre-jefe
+ */
+const saveQEntreJefa = async (req, res) => {
+  try {
+    const { CampañaID, FechaInicio, DNI_Capacitador, qEntre } = req.body;
+    
+    if (!CampañaID || !FechaInicio || !DNI_Capacitador || qEntre == null) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Faltan datos requeridos',
+        received: req.body 
+      });
+    }
+    
+    console.log('💾 Guardando Q ENTRE:', { CampañaID, FechaInicio, DNI_Capacitador, qEntre });
+    
+    // Por ahora solo devolver éxito (se puede implementar tabla QEntre_Jefe después)
+    res.json({
+      success: true,
+      message: 'Q ENTRE guardado correctamente',
+      data: { CampañaID, FechaInicio, DNI_Capacitador, qEntre }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en saveQEntreJefa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al guardar Q ENTRE',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getCapas,
   getMeses,
@@ -1342,14 +1657,19 @@ module.exports = {
   updateEstadoPostulantes,
   updateHorariosPostulantes,
   test,
-  generateToken, // Agregar esta función
-  verificarTablas, // Agregar endpoint de verificación
-  verificarEstructuraTablas, // Agregar endpoint de estructura
-  probarConsultaCampanias, // Agregar endpoint de prueba
+  generateToken,
+  verificarTablas,
+  verificarEstructuraTablas,
+  probarConsultaCampanias,
   
   // Nuevos endpoints para dashboard de jefa
   obtenerDashboardJefa,
   obtenerCampaniasDashboardJefa,
   obtenerMesesDashboardJefa,
-  obtenerCapasDashboardJefa
+  obtenerCapasDashboardJefa,
+  obtenerResumenJefa,
+  saveQEntreJefa,
+  
+  // Funciones auxiliares
+  obtenerDuracion
 };

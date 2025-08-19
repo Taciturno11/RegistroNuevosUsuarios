@@ -79,4 +79,8 @@ router.get('/dashboard-jefa/capas', authMiddleware, capacitacionesController.obt
  */
 router.get('/dashboard-jefa/:dni', authMiddleware, capacitacionesController.obtenerDashboardJefa);
 
+// Rutas para el resumen de capacitaciones de la jefa
+router.get('/resumen-jefe', authMiddleware, capacitacionesController.obtenerResumenJefa);
+router.post('/qentre-jefe', authMiddleware, capacitacionesController.saveQEntreJefa);
+
 module.exports = router;

@@ -25,7 +25,8 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Tooltip as MuiTooltip
+  Tooltip as MuiTooltip,
+  TextField
 } from '@mui/material';
 import {
   School as SchoolIcon,
@@ -41,6 +42,8 @@ Chart.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Lege
 
 export default function DashboardJefa() {
   const { user, api } = useAuth();
+  console.log('🔑 DashboardJefa renderizado con:', { user: user?.dni, userCompleto: user, api: !!api });
+  
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [campania, setCampania] = useState("");
@@ -53,13 +56,28 @@ export default function DashboardJefa() {
   const [filtroGraficosCapa, setFiltroGraficosCapa] = useState("");
   const [capas, setCapas] = useState([]);
   
+  // Estados para filtros y paginación
+  const [filtroCampania, setFiltroCampania] = useState('');
+  const [filtroFormador, setFiltroFormador] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [resumenCapacitaciones, setResumenCapacitaciones] = useState([]);
+  
+  // Estados para edición de Q ENTRE
+  const [editIdx, setEditIdx] = useState(null);
+  const [editValue, setEditValue] = useState(null);
+  
   const nombreCompleto = `${user?.nombres || ''} ${user?.apellidoPaterno || ''} ${user?.apellidoMaterno || ''}`.trim();
 
   // Cargar campañas y meses disponibles
   useEffect(() => {
+    console.log('🔄 useEffect campañas/meses ejecutado:', { user: user?.dni, userCompleto: user });
     if (user?.dni) {
       cargarCampanias();
       cargarMeses();
+    } else {
+      console.log('❌ Usuario no disponible para campañas/meses');
     }
   }, [user]);
 
@@ -82,6 +100,16 @@ export default function DashboardJefa() {
       cargarDatosDashboard();
     }
   }, [campania, mes, user]);
+
+  // Cargar resumen de capacitaciones cuando cambien los filtros o la página
+  useEffect(() => {
+    console.log('🔄 useEffect resumen ejecutado:', { user: user?.dni, filtroCampania, filtroFormador, filtroEstado, paginaActual });
+    if (user?.dni) {
+      cargarResumenCapacitaciones();
+    } else {
+      console.log('❌ Usuario no disponible aún');
+    }
+  }, [filtroCampania, filtroFormador, filtroEstado, paginaActual, user]);
 
   const cargarCampanias = async () => {
     try {
@@ -168,7 +196,7 @@ export default function DashboardJefa() {
   // Estado para datos de gráficos
   const [datosGraficos, setDatosGraficos] = useState(null);
 
-  // Actualizar datos de gráficos cuando cambian los filtros
+  // Actualizar datos de gráficos cuando cambien los filtros
   useEffect(() => {
     if (!data) return;
     
@@ -176,6 +204,79 @@ export default function DashboardJefa() {
       setDatosGraficos(datos);
     });
   }, [filtroGraficosCampania, filtroGraficosCapa, data]);
+
+  // Función para cargar resumen de capacitaciones
+  const cargarResumenCapacitaciones = async () => {
+    try {
+      console.log('🔄 Cargando resumen de capacitaciones...');
+      console.log('🔍 Estado actual:', { paginaActual, filtroCampania, filtroFormador, filtroEstado });
+      
+      const params = new URLSearchParams({
+        page: paginaActual.toString(),
+        pageSize: '10'
+      });
+      
+      if (filtroCampania) params.append('campania', filtroCampania);
+      if (filtroFormador) params.append('formador', filtroFormador);
+      if (filtroEstado) params.append('estado', filtroEstado);
+      
+      const url = `/capacitaciones/resumen-jefe?${params.toString()}`;
+      console.log('📡 URL completa:', url);
+      console.log('🔑 Token disponible:', !!api.defaults.headers.common['Authorization']);
+      
+      const response = await api.get(url);
+      console.log('✅ Respuesta del backend:', response);
+      console.log('📊 Datos recibidos:', response.data);
+      console.log('📈 Total recibido:', response.data?.total);
+      console.log('🔍 Tipo de datos:', typeof response.data?.data, Array.isArray(response.data?.data));
+      
+      // Los datos están directamente en response.data
+      const datos = response.data?.data || [];
+      const total = response.data?.total || 0;
+      
+      console.log('🔍 Datos extraídos:', { datos, total, esArray: Array.isArray(datos) });
+      
+      setResumenCapacitaciones(datos);
+      setTotalPaginas(Math.ceil(total / 10));
+      
+      console.log('✅ Estado actualizado:', { 
+        resumenCapacitaciones: datos.length, 
+        totalPaginas: Math.ceil(total / 10) 
+      });
+    } catch (error) {
+      console.error('❌ Error cargando resumen de capacitaciones:', error);
+      console.error('❌ Detalles del error:', error.response?.data, error.response?.status);
+      setResumenCapacitaciones([]);
+    }
+  };
+
+  // Función para guardar Q ENTRE
+  const saveQEntre = async (rowIdx, row, value) => {
+    try {
+      // Extraer CampañaID y DNI_Capacitador del id del row
+      const [campaniaId, fechaInicio, dniCapacitador] = row.id.split('_');
+      
+      await api.post('/capacitaciones/qentre-jefe', {
+        CampañaID: parseInt(campaniaId),
+        FechaInicio: fechaInicio,
+        DNI_Capacitador: dniCapacitador,
+        qEntre: value
+      });
+      
+      // Actualizar en frontend
+      const newResumen = [...resumenCapacitaciones];
+      newResumen[rowIdx].qEntre = value;
+      setResumenCapacitaciones(newResumen);
+      
+      // Mostrar mensaje de éxito
+      alert('Q ENTRE guardado correctamente');
+    } catch (error) {
+      console.error('Error al guardar Q ENTRE:', error);
+      alert('Error al guardar Q ENTRE');
+    }
+    setEditIdx(null);
+    setEditValue(null);
+  };
 
   if (loading || !data) {
     return (
@@ -395,24 +496,22 @@ export default function DashboardJefa() {
       </Box>
 
       {/* KPIs */}
-      <Grid container spacing={4} sx={{ px: 8, mb: 8 }}>
+      <Grid container spacing={2} sx={{ px: 8, mb: 6 }}>
         {Array.isArray(kpi) && kpi.length > 0 ? kpi.map((k, i) => (
-          <Grid item key={`kpi-${i}`} sx={{ width: { xs: '100%', sm: '50%', md: '25%' } }}>
+          <Grid item key={`kpi-${i}`} sx={{ width: { xs: '100%', sm: '50%', md: '14.28%' } }}>
             <Card sx={{ 
               textAlign: 'center', 
-              p: 3, 
-              boxShadow: 3,
+              p: 2, 
+              boxShadow: 2,
               border: `2px solid ${k.color}`,
-              borderRadius: 3
+              borderRadius: 2,
+              minHeight: 100
             }}>
-              <CardContent>
-                <Box sx={{ color: k.color, mb: 2 }}>
-                  {k.icon}
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1, color: k.color }}>
+              <CardContent sx={{ p: '8px !important' }}>
+                <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1, color: k.color }}>
                   {k.value}
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', lineHeight: 1.2 }}>
                   {k.label}
                 </Typography>
               </CardContent>
@@ -430,6 +529,216 @@ export default function DashboardJefa() {
           </Grid>
         )}
       </Grid>
+
+      {/* Resumen de Capacitaciones */}
+      <div className="px-8 mb-8">
+        <div className="rounded-xl shadow bg-white p-4 mt-6">
+          {/* Filtros */}
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Filtro Campaña */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Campaña</label>
+              <select
+                value={filtroCampania}
+                onChange={(e) => {
+                  setFiltroCampania(e.target.value);
+                  setPaginaActual(1);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todas las campañas</option>
+                {Array.isArray(campanias) && campanias.map(campania => (
+                  <option key={`camp-${campania.id}`} value={campania.nombre}>{campania.nombre}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro Formador */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Formador</label>
+              <select
+                value={filtroFormador}
+                onChange={(e) => {
+                  setFiltroFormador(e.target.value);
+                  setPaginaActual(1);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todos los formadores</option>
+                {Array.isArray(resumenCapacitaciones) && [...new Set(resumenCapacitaciones.map(row => row.formador))].sort().map(formador => (
+                  <option key={`form-${formador}`} value={formador}>{formador}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Filtro Estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <select
+                value={filtroEstado}
+                onChange={(e) => {
+                  setFiltroEstado(e.target.value);
+                  setPaginaActual(1);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Todos los estados</option>
+                <option value="En curso">En curso</option>
+                <option value="Finalizado">Finalizado</option>
+              </select>
+            </div>
+          </div>
+          
+          <table className="min-w-full text-xs border border-gray-200">
+            <thead>
+              <tr className="bg-blue-100 text-blue-900">
+                <th rowSpan={2} className="px-2 py-1">CAMPAÑA</th>
+                <th rowSpan={2} className="px-2 py-1">MODALIDAD</th>
+                <th rowSpan={2} className="px-2 py-1">FORMADOR</th>
+                <th rowSpan={2} className="px-2 py-1">INICIO CAPA</th>
+                <th rowSpan={2} className="px-2 py-1">FECHA FIN OJT</th>
+                <th rowSpan={2} className="px-2 py-1">STATUS</th>
+                <th rowSpan={2} className="px-2 py-1">Q ENTRE</th>
+                <th rowSpan={2} className="px-2 py-1">ESPERADO</th>
+                <th rowSpan={2} className="px-2 py-1">LISTA</th>
+                <th rowSpan={2} className="px-2 py-1">1er DÍA</th>
+                <th rowSpan={2} className="px-2 py-1">% EFEC ATH</th>
+                <th rowSpan={2} className="px-2 py-1">RIESGO ATH</th>
+                <th colSpan={7} className="px-1 py-1 text-center">Días</th>
+                <th rowSpan={2} className="px-2 py-1">ACTIVOS</th>
+                <th rowSpan={2} className="px-2 py-1">Q BAJAS</th>
+                <th rowSpan={2} className="px-2 py-1">% DESER</th>
+                <th rowSpan={2} className="px-2 py-1">RIESGO FORM</th>
+              </tr>
+              <tr className="bg-blue-100 text-blue-900">
+                {Array.from({length: 7}, (_, i) => (
+                  <th key={i} className={`px-1 py-1 text-center bg-gray-300 ${i === 0 ? 'border-l-2 border-gray-300' : ''}`}>{i + 1}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {console.log('📊 Renderizando tabla con datos:', { 
+                resumenCapacitaciones, 
+                esArray: Array.isArray(resumenCapacitaciones), 
+                longitud: resumenCapacitaciones?.length,
+                tipo: typeof resumenCapacitaciones 
+              })}
+              {Array.isArray(resumenCapacitaciones) && resumenCapacitaciones.length > 0 ? resumenCapacitaciones.map((row, idx) => {
+                const esperado = row.qEntre * 2;
+                let porcentajeEfec = 0;
+                let riesgoAth = '---';
+                let riesgoAthClass = 'text-gray-500';
+                let porcentajeEfecClass = 'bg-gray-50';
+                
+                // Solo calcular si hay Q ENTRE
+                if (row.qEntre && row.qEntre > 0) {
+                  porcentajeEfec = esperado > 0 ? Math.round((row.primerDia / esperado) * 100) : 0;
+                  
+                  if (porcentajeEfec < 60) {
+                    riesgoAth = 'Riesgo alto';
+                    riesgoAthClass = 'text-red-700';
+                    porcentajeEfecClass = 'bg-red-100';
+                  } else if (porcentajeEfec < 85) {
+                    riesgoAth = 'Riesgo medio';
+                    riesgoAthClass = 'text-yellow-700';
+                    porcentajeEfecClass = 'bg-yellow-100';
+                  } else {
+                    riesgoAth = 'Sin riesgo';
+                    riesgoAthClass = 'text-green-700';
+                    porcentajeEfecClass = 'bg-green-100';
+                  }
+                }
+                
+                const status = row.finalizado ? 'Finalizado' : 'En curso';
+                return (
+                  <tr key={`row-${idx}`} className={idx % 2 === 0 ? 'bg-blue-50' : 'bg-white'}>
+                    <td className="border px-2 py-1">{row.campania}</td>
+                    <td className="border px-2 py-1">{row.modalidad}</td>
+                    <td className="border px-2 py-1">{row.formador}</td>
+                    <td className="border px-2 py-1">{row.inicioCapa}</td>
+                    <td className="border px-2 py-1">{row.finOjt}</td>
+                    <td className="border px-2 py-1">{status}</td>
+                    <td className="border px-2 py-1 font-bold text-blue-900 cursor-pointer text-center" onClick={() => { setEditIdx(idx); setEditValue(row.qEntre); }}>
+                      {editIdx === idx ? (
+                        <input
+                          type="number"
+                          className="w-16 text-center border rounded px-1 py-0.5 outline-none"
+                          value={editValue}
+                          autoFocus
+                          min={1}
+                          onChange={e => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
+                          onBlur={() => saveQEntre(idx, row, Number(editValue))}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.target.blur();
+                            } else if (e.key === 'Escape') {
+                              setEditIdx(null); setEditValue(null);
+                            }
+                          }}
+                        />
+                      ) : row.qEntre}
+                    </td>
+                    <td className="border px-2 py-1 text-center">{esperado}</td>
+                    <td className="border px-2 py-1 text-center">{row.lista}</td>
+                    <td className="border px-2 py-1 text-center">{row.primerDia}</td>
+                    <td className={`border px-2 py-1 text-center ${porcentajeEfecClass}`}>
+                      {row.qEntre && row.qEntre > 0 ? `${porcentajeEfec}%` : '---'}
+                    </td>
+                    <td className={`border px-2 py-1 ${riesgoAthClass}`}>{riesgoAth}</td>
+                    {/* Días visibles */}
+                    {Array.from({length: 7}, (_, i) => (
+                      <td key={`dia-${i}`} className={`border px-1 py-1 text-center ${idx % 2 === 0 ? 'bg-gray-100' : 'bg-gray-200'} ${i === 0 ? 'border-l-2 border-gray-200' : ''}`}>
+                        <span className="text-xs font-medium text-gray-600">
+                          {row.asistencias && row.asistencias[i] ? row.asistencias[i] : ''}
+                        </span>
+                      </td>
+                    ))}
+                    <td className="border px-2 py-1 text-center">{row.activos}</td>
+                    <td className="border px-2 py-1 text-center">{row.qBajas}</td>
+                    <td className="border px-2 py-1 text-center">{row.porcentajeDeser}%</td>
+                    <td className="border px-2 py-1">{row.riesgoForm}</td>
+                  </tr>
+                );
+              }) : (
+                <tr>
+                  <td colSpan={25} className="border px-4 py-8 text-center text-gray-500">
+                    No hay datos para mostrar
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+          
+          {/* Controles de paginación */}
+          {totalPaginas > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-4">
+              <button
+                className="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs disabled:opacity-40"
+                onClick={() => setPaginaActual(p => Math.max(1, p - 1))}
+                disabled={paginaActual === 1}
+              >
+                Anterior
+              </button>
+              {Array.from({ length: totalPaginas }, (_, i) => (
+                <button
+                  key={`page-${i}`}
+                  className={`px-2 py-1 rounded text-xs ${paginaActual === i + 1 ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700'}`}
+                  onClick={() => setPaginaActual(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                className="px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs disabled:opacity-40"
+                onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
+                disabled={paginaActual === totalPaginas}
+              >
+                Siguiente
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Tabla de capacitadores */}
       <Box sx={{ bgcolor: 'white', borderRadius: 3, boxShadow: 3, mx: 8, p: 6, mb: 8 }}>
