@@ -449,21 +449,54 @@ exports.getEmpleadosStats = async (req, res) => {
       GROUP BY EstadoEmpleado
     `;
 
-    const statsResult = await executeQuery(statsQuery);
+    // Consulta para contar ceses del mes actual
+    const cesesMesActualQuery = `
+      SELECT COUNT(*) as cesesMesActual
+      FROM PRI.Empleados 
+      WHERE EstadoEmpleado = 'Cese'
+        AND MONTH(FechaCese) = MONTH(GETDATE())
+        AND YEAR(FechaCese) = YEAR(GETDATE())
+    `;
+
+    // Consulta de debug para ver qué hay en la base de datos
+    const debugQuery = `
+      SELECT EstadoEmpleado, FechaCese, COUNT(*) as cantidad
+      FROM PRI.Empleados 
+      WHERE EstadoEmpleado = 'Cese'
+      GROUP BY EstadoEmpleado, FechaCese
+      ORDER BY FechaCese DESC
+    `;
+
+    const [statsResult, cesesResult, debugResult] = await Promise.all([
+      executeQuery(statsQuery),
+      executeQuery(cesesMesActualQuery),
+      executeQuery(debugQuery)
+    ]);
     
     // Procesar resultados
     let empleadosActivos = 0;
     let empleadosCesados = 0;
     let totalEmpleados = 0;
+    let cesesMesActual = 0;
 
     statsResult.recordset.forEach(row => {
       if (row.EstadoEmpleado === 'Activo') {
         empleadosActivos = row.cantidad;
-      } else if (row.EstadoEmpleado === 'Cesado') {
+      } else if (row.EstadoEmpleado === 'Cese') {
         empleadosCesados = row.cantidad;
       }
       totalEmpleados += row.cantidad;
     });
+
+    // Obtener ceses del mes actual
+    if (cesesResult.recordset.length > 0) {
+      cesesMesActual = cesesResult.recordset[0].cesesMesActual;
+    }
+
+    // Log de debug
+    console.log('🔍 Debug - Consulta de ceses del mes actual:', cesesResult.recordset);
+    console.log('🔍 Debug - Todos los ceses en la base de datos:', debugResult.recordset);
+    console.log('🔍 Debug - Mes actual:', new Date().getMonth() + 1, 'Año actual:', new Date().getFullYear());
 
     res.json({
       success: true,
@@ -471,7 +504,8 @@ exports.getEmpleadosStats = async (req, res) => {
       stats: {
         empleadosActivos,
         empleadosCesados,
-        totalEmpleados
+        totalEmpleados,
+        cesesMesActual
       }
     });
 
@@ -512,7 +546,6 @@ exports.searchEmpleados = async (req, res) => {
              OR e.Nombres LIKE @search 
              OR e.ApellidoPaterno LIKE @search 
              OR e.ApellidoMaterno LIKE @search)
-        AND e.EstadoEmpleado = 'Activo'
       ORDER BY e.ApellidoPaterno, e.ApellidoMaterno, e.Nombres
     `;
 

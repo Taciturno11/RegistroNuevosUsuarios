@@ -66,7 +66,8 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     empleadosActivos: '-',
     empleadosCesados: '-',
-    totalEmpleados: '-'
+    totalEmpleados: '-',
+    cesesMesActual: '-'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -592,34 +593,60 @@ const Dashboard = () => {
             </Box>
           }
           action={
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Chip
-                icon={<CheckCircleIcon />}
-                label={`Activos: ${stats.empleadosActivos}`}
-                sx={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}
-              />
-              <Chip
-                icon={<UserTimesIcon />}
-                label={`Cese: ${stats.empleadosCesados}`}
-                sx={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}
-              />
-              <Chip
-                icon={<UsersIcon />}
-                label={`Total: ${stats.totalEmpleados}`}
-                sx={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}
-              />
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              {/* KPI Activos */}
+              <Box sx={{ 
+                backgroundColor: '#10b981', 
+                color: 'white', 
+                p: 2, 
+                borderRadius: 2, 
+                textAlign: 'center',
+                minWidth: 120,
+                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.3)'
+              }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                  {stats.empleadosActivos}
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                  Activos
+                </Typography>
+              </Box>
+              
+                             {/* KPI Cese */}
+               <Box sx={{ 
+                 backgroundColor: '#ef4444', 
+                 color: 'white', 
+                 p: 2, 
+                 borderRadius: 2, 
+                 textAlign: 'center',
+                 minWidth: 120,
+                 boxShadow: '0 4px 6px rgba(239, 68, 68, 0.3)'
+               }}>
+                 <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                   {stats.cesesMesActual}
+                 </Typography>
+                 <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                   Cese {new Date().toLocaleDateString('es-ES', { month: 'long' }).charAt(0).toUpperCase() + new Date().toLocaleDateString('es-ES', { month: 'long' }).slice(1)}
+                 </Typography>
+               </Box>
+              
+              {/* KPI Total */}
+              <Box sx={{ 
+                backgroundColor: '#3b82f6', 
+                color: 'white', 
+                p: 2, 
+                borderRadius: 2, 
+                textAlign: 'center',
+                minWidth: 120,
+                boxShadow: '0 4px 6px rgba(59, 130, 246, 0.3)'
+              }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                  {stats.totalEmpleados}
+                </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                  Total
+                </Typography>
+              </Box>
             </Box>
           }
         />
@@ -702,31 +729,55 @@ const Dashboard = () => {
               }}
             >
               {suggestions.map((emp, index) => (
-                <Box
-                  key={emp.DNI || emp.dni}
-                  onClick={() => selectEmployee(emp)}
-                  sx={{
-                    p: 2,
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #e2e8f0',
-                    backgroundColor: index === selectedSuggestionIndex ? '#1e40af' : 'transparent',
-                    color: index === selectedSuggestionIndex ? 'white' : 'inherit',
-                    '&:hover': { 
-                      backgroundColor: index === selectedSuggestionIndex ? '#1e40af' : '#f8fafc' 
-                    },
-                    '&:last-child': { borderBottom: 'none' }
-                  }}
-                >
-                  <Typography variant="subtitle1" sx={{ 
-                    fontWeight: 600, 
-                    color: index === selectedSuggestionIndex ? 'white' : '#1e40af' 
-                  }}>
-                    {emp.DNI || emp.dni}
-                  </Typography>
-                  <Typography variant="body2" color={index === selectedSuggestionIndex ? 'white' : 'text.secondary'}>
-                    {emp.Nombres || emp.nombre} {emp.ApellidoPaterno || emp.apellido}
-                  </Typography>
-                </Box>
+                                 <Box
+                   key={emp.DNI || emp.dni}
+                   onClick={() => selectEmployee(emp)}
+                   sx={{
+                     p: 2,
+                     cursor: 'pointer',
+                     borderBottom: '1px solid #e2e8f0',
+                     backgroundColor: index === selectedSuggestionIndex ? '#1e40af' : 'transparent',
+                     color: index === selectedSuggestionIndex ? 'white' : 'inherit',
+                     '&:hover': { 
+                       backgroundColor: index === selectedSuggestionIndex ? '#1e40af' : '#f8fafc' 
+                     },
+                     '&:last-child': { borderBottom: 'none' },
+                     position: 'relative'
+                   }}
+                 >
+                   <Box sx={{ textAlign: 'center' }}>
+                     <Typography variant="subtitle1" sx={{ 
+                       fontWeight: 600, 
+                       color: index === selectedSuggestionIndex ? 'white' : '#1e40af' 
+                     }}>
+                       {emp.DNI || emp.dni}
+                     </Typography>
+                     <Typography variant="body2" color={index === selectedSuggestionIndex ? 'white' : 'text.secondary'}>
+                       {emp.Nombres || emp.nombre} {emp.ApellidoPaterno || emp.apellido}
+                     </Typography>
+                   </Box>
+                   <Box sx={{
+                     position: 'absolute',
+                     right: 16,
+                     top: '50%',
+                     transform: 'translateY(-50%)',
+                     display: 'inline-block',
+                     backgroundColor: index === selectedSuggestionIndex ? 'white' :
+                       emp.EstadoEmpleado === 'Activo' ? '#22c55e' :
+                       emp.EstadoEmpleado === 'Cese' ? '#6b7280' : '#e5e7eb',
+                     color: index === selectedSuggestionIndex ? '#1f2937' :
+                       emp.EstadoEmpleado === 'Activo' ? 'white' :
+                       emp.EstadoEmpleado === 'Cese' ? 'white' : '#6b7280',
+                     px: 1,
+                     py: 0.5,
+                     borderRadius: 2,
+                     fontSize: '0.75rem',
+                     fontWeight: 'bold',
+                     minWidth: 'fit-content'
+                   }}>
+                     {emp.EstadoEmpleado || 'Estado desconocido'}
+                   </Box>
+                 </Box>
               ))}
             </Paper>
           )}
