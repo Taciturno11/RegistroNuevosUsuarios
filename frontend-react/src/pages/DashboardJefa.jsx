@@ -37,6 +37,8 @@ import {
   Refresh as RefreshIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
+import UserAvatar from '../components/UserAvatar';
+import TiendaMarcos from '../components/TiendaMarcos';
 
 Chart.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, ChartDataLabels);
 
@@ -68,12 +70,23 @@ export default function DashboardJefa() {
   const [editIdx, setEditIdx] = useState(null);
   const [editValue, setEditValue] = useState(null);
   
+  // Estados para sistema de marcos
+  const [showTiendaMarcos, setShowTiendaMarcos] = useState(false);
+  const [marcoActual, setMarcoActual] = useState(localStorage.getItem('marco') || 'marco1.png');
+  const [marcoPreview, setMarcoPreview] = useState(null);
+  
   const nombreCompleto = `${user?.nombres || ''} ${user?.apellidoPaterno || ''} ${user?.apellidoMaterno || ''}`.trim();
 
   // Cargar campañas y meses disponibles
   useEffect(() => {
     console.log('🔄 useEffect campañas/meses ejecutado:', { user: user?.dni, userCompleto: user });
     if (user?.dni) {
+      // Guardar datos del usuario en localStorage para el avatar
+      localStorage.setItem('dni', user.dni);
+      localStorage.setItem('nombres', user.nombres || '');
+      localStorage.setItem('apellidoPaterno', user.apellidoPaterno || '');
+      localStorage.setItem('apellidoMaterno', user.apellidoMaterno || '');
+      
       cargarCampanias();
       cargarMeses();
     } else {
@@ -402,62 +415,65 @@ export default function DashboardJefa() {
   return (
     <Box sx={{ minHeight: '100vh', background: '#f7f9fd' }}>
              {/* Header */}
-       <Box sx={{ 
-         display: 'flex', 
-         alignItems: 'center', 
-         justifyContent: 'space-between', 
-         px: 8, 
-         py: 2, 
-         bgcolor: 'white', 
-         boxShadow: 2, 
-         borderRadius: '0 0 24px 24px', 
-         mb: 4 
-       }}>
-         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
-           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-             <Box component="img" 
-               src="/partner.svg" 
-               alt="logo" 
-               sx={{ 
-                 width: 32, 
-                 height: 32
-               }} 
-             />
-             <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#22314a' }}>
-               Panel de Jefa de Capacitaciones
-             </Typography>
-           </Box>
-           <Typography variant="body1" sx={{ ml: 10, color: '#22314a', fontWeight: 'bold' }}>
-             {nombreCompleto} 👋
-           </Typography>
-         </Box>
-         
-         {/* Botón para regresar al sidebar - Estilo similar al de capacitadores */}
-         <Button
-           variant="contained"
-           onClick={() => window.history.back()}
-           sx={{
-             backgroundColor: '#297373',
-             color: 'white',
-             borderRadius: '50px',
-             px: 4,
-             py: 1.5,
-             fontWeight: 'bold',
-             boxShadow: 2,
-             border: '1px solid #297373',
-             '&:hover': {
-               backgroundColor: 'rgba(41, 115, 115, 0.8)',
-               transform: 'translateY(-1px)',
-               boxShadow: 3
-             },
-             transition: 'all 0.2s ease-in-out'
-           }}
-         >
-           ← Volver al Dashboard
-         </Button>
-       </Box>
+               <div className="flex items-center justify-between px-8 py-3 bg-white shadow-md rounded-b-3xl mb-4">
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <img src="/partner.svg" alt="logo" className="w-9 h-9 bg-white/30 rounded-full p-1" />
+              <span className="font-bold text-[#22314a] text-xl">Panel de Jefa de Capacitaciones</span>
+            </div>
+            <span className="ml-12 text-base text-[#22314a] font-bold leading-tight flex items-center gap-2">
+              {nombreCompleto} <span className="text-2xl">👋</span>
+            </span>
+          </div>
+          <div className="flex items-center">
+            <button 
+              onClick={() => setShowTiendaMarcos(true)}
+              className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 text-blue-700 shadow hover:bg-blue-200 transition mr-14"
+              title="Tienda de Marcos"
+              aria-label="Tienda de Marcos"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.75V7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v2.25M3 9.75l1.5 8.25A2.25 2.25 0 006.72 20.25h10.56a2.25 2.25 0 002.22-2.25l1.5-8.25M3 9.75h18" />
+                <rect x="6.75" y="13.5" width="3" height="3" rx="0.75" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                <rect x="14.25" y="13.5" width="3" height="3" rx="0.75" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              </svg>
+            </button>
+            <UserAvatar 
+              onLogout={() => { 
+                localStorage.clear(); 
+                window.location.reload(); 
+              }} 
+              marco={marcoPreview || marcoActual} 
+            />
+          </div>
+        </div>
+        
+        {/* Botón para regresar al sidebar */}
+        <div className="flex justify-center mb-4">
+          <button
+            onClick={() => window.history.back()}
+            className="bg-[#297373] text-white rounded-full px-4 py-2 text-sm font-semibold shadow-md hover:bg-[#297373]/80 transition-all duration-200 ease-in-out"
+          >
+            ← Volver al Dashboard
+          </button>
+        </div>
+        
+        {/* Modal de tienda de marcos */}
+        {showTiendaMarcos && (
+          <div className="fixed left-0 right-0 z-50 flex flex-col items-center justify-start pt-8 bg-[#f7f9fd] bg-opacity-98 overflow-auto"
+               style={{top: '104px', height: 'calc(100vh - 104px)', width: '100vw'}}>
+            <TiendaMarcos
+              onClose={() => { setShowTiendaMarcos(false); setMarcoPreview(null); }}
+              onSelectMarco={(file) => {
+                setMarcoActual(file);
+                localStorage.setItem('marco', file);
+              }}
+            />
+            <div className="mt-2 text-xs text-gray-400">* El cambio solo se guarda definitivamente en tu perfil cuando lo selecciones en tu menú de usuario.</div>
+          </div>
+        )}
 
-                           {/* Filtros - Estilo exacto del proyecto anterior */}
+              {/* Filtros - Estilo exacto del proyecto anterior */}
         <div className="flex gap-4 px-8 mb-4">
           <select
             className="px-4 py-2 rounded-xl border border-blue-200 bg-white/80 text-blue-900 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
