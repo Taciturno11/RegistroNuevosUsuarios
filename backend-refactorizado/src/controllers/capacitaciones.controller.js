@@ -1,6 +1,12 @@
 const sql = require('mssql');
 const { getConnection } = require('../config/database');
 
+// Helper: new Request() con pool global (igual que el proyecto original)
+const R = async () => {
+  const pool = await getConnection();
+  return pool.request();
+};
+
 // Duración de campañas (idéntico al original)
 const DURACION = {
   "Unificado"         : { cap: 14, ojt: 5 },
@@ -704,6 +710,221 @@ const test = async (req, res) => {
   }
 };
 
+// Endpoint para verificar tablas disponibles
+const verificarTablas = async (req, res) => {
+  try {
+    console.log('🔍 Verificando tablas disponibles en la base de datos');
+    
+    const pool = await getConnection();
+    
+    // Consulta para obtener todas las tablas
+    const query = `
+      SELECT 
+        TABLE_SCHEMA,
+        TABLE_NAME,
+        TABLE_TYPE
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_TYPE = 'BASE TABLE'
+      ORDER BY TABLE_SCHEMA, TABLE_NAME
+    `;
+    
+    const { recordset: tables } = await pool.request().query(query);
+    console.log(`📋 Tablas encontradas: ${tables.length}`);
+    
+    // Buscar tablas relacionadas con capacitaciones
+    const tablasCapacitaciones = tables.filter(table => 
+      table.TABLE_NAME.toLowerCase().includes('capacitacion') ||
+      table.TABLE_NAME.toLowerCase().includes('postulante') ||
+      table.TABLE_NAME.toLowerCase().includes('campania') ||
+      table.TABLE_NAME.toLowerCase().includes('formacion')
+    );
+    
+    res.json({
+      success: true,
+      message: 'Tablas disponibles verificadas',
+      totalTables: tables.length,
+      allTables: tables,
+      tablasCapacitaciones: tablasCapacitaciones
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en verificarTablas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al verificar tablas',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Endpoint para verificar estructura de tablas
+const verificarEstructuraTablas = async (req, res) => {
+  try {
+    console.log('🔍 Verificando estructura de tablas de capacitaciones');
+    
+    const pool = await getConnection();
+    
+    // Verificar columnas de Postulantes_En_Formacion
+    const queryPostulantes = `
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'Postulantes_En_Formacion' AND TABLE_SCHEMA = 'dbo'
+      ORDER BY ORDINAL_POSITION
+    `;
+    
+    const { recordset: columnasPostulantes } = await pool.request().query(queryPostulantes);
+    console.log(`📋 Columnas de Postulantes_En_Formacion: ${columnasPostulantes.length}`);
+    
+    // Verificar columnas de PRI.Campanias
+    const queryCampanias = `
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'Campanias' AND TABLE_SCHEMA = 'PRI'
+      ORDER BY ORDINAL_POSITION
+    `;
+    
+    const { recordset: columnasCampanias } = await pool.request().query(queryCampanias);
+    console.log(`📋 Columnas de PRI.Campanias: ${columnasCampanias.length}`);
+    
+    // Verificar columnas de PRI.Empleados
+    const queryEmpleados = `
+      SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'Empleados' AND TABLE_SCHEMA = 'PRI'
+      ORDER BY ORDINAL_POSITION
+    `;
+    
+    const { recordset: columnasEmpleados } = await pool.request().query(queryEmpleados);
+    console.log(`📋 Columnas de PRI.Empleados: ${columnasEmpleados.length}`);
+    
+    res.json({
+      success: true,
+      message: 'Estructura de tablas verificada',
+      tablas: {
+        Postulantes_En_Formacion: columnasPostulantes,
+        PRI_Campanias: columnasCampanias,
+        PRI_Empleados: columnasEmpleados
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en verificarEstructuraTablas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al verificar estructura de tablas',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Endpoint de prueba para consulta de campañas
+const probarConsultaCampanias = async (req, res) => {
+  try {
+    console.log('🧪 Probando consulta de campañas paso a paso');
+    
+    const pool = await getConnection();
+    console.log('✅ Conexión a base de datos establecida');
+    
+    // Paso 1: Verificar si la tabla PRI.Campanias existe
+    const queryTabla = `
+      SELECT COUNT(*) as total
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_SCHEMA = 'PRI' AND TABLE_NAME = 'Campanias'
+    `;
+    
+    const { recordset: tablaResult } = await pool.request().query(queryTabla);
+    console.log(`📋 Tabla PRI.Campanias existe: ${tablaResult[0].total > 0}`);
+    
+    if (tablaResult[0].total === 0) {
+      return res.json({
+        success: false,
+        message: 'Tabla PRI.Campanias no existe',
+        step: 'verificacion_tabla'
+      });
+    }
+    
+    // Paso 2: Verificar si la tabla Postulantes_En_Formacion existe
+    const queryTabla2 = `
+      SELECT COUNT(*) as total
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = 'Postulantes_En_Formacion'
+    `;
+    
+    const { recordset: tabla2Result } = await pool.request().query(queryTabla2);
+    console.log(`📋 Tabla Postulantes_En_Formacion existe: ${tabla2Result[0].total > 0}`);
+    
+    if (tabla2Result[0].total === 0) {
+      return res.json({
+        success: false,
+        message: 'Tabla Postulantes_En_Formacion no existe',
+        step: 'verificacion_tabla2'
+      });
+    }
+    
+    // Paso 3: Probar consulta simple en PRI.Campanias
+    const querySimple = `
+      SELECT TOP 5 CampañaID, NombreCampaña, Estado
+      FROM PRI.Campanias
+    `;
+    
+    const { recordset: campaniasResult } = await pool.request().query(querySimple);
+    console.log(`🏢 Campañas encontradas: ${campaniasResult.length}`);
+    
+    // Paso 4: Probar consulta simple en Postulantes_En_Formacion
+    const querySimple2 = `
+      SELECT TOP 5 DNI, CampañaID, FechaInicio
+      FROM Postulantes_En_Formacion
+    `;
+    
+    const { recordset: postulantesResult } = await pool.request().query(querySimple2);
+    console.log(`👥 Postulantes encontrados: ${postulantesResult.length}`);
+    
+    // Paso 5: Probar la consulta completa
+    const queryCompleta = `
+      SELECT DISTINCT 
+        c.CampañaID as ID,
+        c.NombreCampaña as Nombre,
+        c.Descripcion,
+        c.FechaInicio,
+        c.FechaFin,
+        c.Estado
+      FROM PRI.Campanias c
+      INNER JOIN Postulantes_En_Formacion pf ON c.CampañaID = pf.CampañaID
+      WHERE c.Estado = 'Activa'
+      ORDER BY c.FechaInicio DESC
+    `;
+    
+    const { recordset: consultaCompleta } = await pool.request().query(queryCompleta);
+    console.log(`🔗 Consulta completa exitosa: ${consultaCompleta.length} resultados`);
+    
+    res.json({
+      success: true,
+      message: 'Prueba de consulta completada exitosamente',
+      resultados: {
+        tablaCampanias: tablaResult[0].total > 0,
+        tablaPostulantes: tabla2Result[0].total > 0,
+        campaniasSimples: campaniasResult.length,
+        postulantesSimples: postulantesResult.length,
+        consultaCompleta: consultaCompleta.length
+      },
+      datos: {
+        campanias: campaniasResult,
+        postulantes: postulantesResult,
+        consultaCompleta: consultaCompleta
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error en probarConsultaCampanias:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al probar consulta',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+};
+
 // Función temporal para generar token JWT (SOLO PARA PRUEBAS)
 const generateToken = async (req, res) => {
   try {
@@ -713,7 +934,7 @@ const generateToken = async (req, res) => {
       return res.status(400).json({ error: 'DNI es requerido' });
     }
 
-    // Verificar que el usuario existe y es capacitador
+    // Verificar que el usuario existe y es capacitador o jefa
     const pool = await getConnection();
     const request = pool.request()
       .input("dni", sql.VarChar(20), dni);
@@ -721,13 +942,13 @@ const generateToken = async (req, res) => {
     const query = `
       SELECT DNI, Nombres, ApellidoPaterno, CargoID, EstadoEmpleado 
       FROM PRI.Empleados 
-      WHERE DNI = @dni AND CargoID = 7 AND EstadoEmpleado = 'Activo'
+      WHERE DNI = @dni AND CargoID IN (7, 8) AND EstadoEmpleado = 'Activo'
     `;
     
     const result = await request.query(query);
     
     if (result.recordset.length === 0) {
-      return res.status(404).json({ error: 'Capacitador no encontrado o no autorizado' });
+      return res.status(404).json({ error: 'Usuario no encontrado o no autorizado' });
     }
 
     const user = result.recordset[0];
@@ -760,6 +981,354 @@ const generateToken = async (req, res) => {
   }
 };
 
+// ============================================================================
+// DASHBOARD DE JEFA - ENDPOINTS ESPECIALES PARA JEFAS DE CAPACITACIÓN
+// ============================================================================
+
+/**
+ * Obtener datos del dashboard de jefa
+ * GET /api/capacitaciones/dashboard-jefa/:dni
+ */
+const obtenerDashboardJefa = async (req, res) => {
+  try {
+    const { dni } = req.params;
+    const { campania, mes, capa } = req.query;
+    
+    console.log(`📊 Dashboard Jefa solicitado para DNI: ${dni}`);
+    console.log(`🔍 Filtros aplicados:`, { campania, mes, capa });
+
+    // Verificar que el usuario sea jefa
+    if (req.user.role !== 'jefe') {
+      return res.status(403).json({
+        success: false,
+        message: 'Acceso denegado. Solo las jefas pueden acceder a este dashboard.'
+      });
+    }
+
+    // Construir consulta base - USANDO LAS TABLAS DEL PROYECTO ORIGINAL
+    let query = `
+      SELECT DISTINCT
+        pf.DNI,
+        CONCAT(e.Nombres,' ',e.ApellidoPaterno,' ',e.ApellidoMaterno) as NombreCompleto,
+        pf.CampañaID,
+        pf.FechaInicio,
+        pf.FechaCese,
+        pf.EstadoPostulante as Estado,
+        pf.DNI_Capacitador as CapacitadorID,
+        CONCAT(cap.Nombres,' ',cap.ApellidoPaterno,' ',cap.ApellidoMaterno) as CapacitadorNombre,
+        c.NombreCampaña as CampaniaNombre
+      FROM Postulantes_En_Formacion pf
+      LEFT JOIN PRI.Empleados e ON pf.DNI = e.DNI
+      LEFT JOIN PRI.Empleados cap ON pf.DNI_Capacitador = cap.DNI
+      LEFT JOIN PRI.Campanias c ON pf.CampañaID = c.CampañaID
+      WHERE 1=1
+    `;
+
+    // Aplicar filtros usando parámetros nombrados (igual que el proyecto original)
+    if (campania) {
+      query += ` AND pf.CampañaID = @campania`;
+    }
+
+    if (mes) {
+      query += ` AND FORMAT(pf.FechaInicio, 'yyyy-MM') = @mes`;
+    }
+
+    if (capa) {
+      query += ` AND pf.Capa = @capa`;
+    }
+
+    query += ` ORDER BY pf.FechaInicio DESC`;
+
+    console.log(`🔍 Query ejecutándose:`, query);
+
+    // Ejecutar consulta usando getConnection() directamente
+    const pool = await getConnection();
+    const request = pool.request();
+    
+    if (campania) request.input("campania", sql.Int, parseInt(campania));
+    if (mes) request.input("mes", sql.VarChar(7), mes);
+    if (capa) request.input("capa", sql.Int, parseInt(capa));
+
+    const { recordset: rows } = await request.query(query);
+    console.log(`📊 Registros obtenidos: ${rows.length}`);
+
+    if (!rows || rows.length === 0) {
+      return res.json({
+        totales: {
+          postulantes: 0,
+          deserciones: 0,
+          desercionesATH1: 0,
+          desercionesATH2: 0,
+          desercionesATHFormacion: 0,
+          contratados: 0,
+          porcentajeExito: 0,
+          porcentajeDesercionesATH1: 0,
+          porcentajeDesercionesATH2: 0,
+          porcentajeDesercionesATHFormacion: 0
+        },
+        capacitadores: []
+      });
+    }
+
+    // Obtener deserciones por separado para evitar duplicados
+    let queryDeserciones = `
+      SELECT 
+        df.postulante_dni,
+        df.fecha_desercion,
+        pf.FechaInicio,
+        pf.DNI_Capacitador
+      FROM Deserciones_Formacion df
+      JOIN Postulantes_En_Formacion pf ON df.postulante_dni = pf.DNI
+      WHERE 1=1
+    `;
+    
+    if (campania) queryDeserciones += ` AND pf.CampañaID = @campania`;
+    if (mes) queryDeserciones += ` AND FORMAT(pf.FechaInicio, 'yyyy-MM') = @mes`;
+    
+    const requestDeserciones = pool.request();
+    
+    if (campania) requestDeserciones.input("campania", sql.Int, parseInt(campania));
+    if (mes) requestDeserciones.input("mes", sql.VarChar(7), mes);
+    
+    const { recordset: desercionesRows } = await requestDeserciones.query(queryDeserciones);
+    console.log(`📊 Deserciones obtenidas: ${desercionesRows.length}`);
+
+    // Procesar datos para obtener totales y métricas por capacitador
+    const totales = {
+      postulantes: rows.length,
+      deserciones: 0,
+      desercionesATH1: 0,
+      desercionesATH2: 0,
+      desercionesATHFormacion: 0,
+      contratados: 0
+    };
+
+    // Agrupar por capacitador
+    const capacitadoresMap = new Map();
+
+    // Procesar deserciones primero
+    desercionesRows.forEach(desercion => {
+      totales.deserciones++;
+      
+      if (desercion.fecha_desercion && desercion.FechaInicio) {
+        const diasDiferencia = Math.floor((new Date(desercion.fecha_desercion) - new Date(desercion.FechaInicio)) / (1000 * 60 * 60 * 24));
+        
+        if (diasDiferencia === 0) {
+          totales.desercionesATH1++;
+        } else if (diasDiferencia === 1) {
+          totales.desercionesATH2++;
+        } else if (diasDiferencia >= 2) {
+          totales.desercionesATHFormacion++;
+        }
+      }
+    });
+
+    // Procesar postulantes
+    rows.forEach(row => {
+      // Contar contratados
+      if (row.Estado === 'Contratado') {
+        totales.contratados++;
+      }
+
+      // Agrupar por capacitador
+      if (row.CapacitadorID) {
+        if (!capacitadoresMap.has(row.CapacitadorID)) {
+          capacitadoresMap.set(row.CapacitadorID, {
+            dni: row.CapacitadorID,
+            nombreCompleto: row.CapacitadorNombre,
+            postulantes: 0,
+            deserciones: 0,
+            desercionesATH1: 0,
+            desercionesATH2: 0,
+            desercionesATHFormacion: 0,
+            contratados: 0
+          });
+        }
+
+        const cap = capacitadoresMap.get(row.CapacitadorID);
+        cap.postulantes++;
+
+        if (row.Estado === 'Contratado') {
+          cap.contratados++;
+        }
+      }
+    });
+
+    // Procesar deserciones por capacitador
+    desercionesRows.forEach(desercion => {
+      if (capacitadoresMap.has(desercion.DNI_Capacitador)) {
+        const cap = capacitadoresMap.get(desercion.DNI_Capacitador);
+        cap.deserciones++;
+        
+        if (desercion.fecha_desercion && desercion.FechaInicio) {
+          const diasDiferencia = Math.floor((new Date(desercion.fecha_desercion) - new Date(desercion.FechaInicio)) / (1000 * 60 * 60 * 24));
+          
+          if (diasDiferencia === 0) {
+            cap.desercionesATH1++;
+          } else if (diasDiferencia === 1) {
+            cap.desercionesATH2++;
+          } else if (diasDiferencia >= 2) {
+            cap.desercionesATHFormacion++;
+          }
+        }
+      }
+    });
+
+    // Calcular porcentajes
+    if (totales.postulantes > 0) {
+      totales.porcentajeExito = Math.round((totales.contratados / totales.postulantes) * 100);
+      totales.porcentajeDesercionesATH1 = Math.round((totales.desercionesATH1 / totales.postulantes) * 100);
+      totales.porcentajeDesercionesATH2 = Math.round((totales.desercionesATH2 / totales.postulantes) * 100);
+      totales.porcentajeDesercionesATHFormacion = Math.round((totales.desercionesATHFormacion / totales.postulantes) * 100);
+    }
+
+    // Convertir map a array y calcular porcentajes por capacitador
+    const capacitadores = Array.from(capacitadoresMap.values()).map(cap => {
+      const porcentajeExito = cap.postulantes > 0 ? Math.round((cap.contratados / cap.postulantes) * 100) : 0;
+      return { ...cap, porcentajeExito };
+    });
+
+    // Ordenar capacitadores por porcentaje de éxito (descendente)
+    capacitadores.sort((a, b) => b.porcentajeExito - a.porcentajeExito);
+
+    console.log(`📊 Totales calculados:`, totales);
+    console.log(`👥 Capacitadores procesados: ${capacitadores.length}`);
+
+    res.json({
+      totales,
+      capacitadores
+    });
+
+  } catch (error) {
+    console.error('❌ Error en obtenerDashboardJefa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener datos del dashboard de jefa',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Obtener campañas disponibles para el dashboard de jefa
+ * GET /api/capacitaciones/dashboard-jefa/campanias
+ */
+const obtenerCampaniasDashboardJefa = async (req, res) => {
+  try {
+    console.log('🏢 Obteniendo campañas para dashboard de jefa');
+
+    const query = `
+      SELECT DISTINCT 
+        c.CampañaID as id,
+        c.NombreCampaña as nombre
+      FROM PRI.Campanias c
+      INNER JOIN Postulantes_En_Formacion pf ON c.CampañaID = pf.CampañaID
+      ORDER BY c.CampañaID DESC
+    `;
+
+    const pool = await getConnection();
+    const { recordset: rows } = await pool.request().query(query);
+    console.log(`🏢 Campañas encontradas: ${rows.length}`);
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error('❌ Error en obtenerCampaniasDashboardJefa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener campañas',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Obtener meses disponibles para el dashboard de jefa
+ * GET /api/capacitaciones/dashboard-jefa/meses
+ */
+const obtenerMesesDashboardJefa = async (req, res) => {
+  try {
+    console.log('📅 Obteniendo meses disponibles para dashboard de jefa');
+
+    const query = `
+      SELECT DISTINCT 
+        YEAR(FechaInicio) as año,
+        MONTH(FechaInicio) as mes,
+        CONCAT(YEAR(FechaInicio), '-', RIGHT('0' + CAST(MONTH(FechaInicio) AS VARCHAR(2)), 2)) as formatoFecha
+      FROM Postulantes_En_Formacion 
+      WHERE FechaInicio IS NOT NULL
+      ORDER BY año DESC, mes DESC
+    `;
+
+    const pool = await getConnection();
+    const { recordset: rows } = await pool.request().query(query);
+    console.log(`📅 Meses encontrados: ${rows.length}`);
+
+    // Convertir a formato más amigable
+    const meses = rows.map(row => ({
+      mes: row.formatoFecha,
+      nombre: row.formatoFecha
+    }));
+
+    res.json(meses);
+
+  } catch (error) {
+    console.error('❌ Error en obtenerMesesDashboardJefa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener meses',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Obtener capas disponibles para una campaña específica
+ * GET /api/capacitaciones/dashboard-jefa/capas?campania=ID
+ */
+const obtenerCapasDashboardJefa = async (req, res) => {
+  try {
+    const { campania } = req.query;
+    
+    if (!campania) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de campaña es requerido'
+      });
+    }
+
+    console.log(`🔍 Obteniendo capas para campaña: ${campania}`);
+
+    const query = `
+      SELECT DISTINCT 
+        ROW_NUMBER() OVER (ORDER BY pf.FechaInicio) as capa,
+        pf.FechaInicio as fechaInicio,
+        pf.FechaCese,
+        COUNT(*) as totalPostulantes
+      FROM Postulantes_En_Formacion pf
+      WHERE pf.CampañaID = @campania
+      GROUP BY pf.FechaInicio, pf.FechaCese
+      ORDER BY pf.FechaInicio DESC
+    `;
+
+    const pool = await getConnection();
+    const { recordset: rows } = await pool.request()
+      .input("campania", sql.Int, parseInt(campania))
+      .query(query);
+    console.log(`🔍 Capas encontradas: ${rows.length}`);
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error('❌ Error en obtenerCapasDashboardJefa:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener capas',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getCapas,
   getMeses,
@@ -773,5 +1342,14 @@ module.exports = {
   updateEstadoPostulantes,
   updateHorariosPostulantes,
   test,
-  generateToken // Agregar esta función
+  generateToken, // Agregar esta función
+  verificarTablas, // Agregar endpoint de verificación
+  verificarEstructuraTablas, // Agregar endpoint de estructura
+  probarConsultaCampanias, // Agregar endpoint de prueba
+  
+  // Nuevos endpoints para dashboard de jefa
+  obtenerDashboardJefa,
+  obtenerCampaniasDashboardJefa,
+  obtenerMesesDashboardJefa,
+  obtenerCapasDashboardJefa
 };

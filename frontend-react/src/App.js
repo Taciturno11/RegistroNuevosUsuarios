@@ -21,6 +21,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
 import PagosNomina from './pages/PagosNomina';
 import CapacitacionesFullscreen from './pages/CapacitacionesFullscreen';
+import DashboardJefa from './pages/DashboardJefa';
+import VerificarTablas from './components/VerificarTablas';
 import './App.css';
 
 // Tema personalizado que mantiene la estética del proyecto original
@@ -91,13 +93,15 @@ const BasicProtectedRoute = ({ children }) => {
 
 // Componente principal de la aplicación
 const AppContent = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
   
   console.log('🏠 AppContent renderizándose:', { 
     isAuthenticated, 
     loading, 
-    currentPath: window.location.pathname 
+    currentPath: window.location.pathname,
+    userRole: user?.role,
+    userDNI: user?.dni
   });
 
   // Mostrar loading mientras se verifica autenticación
@@ -128,17 +132,28 @@ const AppContent = () => {
 
   console.log('✅ AppContent: Usuario autenticado, mostrando aplicación principal');
   
-  // Si estamos en capacitaciones, mostrar solo el componente sin layout principal
+  // Si estamos en capacitaciones, mostrar componente según el rol
   if (location.pathname === '/capacitaciones') {
-    return (
-      <Routes>
-        <Route path="/capacitaciones" element={
-          <ProtectedRoute requireRole={['capacitador', 'coordinadora', 'admin', 'creador']}>
-            <CapacitacionesFullscreen />
-          </ProtectedRoute>
-        } />
-      </Routes>
-    );
+    // La jefa ve su dashboard especial, los capacitadores ven la vista normal
+    if (user?.role === 'jefe') {
+      console.log('👑 Jefa accediendo a capacitaciones - Mostrando DashboardJefa');
+      return (
+        <Routes>
+          <Route path="/capacitaciones" element={<DashboardJefa />} />
+        </Routes>
+      );
+    } else {
+      console.log('👨‍🏫 Capacitador/otro rol accediendo a capacitaciones - Mostrando CapacitacionesFullscreen');
+      return (
+        <Routes>
+          <Route path="/capacitaciones" element={
+            <ProtectedRoute requireRole={['capacitador', 'coordinadora', 'admin', 'creador']}>
+              <CapacitacionesFullscreen />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      );
+    }
   }
   
   // Layout normal para todas las demás rutas
@@ -226,6 +241,9 @@ const AppContent = () => {
               <PagosNomina />
             </ProtectedRoute>
           } />
+          
+          {/* Ruta temporal para verificar tablas */}
+          <Route path="/verificar-tablas" element={<VerificarTablas />} />
           
           {/* Rutas no encontradas van al perfil del usuario */}
           <Route path="*" element={<Navigate to="/" replace />} />

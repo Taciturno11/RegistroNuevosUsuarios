@@ -9,6 +9,15 @@ router.post('/generate-token', capacitacionesController.generateToken);
 // Endpoint de prueba (sin autenticación)
 router.get('/test', capacitacionesController.test);
 
+// Endpoint para verificar tablas disponibles (sin autenticación)
+router.get('/verificar-tablas', capacitacionesController.verificarTablas);
+
+// Endpoint para verificar estructura de tablas (sin autenticación)
+router.get('/verificar-estructura-tablas', capacitacionesController.verificarEstructuraTablas);
+
+// Endpoint de prueba para consulta de campañas (sin autenticación)
+router.get('/probar-consulta-campanias', capacitacionesController.probarConsultaCampanias);
+
 // Obtener capas disponibles para un capacitador (SIN autenticación - como en el original)
 router.get('/capas', capacitacionesController.getCapas);
 
@@ -41,5 +50,33 @@ router.post('/postulantes/estado', authMiddleware, requireRole(['capacitador', '
 
 // Actualizar horarios de postulantes (requiere autenticación)
 router.post('/postulantes/horario', authMiddleware, requireRole(['capacitador', 'coordinadora', 'admin', 'creador']), capacitacionesController.updateHorariosPostulantes);
+
+// ============================================================================
+// RUTAS PARA DASHBOARD DE JEFA
+// ============================================================================
+
+/**
+ * Obtener campañas disponibles para el dashboard de jefa
+ * GET /api/capacitaciones/dashboard-jefa/campanias
+ */
+router.get('/dashboard-jefa/campanias', authMiddleware, capacitacionesController.obtenerCampaniasDashboardJefa);
+
+/**
+ * Obtener meses disponibles para el dashboard de jefa
+ * GET /api/capacitaciones/dashboard-jefa/meses
+ */
+router.get('/dashboard-jefa/meses', authMiddleware, capacitacionesController.obtenerMesesDashboardJefa);
+
+/**
+ * Obtener capas disponibles para una campaña específica
+ * GET /api/capacitaciones/dashboard-jefa/capas?campania=ID
+ */
+router.get('/dashboard-jefa/capas', authMiddleware, capacitacionesController.obtenerCapasDashboardJefa);
+
+/**
+ * Obtener datos del dashboard de jefa
+ * GET /api/capacitaciones/dashboard-jefa/:dni
+ */
+router.get('/dashboard-jefa/:dni', authMiddleware, capacitacionesController.obtenerDashboardJefa);
 
 module.exports = router;

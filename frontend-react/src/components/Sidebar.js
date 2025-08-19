@@ -79,6 +79,12 @@ const menuItems = [
     path: '/ejecutar-sp',
     icon: <AssessmentIcon sx={{ color: '#84cc16' }} />, // Verde lima vibrante
     adminOnly: true
+  },
+  {
+    title: '🔍 Verificar Tablas (Temporal)',
+    path: '/verificar-tablas',
+    icon: <TableChartIcon sx={{ color: '#ec4899' }} />, // Rosa vibrante
+    adminOnly: false // Visible para todos
   }
 ];
 
@@ -356,8 +362,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Capacitaciones - Solo para analistas, creador, capacitadores, coordinadoras y administradores */}
-        {(isAnalista || user?.dni === '73766815' || user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'admin') && (
+        {/* Capacitaciones - Solo para analistas, creador, capacitadores, coordinadoras, jefas y administradores */}
+        {(isAnalista || user?.dni === '73766815' || user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'jefe' || user?.role === 'admin') && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
