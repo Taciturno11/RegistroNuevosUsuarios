@@ -485,7 +485,7 @@ const ActualizarEmpleado = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
               >
                 Volver al Dashboard
               </Button>
@@ -499,7 +499,7 @@ const ActualizarEmpleado = () => {
           </Alert>
           <Button
             variant="contained"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
           >
             Volver al Dashboard
           </Button>
@@ -537,7 +537,7 @@ const ActualizarEmpleado = () => {
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
             >
               Volver al Dashboard
             </Button>
@@ -929,7 +929,7 @@ const ActualizarEmpleado = () => {
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
               sx={{ 
                 px: 4, 
                 py: 1.5,

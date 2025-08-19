@@ -114,18 +114,18 @@ const EjecutarSP = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>SP:</strong> usp_GenerarReporteAsistenciaMaestro
+              <strong style={{ color: '#000000' }}>SP:&nbsp;&nbsp;</strong> usp_GenerarReporteAsistenciaMaestro
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Base de Datos:</strong> Partner
+              <strong style={{ color: '#000000' }}>Base de Datos:&nbsp;&nbsp;</strong> Partner
             </Typography>
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Parámetros:</strong> @FechaInicio, @FechaFin
+              <strong style={{ color: '#000000' }}>Parámetros:&nbsp;&nbsp;</strong> @FechaInicio, @FechaFin
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong>Acceso:</strong> Solo Analistas y Creador
+              <strong style={{ color: '#000000' }}>Acceso:&nbsp;&nbsp;</strong> Solo Analistas y Creador
             </Typography>
           </Grid>
         </Grid>

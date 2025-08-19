@@ -11,7 +11,9 @@ const ProtectedRoute = ({ children, requireRole }) => {
     user: user ? `${user.dni} (${user.role})` : 'null', 
     loading, 
     requireRole,
-    currentPath: window.location.pathname 
+    currentPath: window.location.pathname,
+    childrenType: children?.type?.name || 'Unknown',
+    childrenProps: children?.props || 'No props'
   });
 
   // Mostrar loading mientras se verifica la autenticación

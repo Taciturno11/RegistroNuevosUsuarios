@@ -41,43 +41,43 @@ const menuItems = [
   {
     title: 'Registrar Empleado',
     path: '/registrar-empleado',
-    icon: <PersonAddIcon />,
+    icon: <PersonAddIcon sx={{ color: '#10b981' }} />, // Verde vibrante
     adminOnly: true
   },
   {
     title: 'Actualizar Empleado',
     path: '/actualizar-empleado',
-    icon: <EditIcon />,
+    icon: <EditIcon sx={{ color: '#3b82f6' }} />, // Azul vibrante
     adminOnly: true
   },
   {
     title: 'Cese de Empleado',
     path: '/cese',
-    icon: <PersonOffIcon />,
+    icon: <PersonOffIcon sx={{ color: '#ef4444' }} />, // Rojo vibrante
     adminOnly: true
   },
   {
     title: 'Justificaciones',
     path: '/justificaciones',
-    icon: <CheckCircleIcon />,
+    icon: <CheckCircleIcon sx={{ color: '#f59e0b' }} />, // Naranja vibrante
     adminOnly: true
   },
   {
     title: 'OJT / CIC',
     path: '/ojt',
-    icon: <StarIcon />,
+    icon: <StarIcon sx={{ color: '#8b5cf6' }} />, // Púrpura vibrante
     adminOnly: true
   },
   {
     title: 'Asignación Excepciones',
     path: '/excepciones',
-    icon: <ScheduleIcon />,
+    icon: <ScheduleIcon sx={{ color: '#06b6d4' }} />, // Cian vibrante
     adminOnly: true
   },
   {
     title: 'Ejecutar SP',
     path: '/ejecutar-sp',
-    icon: <AssessmentIcon />,
+    icon: <AssessmentIcon sx={{ color: '#84cc16' }} />, // Verde lima vibrante
     adminOnly: true
   }
 ];
@@ -104,7 +104,15 @@ const Sidebar = () => {
   const isCapacitacionesView = location.pathname === '/capacitaciones';
 
   const handleNavigation = (path) => {
+    console.log('🧭 handleNavigation ejecutándose:', {
+      path,
+      currentPath: location.pathname,
+      user: user ? `${user.dni} (${user.role})` : 'null'
+    });
+    
     navigate(path);
+    
+    console.log('✅ Navegación completada a:', path);
   };
 
   const handleLogout = () => {
@@ -117,8 +125,16 @@ const Sidebar = () => {
   };
 
   const toggleAdminMenu = () => {
+    console.log('🔄 toggleAdminMenu ejecutándose:', {
+      currentPath: location.pathname,
+      adminMenuOpen,
+      user: user ? `${user.dni} (${user.role})` : 'null',
+      isAdmin
+    });
+    
     // Navegar al Dashboard (sistema de gestión de empleados) y abrir/cerrar submenú
-    handleNavigation('/');
+    console.log('📍 Navegando a /dashboard...');
+    handleNavigation('/dashboard');
     setAdminMenuOpen(!adminMenuOpen);
   };
 
@@ -191,11 +207,11 @@ const Sidebar = () => {
 
       {/* Navegación principal */}
       <List sx={{ flexGrow: 1, pt: 1 }}>
-        {/* Mi Perfil - Siempre visible */}
+        {/* Mi Perfil */}
         <ListItem disablePadding>
           <ListItemButton
-            onClick={() => handleNavigation('/profile')}
-            selected={location.pathname === '/profile'}
+            onClick={() => handleNavigation('/')}
+            selected={location.pathname === '/'}
             sx={{
               mx: 1,
               borderRadius: 1,
@@ -210,7 +226,7 @@ const Sidebar = () => {
               },
             }}
           >
-            <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
+            <ListItemIcon sx={{ color: '#8b5cf6', minWidth: open ? 40 : 'auto' }}>
               <AccountCircleIcon />
             </ListItemIcon>
             {open && <ListItemText primary="Mi Perfil" />}
@@ -233,7 +249,7 @@ const Sidebar = () => {
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
+                <ListItemIcon sx={{ color: '#1e40af', minWidth: open ? 40 : 'auto' }}>
                   <AssessmentIcon />
                 </ListItemIcon>
                 {open && (
@@ -332,7 +348,7 @@ const Sidebar = () => {
                 }}
               >
                 <ListItemIcon sx={{ color: '#dc2626', minWidth: open ? 40 : 'auto' }}>
-                  <ScheduleIcon />
+                  <TableChartIcon />
                 </ListItemIcon>
                 {open && <ListItemText primary="Reporte de Tardanzas" sx={{ color: '#dc2626', fontWeight: 600 }} />}
               </ListItemButton>
@@ -340,74 +356,74 @@ const Sidebar = () => {
           </>
         )}
 
-                 {/* Pagos Nómina - Solo para analistas y creador */}
-         {(user?.dni === '73766815' || user?.role === 'analista') && (
-           <>
-             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
-             <ListItem disablePadding>
-               <ListItemButton
-                 onClick={() => handleNavigation('/pagos-nomina')}
-                 selected={location.pathname === '/pagos-nomina'}
-                 sx={{
-                   mx: 1,
-                   borderRadius: 1,
-                   backgroundColor: '#f0fdf4', // Fondo verde muy claro
-                   border: '1px solid #bbf7d0', // Borde verde claro
-                   '&:hover': {
-                     backgroundColor: '#dcfce7',
-                   },
-                   '&.Mui-selected': {
-                     backgroundColor: '#bbf7d0',
-                     '&:hover': {
-                       backgroundColor: '#86efac',
-                     },
-                   },
-                 }}
-               >
-                 <ListItemIcon sx={{ color: '#16a34a', minWidth: open ? 40 : 'auto' }}>
-                   <AccountBalanceIcon />
-                 </ListItemIcon>
-                 {open && <ListItemText primary="Pagos Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
-               </ListItemButton>
-             </ListItem>
-           </>
-         )}
+        {/* Capacitaciones - Solo para analistas, creador, capacitadores, coordinadoras y administradores */}
+        {(isAnalista || user?.dni === '73766815' || user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'admin') && (
+          <>
+            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/capacitaciones')}
+                selected={location.pathname === '/capacitaciones'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#fdf4ff', // Fondo púrpura muy claro
+                  border: '1px solid #f3e8ff', // Borde púrpura claro
+                  '&:hover': {
+                    backgroundColor: '#faf5ff',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#f3e8ff',
+                    '&:hover': {
+                      backgroundColor: '#e9d5ff',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#9333ea', minWidth: open ? 40 : 'auto' }}>
+                  <SchoolIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Capacitaciones" sx={{ color: '#9333ea', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+          </>
+        )}
 
-         {/* Capacitaciones - Solo para capacitadores y coordinadoras */}
-         {(user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'admin' || user?.dni === '73766815') && (
-           <>
-             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
-             <ListItem disablePadding>
-               <ListItemButton
-                 onClick={() => handleNavigation('/capacitaciones')}
-                 selected={location.pathname === '/capacitaciones'}
-                 sx={{
-                   mx: 1,
-                   borderRadius: 1,
-                   backgroundColor: '#fef3c7', // Fondo amarillo muy claro
-                   border: '1px solid #fde68a', // Borde amarillo claro
-                   '&:hover': {
-                     backgroundColor: '#fde68a',
-                   },
-                   '&.Mui-selected': {
-                     backgroundColor: '#fbbf24',
-                     '&:hover': {
-                       backgroundColor: '#f59e0b',
-                     },
-                   },
-                 }}
-               >
-                 <ListItemIcon sx={{ color: '#d97706', minWidth: open ? 40 : 'auto' }}>
-                   <SchoolIcon />
-                 </ListItemIcon>
-                 {open && <ListItemText primary="Capacitaciones" sx={{ color: '#d97706', fontWeight: 600 }} />}
-               </ListItemButton>
-             </ListItem>
-           </>
-         )}
+        {/* Pagos de Nómina - Solo para analistas y creador */}
+        {(isAnalista || user?.dni === '73766815') && (
+          <>
+            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/pagos-nomina')}
+                selected={location.pathname === '/pagos-nomina'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#f0fdf4', // Fondo verde muy claro
+                  border: '1px solid #bbf7d0', // Borde verde claro
+                  '&:hover': {
+                    backgroundColor: '#dcfce7',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#bbf7d0',
+                    '&:hover': {
+                      backgroundColor: '#86efac',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#16a34a', minWidth: open ? 40 : 'auto' }}>
+                  <AccountBalanceIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Pagos de Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+          </>
+        )}
 
          {/* Control Maestro - Solo para el creador y analistas - AL FINAL DEL SIDEBAR */}
-         {(user?.dni === '73766815' || user?.role === 'analista') && (
+         {(user?.dni === '73766815' || isAnalista) && (
            <>
              <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
              <ListItem disablePadding>
@@ -428,7 +444,7 @@ const Sidebar = () => {
                    },
                  }}
                >
-                 <ListItemIcon sx={{ color: '#6b7280', minWidth: open ? 40 : 'auto' }}>
+                 <ListItemIcon sx={{ color: '#dc2626', minWidth: open ? 40 : 'auto' }}>
                    <SecurityIcon />
                  </ListItemIcon>
                  {open && <ListItemText primary="Control Maestro" />}

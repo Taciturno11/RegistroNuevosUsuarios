@@ -307,7 +307,7 @@ const OJT = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
               >
                 Volver al Dashboard
               </Button>
@@ -321,7 +321,7 @@ const OJT = () => {
           </Alert>
           <Button
             variant="contained"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
           >
             Volver al Dashboard
           </Button>
@@ -359,7 +359,7 @@ const OJT = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
               >
                 Volver al Dashboard
               </Button>

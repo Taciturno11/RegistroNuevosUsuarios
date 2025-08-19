@@ -542,7 +542,7 @@ const Justificaciones = () => {
           </Typography>
         <Button 
           variant="contained" 
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/dashboard')}
           startIcon={<ArrowBackIcon />}
         >
           Volver al Dashboard
@@ -563,7 +563,7 @@ const Justificaciones = () => {
               {/* Navegación y Título */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <IconButton 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             sx={{
                     color: 'white',
                     backgroundColor: 'rgba(255,255,255,0.15)',

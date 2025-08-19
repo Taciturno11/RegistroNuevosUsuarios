@@ -338,7 +338,7 @@ const Excepciones = () => {
               <Button
                 variant="outlined"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
               >
                 Volver al Dashboard
               </Button>
@@ -352,7 +352,7 @@ const Excepciones = () => {
           </Alert>
             <Button
             variant="contained"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
           >
             Volver al Dashboard
           </Button>
@@ -645,7 +645,7 @@ const Excepciones = () => {
                 variant="contained"
                 size="medium"
                 startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 sx={{ 
                   background: 'linear-gradient(135deg, #34495e, #2c3e50)',
                   border: 'none',
@@ -732,8 +732,8 @@ const Excepciones = () => {
                         <Typography variant="body2">N/A</Typography>
                       ) : (
                         <>
-                          <Typography variant="body2"><strong>Entrada:</strong> {formatearHora(excepcion.HoraEntrada || excepcion.horaEntrada)}</Typography>
-                          <Typography variant="body2"><strong>Salida:</strong> {formatearHora(excepcion.HoraSalida || excepcion.horaSalida)}</Typography>
+                          <Typography variant="body2"><strong style={{ color: '#000000' }}>Entrada:&nbsp;&nbsp;</strong> {formatearHora(excepcion.HoraEntrada || excepcion.horaEntrada)}</Typography>
+                          <Typography variant="body2"><strong style={{ color: '#000000' }}>Salida:&nbsp;&nbsp;</strong> {formatearHora(excepcion.HoraSalida || excepcion.horaSalida)}</Typography>
                         </>
                       )}
                     </TableCell>

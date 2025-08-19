@@ -938,7 +938,7 @@ const PagosNomina = () => {
              <Button
                variant="outlined"
                startIcon={<ArrowBackIcon />}
-               onClick={() => navigate('/')}
+               onClick={() => navigate('/dashboard')}
              >
                Volver al Dashboard
              </Button>

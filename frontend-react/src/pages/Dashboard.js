@@ -51,6 +51,12 @@ const Dashboard = () => {
   const location = useLocation();
   
   console.log('🏗️ Dashboard component montándose. Ruta actual:', location.pathname);
+  console.log('🏗️ Dashboard - Estado inicial:', {
+    pathname: location.pathname,
+    search: location.search,
+    hash: location.hash
+  });
+  
   const { api } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -84,10 +90,17 @@ const Dashboard = () => {
   // Cargar estadísticas al montar el componente
   useEffect(() => {
     console.log('🔍 Dashboard useEffect ejecutándose. Ruta actual:', location.pathname);
+    console.log('🔍 Dashboard useEffect - Estado completo:', {
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+      fullPath: window.location.href
+    });
     
     // Solo ejecutar si estamos realmente en la ruta del Dashboard
-    if (location.pathname !== '/') {
-      console.log('🚫 Dashboard montado pero no en ruta /, saltando inicialización');
+    if (location.pathname !== '/dashboard') {
+      console.log('🚫 Dashboard montado pero no en ruta /dashboard, saltando inicialización');
+      console.log('🚫 Ruta esperada: /dashboard, Ruta actual:', location.pathname);
       return;
     }
     
@@ -99,11 +112,47 @@ const Dashboard = () => {
     const nombreGuardado = localStorage.getItem('empleadoNombre');
     
     if (dniGuardado && nombreGuardado) {
-      setSelectedEmployee({
-        DNI: dniGuardado,
-        Nombres: nombreGuardado
-      });
-      setShowActions(true);
+      console.log('🔄 Restaurando empleado desde localStorage:', { dniGuardado, nombreGuardado });
+      
+      // Cargar información completa del empleado desde la API
+      const cargarEmpleadoCompleto = async () => {
+        try {
+          console.log('📡 Cargando información completa del empleado...');
+          const [empleadoResponse, infoAdicionalResponse] = await Promise.all([
+            api.get(`/empleados/${dniGuardado}`),
+            api.get('/catalogos')
+          ]);
+          
+          if (empleadoResponse.data.success && infoAdicionalResponse.data.success) {
+            const empleado = empleadoResponse.data.data;
+            const infoAdicional = infoAdicionalResponse.data.catalogos;
+            
+            // Crear objeto con información completa
+            const empleadoCompleto = {
+              ...empleado,
+              cargo: infoAdicional.cargos?.find(c => c.id === empleado.CargoID)?.nombre || `ID: ${empleado.CargoID}` || 'No especificado',
+              campania: infoAdicional.campanias?.find(c => c.id === empleado.CampañaID)?.nombre || `ID: ${empleado.CampañaID}` || 'No especificado',
+              jornada: infoAdicional.jornadas?.find(c => c.id === empleado.JornadaID)?.nombre || `ID: ${empleado.JornadaID}` || 'No especificado',
+              modalidad: infoAdicional.modalidades?.find(c => c.id === empleado.ModalidadID)?.nombre || `ID: ${empleado.ModalidadID}` || 'No especificado'
+            };
+            
+            console.log('✅ Empleado restaurado completamente:', empleadoCompleto);
+            setSelectedEmployee(empleadoCompleto);
+            setShowActions(true);
+            setSearchTerm(empleadoCompleto.DNI); // Restaurar también el término de búsqueda
+          } else {
+            console.log('❌ Error restaurando empleado, limpiando localStorage');
+            localStorage.removeItem('empleadoDNI');
+            localStorage.removeItem('empleadoNombre');
+          }
+        } catch (error) {
+          console.error('❌ Error restaurando empleado:', error);
+          localStorage.removeItem('empleadoDNI');
+          localStorage.removeItem('empleadoNombre');
+        }
+      };
+      
+      cargarEmpleadoCompleto();
     }
   }, [location.pathname]);
 
@@ -215,15 +264,17 @@ const Dashboard = () => {
   };
 
   const clearSelectedEmployee = () => {
+    console.log('🧹 Limpiando empleado seleccionado...');
     setSelectedEmployee(null);
     setShowActions(false);
     setSearchTerm('');
     setSuggestions([]);
     setSelectedSuggestionIndex(-1);
     
-    // Limpiar localStorage como en el proyecto original
+    // Limpiar localStorage
     localStorage.removeItem('empleadoDNI');
     localStorage.removeItem('empleadoNombre');
+    console.log('💾 localStorage limpiado');
   };
 
   // Funciones de navegación por teclado como en el proyecto original
@@ -462,6 +513,17 @@ const Dashboard = () => {
     }
   };
 
+  console.log('🎨 Dashboard - Antes del return, renderizando JSX...');
+  console.log('🎨 Dashboard - Estado actual:', {
+    searchTerm,
+    suggestions: suggestions.length,
+    selectedEmployee: selectedEmployee ? 'Seleccionado' : 'No seleccionado',
+    showActions,
+    stats,
+    loading,
+    error
+  });
+
   const actionCards = [
     {
       title: 'Actualizar Datos',
@@ -681,34 +743,34 @@ const Dashboard = () => {
               </Typography>
               
               {/* Información detallada en grid como en el proyecto original */}
-              <Grid container spacing={2}>
+              <Grid container spacing={8}>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <IdCardIcon sx={{ color: '#1e40af', mr: 1, fontSize: 16 }} />
-                      <strong>DNI:</strong> {selectedEmployee.DNI}
+                      <strong style={{ color: '#000000' }}>DNI:&nbsp;&nbsp;</strong> {selectedEmployee.DNI}
                     </Typography>
                   </Box>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <CalendarIcon sx={{ color: '#059669', mr: 1, fontSize: 16 }} />
-                      <strong>Fecha Contratación:</strong> {formatearFecha(selectedEmployee.FechaContratacion)}
+                      <strong style={{ color: '#000000' }}>Fecha Contratación:&nbsp;&nbsp;</strong> {formatearFecha(selectedEmployee.FechaContratacion)}
                     </Typography>
                   </Box>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <WorkIcon sx={{ color: '#0891b2', mr: 1, fontSize: 16 }} />
-                      <strong>Cargo:</strong> {selectedEmployee.cargo}
+                      <strong style={{ color: '#000000' }}>Cargo:&nbsp;&nbsp;</strong> {selectedEmployee.cargo}
                     </Typography>
                   </Box>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <BusinessIcon sx={{ color: '#d97706', mr: 1, fontSize: 16 }} />
-                      <strong>Campaña:</strong> {selectedEmployee.campania}
+                      <strong style={{ color: '#000000' }}>Campaña:&nbsp;&nbsp;</strong> {selectedEmployee.campania}
                     </Typography>
                   </Box>
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} sx={{ pl: 8 }}>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <CircleIcon sx={{ 
@@ -716,25 +778,25 @@ const Dashboard = () => {
                         mr: 1, 
                         fontSize: 16 
                       }} />
-                      <strong>Estado:</strong> {selectedEmployee.EstadoEmpleado || 'No especificado'}
+                      <strong style={{ color: '#000000' }}>Estado:&nbsp;&nbsp;</strong> {selectedEmployee.EstadoEmpleado || 'No especificado'}
                     </Typography>
                   </Box>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <ClockIcon sx={{ color: '#475569', mr: 1, fontSize: 16 }} />
-                      <strong>Jornada:</strong> {selectedEmployee.jornada}
+                      <strong style={{ color: '#000000' }}>Jornada:&nbsp;&nbsp;</strong> {selectedEmployee.jornada}
                     </Typography>
                   </Box>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <LaptopIcon sx={{ color: '#0891b2', mr: 1, fontSize: 16 }} />
-                      <strong>Modalidad:</strong> {selectedEmployee.modalidad}
+                      <strong style={{ color: '#000000' }}>Modalidad:&nbsp;&nbsp;</strong> {selectedEmployee.modalidad}
                     </Typography>
                   </Box>
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                       <CalendarMonthIcon sx={{ color: '#dc2626', mr: 1, fontSize: 16 }} />
-                      <strong>Fecha Cese:</strong> {formatearFecha(selectedEmployee.FechaCese)}
+                      <strong style={{ color: '#000000' }}>Fecha Cese:&nbsp;&nbsp;</strong> {formatearFecha(selectedEmployee.FechaCese)}
                     </Typography>
                   </Box>
                 </Grid>

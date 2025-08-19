@@ -344,7 +344,7 @@ const RegistrarEmpleado = () => {
             <Button
               variant="outlined"
               startIcon={<ArrowBackIcon />}
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/dashboard')}
             >
               Volver al Dashboard
             </Button>
@@ -797,7 +797,7 @@ const RegistrarEmpleado = () => {
              <Button
                variant="outlined"
                startIcon={<ArrowBackIcon />}
-               onClick={() => navigate('/')}
+               onClick={() => navigate('/dashboard')}
              >
                Volver al Dashboard
              </Button>

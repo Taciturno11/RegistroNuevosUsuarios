@@ -8,11 +8,11 @@ const getBackendURL = () => {
   
   // Si no es localhost, usar la IP actual
   if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    return `http://${hostname}:5000/api`;
+    return `http://${hostname}:3001/api`;
   }
   
   // Fallback a localhost
-  return 'http://localhost:5000/api';
+  return 'http://localhost:3001/api';
 };
 
 // Crear instancia específica de Axios para el proyecto
@@ -20,6 +20,8 @@ const api = axios.create({
   baseURL: getBackendURL(),
   timeout: 10000,
 });
+
+console.log('🌐 AuthContext - URL del backend configurada:', getBackendURL());
 
 const AuthContext = createContext();
 
@@ -48,7 +50,14 @@ export const AuthProvider = ({ children }) => {
     token: token ? 'presente' : 'null', 
     isAuthenticated, 
     loading,
-    currentPath: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
+    currentPath: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+    userDetails: user ? {
+      dni: user.dni,
+      role: user.role,
+      nombres: user.nombres,
+      apellidoPaterno: user.apellidoPaterno,
+      apellidoMaterno: user.apellidoMaterno
+    } : 'No user'
   });
 
 

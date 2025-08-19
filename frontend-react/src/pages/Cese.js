@@ -225,10 +225,9 @@ const Cese = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Button
-          variant="outlined"
+          variant="contained"
+          onClick={() => navigate('/dashboard')}
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/')}
-          sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}
         >
           Volver al Dashboard
         </Button>
@@ -253,11 +252,11 @@ const Cese = () => {
             <Typography variant="body2" sx={{ color: '#92400e', fontWeight: 600, mb: 1 }}>
               📅 Registro de Cese Existente
             </Typography>
-            <Typography variant="body2" sx={{ color: '#92400e' }}>
-              <strong>Fecha de Cese:</strong> {formatearFecha(empleado.FechaCese)}
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong style={{ color: '#000000' }}>Fecha de Cese:&nbsp;&nbsp;</strong> {formatearFecha(empleado.FechaCese)}
             </Typography>
-            <Typography variant="body2" sx={{ color: '#92400e' }}>
-              <strong>Estado:</strong> {empleado.EstadoEmpleado || 'Cesado'}
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              <strong style={{ color: '#000000' }}>Estado:&nbsp;&nbsp;</strong> {empleado.EstadoEmpleado || 'Cesado'}
             </Typography>
           </Box>
         )}

@@ -154,14 +154,17 @@ const AppContent = () => {
         minHeight: '100vh' // Asegura que ocupe toda la altura de la pantalla
       }}>
         <Routes>
-          {/* Dashboard como ruta principal */}
-          <Route path="/" element={
+          {/* Perfil del usuario como ruta principal */}
+          <Route path="/" element={<EmployeeProfile />} />
+          
+          {/* Dashboard como ruta separada */}
+          <Route path="/dashboard" element={
             <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
               <Dashboard />
             </ProtectedRoute>
           } />
           
-          {/* Vista de perfil de empleado */}
+          {/* Vista de perfil de empleado (mantener para compatibilidad) */}
           <Route path="/profile" element={<EmployeeProfile />} />
           
           {/* Rutas administrativas (solo para roles administrativos) */}
@@ -224,7 +227,7 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
-          {/* Rutas no encontradas van al Dashboard en lugar de crear un loop */}
+          {/* Rutas no encontradas van al perfil del usuario */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
