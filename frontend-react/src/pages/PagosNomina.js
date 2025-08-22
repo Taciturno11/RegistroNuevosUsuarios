@@ -1356,7 +1356,7 @@ const PagosNomina = () => {
                                     S/ {(empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </TableCell>
                                   <TableCell>
-                                    <Tooltip title="Ver bonos del empleado">
+                                                                         <Tooltip title="Ver detalle de nómina del empleado">
                                       <IconButton
                                         size="small"
                                         onClick={(e) => {
@@ -1661,60 +1661,60 @@ const PagosNomina = () => {
            justifyContent: 'space-between',
            alignItems: 'center'
          }}>
-           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-             <Typography variant="h6">
-               💰 Detalle de Bonos - {modalBonos.empleado?.Nombres} {modalBonos.empleado?.ApellidoPaterno}
-             </Typography>
-           </Box>
+                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography variant="h6">
+                💰 Detalle de Nómina - {modalBonos.empleado?.Nombres} {modalBonos.empleado?.ApellidoPaterno}
+              </Typography>
+            </Box>
            <IconButton onClick={cerrarModalBonos} sx={{ color: 'white' }}>
              <CloseIcon />
            </IconButton>
          </DialogTitle>
          
-         <DialogContent sx={{ pt: 3 }}>
-           {modalBonos.empleado && (() => {
-             // Obtener todas las columnas de bonos del empleado
-             const columnasBonos = Object.keys(modalBonos.empleado).filter(columna => 
-               columna.toLowerCase().includes('bono') && 
-               typeof modalBonos.empleado[columna] === 'number' &&
-               modalBonos.empleado[columna] > 0
-             );
-             
-             if (columnasBonos.length === 0) {
-               return (
-                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                   <Typography variant="h6" color="text.secondary">
-                     Este empleado no tiene bonos asignados
-                   </Typography>
-                 </Box>
-               );
-             }
+                   <DialogContent sx={{ pt: 3 }}>
+            {modalBonos.empleado && (() => {
+              // Obtener todas las columnas de bonos del empleado (incluyendo los que valen 0)
+              const columnasBonos = Object.keys(modalBonos.empleado).filter(columna => 
+                columna.toLowerCase().includes('bono') && 
+                typeof modalBonos.empleado[columna] === 'number'
+              );
+              
+              // Filtrar solo los bonos que tienen valor mayor a 0 para mostrar
+              const bonosConValor = columnasBonos.filter(columna => 
+                modalBonos.empleado[columna] > 0
+              );
              
              return (
                <Box>
                                                      {/* Información del empleado */}
-                  <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8fafc' }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" color="text.secondary">DNI:</Typography>
-                        <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.DNI}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" color="text.secondary">Cargo:</Typography>
-                        <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCargo}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" color="text.secondary">Campaña:</Typography>
-                        <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCampaña}</Typography>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" color="text.secondary">Total a Pagar:</Typography>
-                        <Typography variant="h6" color="success.main" fontWeight="bold">
-                          S/ {parseFloat(modalBonos.empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Paper>
+                                     <Paper sx={{ p: 2, mb: 3, backgroundColor: '#f8fafc' }}>
+                     <Grid container spacing={2}>
+                       <Grid item xs={12} md={6}>
+                         <Typography variant="body2" color="text.secondary">DNI:</Typography>
+                         <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.DNI}</Typography>
+                       </Grid>
+                       <Grid item xs={12} md={6}>
+                         <Typography variant="body2" color="text.secondary">Cargo:</Typography>
+                         <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCargo}</Typography>
+                       </Grid>
+                       <Grid item xs={12} md={6}>
+                         <Typography variant="body2" color="text.secondary">Campaña:</Typography>
+                         <Typography variant="body1" fontWeight="bold">{modalBonos.empleado.NombreCampaña}</Typography>
+                       </Grid>
+                       <Grid item xs={12} md={6}>
+                         <Typography variant="body2" color="text.secondary">Sueldo Base:</Typography>
+                         <Typography variant="h6" color="info.main" fontWeight="bold">
+                           S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         </Typography>
+                       </Grid>
+                       <Grid item xs={12} md={6}>
+                         <Typography variant="body2" color="text.secondary">Total a Pagar:</Typography>
+                         <Typography variant="h6" color="success.main" fontWeight="bold">
+                           S/ {parseFloat(modalBonos.empleado.TotalPagar || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                         </Typography>
+                       </Grid>
+                     </Grid>
+                   </Paper>
 
                   {/* Información de Asistencia y Descuentos en la misma línea */}
                   <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -1792,45 +1792,61 @@ const PagosNomina = () => {
 
                   
 
-                 {/* Lista de bonos */}
-                 <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
-                   📊 Desglose de Bonos
-                 </Typography>
-                 
-                 <Grid container spacing={2}>
-                   {columnasBonos.map((columnaBono) => {
-                     const valorBono = modalBonos.empleado[columnaBono];
-                     const totalAPagar = modalBonos.empleado.TotalPagar || 0;
-                     const porcentajeBono = totalAPagar > 0 ? ((valorBono / totalAPagar) * 100) : 0;
-                     
-                     // Mapear nombres de columnas a nombres legibles
-                     const nombreLegible = columnaBono
-                       .replace(/([A-Z])/g, ' $1')
-                       .replace(/^./, str => str.toUpperCase())
-                       .trim();
-                     
-                     return (
-                       <Grid item xs={12} sm={6} md={4} key={columnaBono}>
-                         <Paper sx={{ 
-                           p: 2, 
-                           textAlign: 'center',
-                           border: '1px solid #e0e0e0',
-                           backgroundColor: 'white'
-                         }}>
-                           <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
-                             S/ {valorBono.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                           </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                             {nombreLegible}
-                           </Typography>
-                           <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                             {porcentajeBono.toFixed(1)}% del total
-                           </Typography>
-                         </Paper>
-                       </Grid>
-                     );
-                   })}
-                 </Grid>
+                                   {/* Lista de bonos */}
+                  <Typography variant="h6" sx={{ mb: 2, color: '#16a34a' }}>
+                    📊 Desglose de Bonos
+                  </Typography>
+                  
+                  {bonosConValor.length > 0 ? (
+                    <Grid container spacing={2}>
+                      {bonosConValor.map((columnaBono) => {
+                        const valorBono = modalBonos.empleado[columnaBono];
+                        const totalAPagar = modalBonos.empleado.TotalPagar || 0;
+                        const porcentajeBono = totalAPagar > 0 ? ((valorBono / totalAPagar) * 100) : 0;
+                        
+                        // Mapear nombres de columnas a nombres legibles
+                        const nombreLegible = columnaBono
+                          .replace(/([A-Z])/g, ' $1')
+                          .replace(/^./, str => str.toUpperCase())
+                          .trim();
+                        
+                        return (
+                          <Grid item xs={12} sm={6} md={4} key={columnaBono}>
+                            <Paper sx={{ 
+                              p: 2, 
+                              textAlign: 'center',
+                              border: '1px solid #e0e0e0',
+                              backgroundColor: 'white'
+                            }}>
+                              <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                S/ {valorBono.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {nombreLegible}
+                              </Typography>
+                              <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                                {porcentajeBono.toFixed(1)}% del total
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                        );
+                      })}
+                    </Grid>
+                  ) : (
+                    <Paper sx={{ 
+                      p: 3, 
+                      textAlign: 'center',
+                      border: '1px solid #e0e0e0',
+                      backgroundColor: '#f8fafc'
+                    }}>
+                      <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                        💡 Sin Bonos Asignados
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Este empleado no tiene bonos asignados para este período.
+                      </Typography>
+                    </Paper>
+                  )}
 
                                    {/* Resumen Detallado */}
                   <Paper sx={{ p: 3, mt: 3, backgroundColor: '#f0fdf4' }}>
@@ -1854,17 +1870,17 @@ const PagosNomina = () => {
                         </Box>
                       </Grid>
                       
-                      {/* Total Bonos */}
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            🎁 Total Bonos
-                          </Typography>
-                          <Typography variant="h6" color="primary" fontWeight="bold">
-                            + S/ {columnasBonos.reduce((sum, col) => sum + (modalBonos.empleado[col] || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </Typography>
-                        </Box>
-                      </Grid>
+                                             {/* Total Bonos */}
+                       <Grid item xs={12} sm={6} md={3}>
+                         <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                             🎁 Total Bonos
+                           </Typography>
+                           <Typography variant="h6" color="primary" fontWeight="bold">
+                             + S/ {bonosConValor.reduce((sum, col) => sum + (modalBonos.empleado[col] || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </Typography>
+                         </Box>
+                       </Grid>
                       
                                              {/* Descuentos */}
                        <Grid item xs={12} sm={6} md={3}>
