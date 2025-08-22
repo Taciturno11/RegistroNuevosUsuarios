@@ -27,7 +27,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Popover
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -36,7 +37,8 @@ import {
   Download as DownloadIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -105,6 +107,9 @@ const PagosNomina = () => {
   // Estados para la nueva sección "Pagos por Área"
   const [areasExpandidas, setAreasExpandidas] = useState({});
   const [campañasExpandidas, setCampañasExpandidas] = useState({});
+  
+  // Estado para el popover de fórmula de descuento
+  const [popoverDescuento, setPopoverDescuento] = useState({ open: false, anchorEl: null });
   
   // Estructura de áreas y campañas
   const [areasCampañas] = useState({
@@ -915,6 +920,15 @@ const PagosNomina = () => {
   // Cerrar modal de bonos
   const cerrarModalBonos = () => {
     setModalBonos({ open: false, empleado: null });
+  };
+
+  // Funciones para el popover de descuento
+  const abrirPopoverDescuento = (event) => {
+    setPopoverDescuento({ open: true, anchorEl: event.currentTarget });
+  };
+
+  const cerrarPopoverDescuento = () => {
+    setPopoverDescuento({ open: false, anchorEl: null });
   };
 
   // Editar registro
@@ -1747,47 +1761,43 @@ const PagosNomina = () => {
                       </Paper>
                     </Grid>
 
-                    {/* Información de Descuentos */}
-                    <Grid item xs={12} md={6}>
-                      <Paper sx={{ p: 2, backgroundColor: '#fef2f2', height: '100%' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: '#dc2626' }}>
-                          💸 Información de Descuentos
-                        </Typography>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} sm={6}>
-                            <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
-                            <Typography variant="h6" color="error.main" fontWeight="bold">
-                              {modalBonos.empleado.DiasFaltados || 0}
-                            </Typography>
-                          </Grid>
-                                                     <Grid item xs={12} sm={6}>
-                             <Typography variant="body2" color="text.secondary">Descuento Total:</Typography>
+                                         {/* Información de Descuentos */}
+                     <Grid item xs={12} md={6}>
+                       <Paper sx={{ p: 2, backgroundColor: '#fef2f2', height: '100%' }}>
+                         <Typography variant="h6" sx={{ mb: 2, color: '#dc2626' }}>
+                           💸 Información de Descuentos
+                         </Typography>
+                         <Grid container spacing={2}>
+                           <Grid item xs={12} sm={6}>
+                             <Typography variant="body2" color="text.secondary">Días Faltados:</Typography>
                              <Typography variant="h6" color="error.main" fontWeight="bold">
-                               S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)}
+                               {modalBonos.empleado.DiasFaltados || 0}
                              </Typography>
                            </Grid>
-                        </Grid>
-                        
-                                                 {/* Fórmula del descuento */}
-                         <Box sx={{ mt: 2, p: 2, backgroundColor: '#fef2f2', borderRadius: 1, border: '1px solid #fecaca' }}>
-                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
-                             📐 Fórmula del Descuento:
-                           </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                             Descuento = (Sueldo Base ÷ 30) × Días Faltados
-                           </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
-                             = (S/ {parseFloat(modalBonos.empleado.SueldoBase || 0).toLocaleString('es-PE')} ÷ 30) × {modalBonos.empleado.DiasFaltados || 0}
-                           </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace' }}>
-                             = S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30)).toFixed(2)} × {modalBonos.empleado.DiasFaltados || 0}
-                           </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontFamily: 'monospace', fontWeight: 600 }}>
-                             = S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)}
-                           </Typography>
-                         </Box>
-                      </Paper>
-                    </Grid>
+                                                       <Grid item xs={12} sm={6}>
+                              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                  <Typography variant="body2" color="text.secondary">Descuento Total:</Typography>
+                                  <Typography variant="h6" color="error.main" fontWeight="bold">
+                                    S/ {((parseFloat(modalBonos.empleado.SueldoBase || 0) / 30) * (modalBonos.empleado.DiasFaltados || 0)).toFixed(2)}
+                                  </Typography>
+                                </Box>
+                                <IconButton
+                                  size="small"
+                                  onClick={abrirPopoverDescuento}
+                                  sx={{ 
+                                    color: '#dc2626',
+                                    '&:hover': { backgroundColor: 'rgba(220, 38, 38, 0.1)' },
+                                    mt: 0.5
+                                  }}
+                                >
+                                  <InfoIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </Grid>
+                         </Grid>
+                       </Paper>
+                     </Grid>
                   </Grid>
 
                   
@@ -1914,12 +1924,67 @@ const PagosNomina = () => {
            })()}
          </DialogContent>
          
-         <DialogActions sx={{ p: 2 }}>
-           <Button onClick={cerrarModalBonos} variant="outlined">
-             Cerrar
-           </Button>
-         </DialogActions>
-       </Dialog>
+                   <DialogActions sx={{ p: 2 }}>
+            <Button onClick={cerrarModalBonos} variant="outlined">
+              Cerrar
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Popover para la fórmula de descuento */}
+        <Popover
+          open={popoverDescuento.open}
+          anchorEl={popoverDescuento.anchorEl}
+          onClose={cerrarPopoverDescuento}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          PaperProps={{
+            sx: {
+              maxWidth: 400,
+              p: 2,
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca'
+            }
+          }}
+        >
+          <Box>
+            <Typography variant="h6" sx={{ mb: 2, color: '#dc2626', fontWeight: 600 }}>
+              📐 Fórmula del Descuento
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontFamily: 'monospace', fontWeight: 600 }}>
+              Descuento = (Sueldo Base ÷ 30) × Días Faltados
+            </Typography>
+            
+            <Box sx={{ backgroundColor: 'white', p: 2, borderRadius: 1, border: '1px solid #e0e0e0' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontFamily: 'monospace' }}>
+                <strong>Paso 1:</strong> Calcular valor por día
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', mb: 2 }}>
+                = S/ {parseFloat(modalBonos.empleado?.SueldoBase || 0).toLocaleString('es-PE')} ÷ 30
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', mb: 2 }}>
+                = S/ {((parseFloat(modalBonos.empleado?.SueldoBase || 0) / 30)).toFixed(2)} por día
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontFamily: 'monospace' }}>
+                <strong>Paso 2:</strong> Multiplicar por días faltados
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', mb: 2 }}>
+                = S/ {((parseFloat(modalBonos.empleado?.SueldoBase || 0) / 30)).toFixed(2)} × {modalBonos.empleado?.DiasFaltados || 0} días
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace', fontWeight: 600, color: '#dc2626' }}>
+                <strong>Resultado:</strong> S/ {((parseFloat(modalBonos.empleado?.SueldoBase || 0) / 30) * (modalBonos.empleado?.DiasFaltados || 0)).toFixed(2)}
+              </Typography>
+            </Box>
+          </Box>
+        </Popover>
      </Box>
    );
  };
