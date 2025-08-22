@@ -132,13 +132,15 @@ exports.getEmpleadoByDNI = async (req, res) => {
         j.NombreJornada,
         camp.NombreCampaña,
         m.NombreModalidad,
-        gh.NombreGrupo as NombreGrupoHorario
+        gh.NombreGrupo as NombreGrupoHorario,
+        ISNULL(sb.MontoMensual, 0) as SueldoBase
       FROM PRI.Empleados e
       LEFT JOIN PRI.Cargos c ON e.CargoID = c.CargoID
       LEFT JOIN PRI.Jornada j ON e.JornadaID = j.JornadaID
       LEFT JOIN PRI.Campanias camp ON e.CampañaID = camp.CampañaID
       LEFT JOIN PRI.ModalidadesTrabajo m ON e.ModalidadID = m.ModalidadID
       LEFT JOIN dbo.GruposDeHorario gh ON e.GrupoHorarioID = gh.GrupoID
+      LEFT JOIN PRI.SueldoBase sb ON e.DNI = sb.EmpleadoDNI
       WHERE e.DNI = @DNI
     `;
 

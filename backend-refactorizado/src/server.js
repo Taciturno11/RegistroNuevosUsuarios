@@ -18,6 +18,8 @@ const reportesRoutes = require('./routes/reportes.routes');
 const tardanzasRoutes = require('./routes/tardanzas.routes');
 const permisosRoutes = require('./routes/permisos.routes');
 const capacitacionesRoutes = require('./routes/capacitaciones.routes');
+const nominaRoutes = require('./routes/nomina.routes');
+const bonosRoutes = require('./routes/bonos.routes');
 
 // Importar utilidades de red
 const { printNetworkInfo, getMainIP } = require('./utils/networkUtils');
@@ -112,6 +114,7 @@ app.use('/api/reportes', require('./routes/reportes.routes'));
 app.use('/api/tardanzas', require('./routes/tardanzas.routes'));
 app.use('/api/nomina', require('./routes/nomina.routes'));
 app.use('/api/capacitaciones', capacitacionesRoutes);
+app.use('/api/bonos', bonosRoutes);
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {
@@ -146,7 +149,9 @@ app.use('*', (req, res) => {
       '/api/reportes',
       '/api/tardanzas',
       '/api/permisos',
-      '/api/capacitaciones'
+      '/api/capacitaciones',
+      '/api/nomina',
+      '/api/bonos'
     ],
     timestamp: new Date().toISOString()
   });
@@ -177,6 +182,8 @@ const server = app.listen(PORT, HOST, () => {
   console.log('   /api/reportes - Reportes del sistema');
   console.log('   /api/permisos - Permisos especiales');
   console.log('   /api/capacitaciones - Sistema de capacitaciones');
+  console.log('   /api/nomina - Pagos de nómina');
+  console.log('   /api/bonos - Gestión de bonos');
   console.log('=====================================');
   
   // Mostrar información de red

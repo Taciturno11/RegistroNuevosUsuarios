@@ -10,6 +10,7 @@ import EmployeeProfile from './pages/EmployeeProfile';
 import Login from './pages/Login';
 import RegistrarEmpleado from './pages/RegistrarEmpleado';
 import ActualizarEmpleado from './pages/ActualizarEmpleado';
+import Bonos from './pages/Bonos';
 import Cese from './pages/Cese';
 import Justificaciones from './pages/Justificaciones';
 import OJT from './pages/OJT';
@@ -211,6 +212,11 @@ const AppContent = () => {
           <Route path="/excepciones" element={
             <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
               <Excepciones />
+            </ProtectedRoute>
+          } />
+          <Route path="/bonos" element={
+            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+              <Bonos />
             </ProtectedRoute>
           } />
           

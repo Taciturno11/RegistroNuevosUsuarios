@@ -32,7 +32,8 @@ import {
   Security as SecurityIcon,
   TableChart as TableChartIcon,
   AccountBalance as AccountBalanceIcon,
-  School as SchoolIcon
+  School as SchoolIcon,
+  AttachMoney as AttachMoneyIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -72,6 +73,12 @@ const menuItems = [
     title: 'Asignación Excepciones',
     path: '/excepciones',
     icon: <ScheduleIcon sx={{ color: '#06b6d4' }} />, // Cian vibrante
+    adminOnly: true
+  },
+  {
+    title: 'Bonos',
+    path: '/bonos',
+    icon: <AttachMoneyIcon sx={{ color: '#f97316' }} />, // Naranja vibrante
     adminOnly: true
   },
   {
