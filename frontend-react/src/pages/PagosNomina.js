@@ -115,14 +115,22 @@ const PagosNomina = () => {
       'HOGAR',
       'REGULARIZACION',
       'PORTABILIDAD POSPAGO',
-      'PREPAGO DIGITAL'
+      'PREPAGO DIGITAL',
+      'BACKOFFICE'
     ],
     'INBOUND': [
       'UNIFICADO',
       'AUDITORIA',
       'CROSSELLING',
       'BACK SEGUIMIENTO',
-      'REDES SOCIALES'
+      'REDES SOCIALES',
+      'BACK TRANSFERENCIAS',
+      'CLIENTES ESPECIALES',
+      'LIVE CHAT',
+      'RELLAMADO',
+      'BACK OFRECIMENTO',
+      'NPS FCR',
+      'RETENCIONES'
     ],
     'STAFF': [
       'ESTRUCTURA',
