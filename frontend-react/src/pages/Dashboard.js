@@ -42,7 +42,8 @@ import {
   Business as BusinessIcon,
   Circle as CircleIcon,
   Laptop as LaptopIcon,
-  Event as CalendarMonthIcon
+  Event as CalendarMonthIcon,
+  MonetizationOn as MoneyBagIcon
 } from '@mui/icons-material';
 import '../App.css';
 
@@ -483,6 +484,9 @@ const Dashboard = () => {
       case 'excepciones':
         navigate('/excepciones');
         break;
+      case 'bonos':
+        navigate('/bonos');
+        break;
       default:
         break;
     }
@@ -560,6 +564,13 @@ const Dashboard = () => {
       icon: <ClockIcon />,
       color: '#d97706',
       action: 'excepciones'
+    },
+    {
+      title: 'Bonos',
+      description: 'Gestionar bonos y compensaciones del empleado',
+      icon: <MoneyBagIcon />,
+      color: '#16a34a',
+      action: 'bonos'
     },
     {
       title: 'Generar Reporte Asistencia',
