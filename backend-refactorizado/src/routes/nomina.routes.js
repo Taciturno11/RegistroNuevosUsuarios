@@ -4,7 +4,8 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 const { requireRole } = require('../middleware/auth.middleware');
 const {
   generarReporteNomina,
-  getAniosDisponibles
+  getAniosDisponibles,
+  getTodasLasCampanias
 } = require('../controllers/nomina.controller');
 
 // Todas las rutas requieren autenticación
@@ -18,5 +19,8 @@ router.get('/generar-reporte', generarReporteNomina);
 
 // Obtener años disponibles para reportes
 router.get('/anios-disponibles', getAniosDisponibles);
+
+// Obtener todas las campañas disponibles en la base de datos
+router.get('/todas-las-campanias', getTodasLasCampanias);
 
 module.exports = router;

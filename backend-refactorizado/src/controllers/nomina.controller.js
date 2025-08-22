@@ -79,3 +79,67 @@ exports.getAniosDisponibles = async (req, res) => {
     });
   }
 };
+
+// Obtener todas las campañas disponibles en la base de datos
+exports.getTodasLasCampanias = async (req, res) => {
+  try {
+    console.log('🔍 Obteniendo todas las campañas disponibles en la base de datos...');
+
+    // Consulta para obtener todas las campañas de la tabla PRI.Campanias
+    const queryTodasCampanias = `
+      SELECT CampañaID, NombreCampaña 
+      FROM PRI.Campanias 
+      ORDER BY NombreCampaña
+    `;
+
+    // Consulta para obtener campañas que aparecen en reportes de nómina (últimos 3 meses)
+    const queryCampaniasEnNomina = `
+      SELECT DISTINCT c.NombreCampaña
+      FROM PRI.Campanias c
+      INNER JOIN PRI.Empleados e ON c.CampañaID = e.CampañaID
+      WHERE e.EstadoEmpleado IN ('Activo', 'Cese')
+      ORDER BY c.NombreCampaña
+    `;
+
+    // Consulta para obtener campañas que aparecen en capacitaciones
+    const queryCampaniasEnCapacitaciones = `
+      SELECT DISTINCT c.NombreCampaña
+      FROM PRI.Campanias c
+      INNER JOIN Postulantes_En_Formacion pf ON c.CampañaID = pf.CampañaID
+      ORDER BY c.NombreCampaña
+    `;
+
+    const [todasCampanias, campaniasEnNomina, campaniasEnCapacitaciones] = await Promise.all([
+      executeQuery(queryTodasCampanias),
+      executeQuery(queryCampaniasEnNomina),
+      executeQuery(queryCampaniasEnCapacitaciones)
+    ]);
+
+    console.log('📊 Resultados obtenidos:');
+    console.log('🔍 Todas las campañas en PRI.Campanias:', todasCampanias.recordset.map(c => c.NombreCampaña));
+    console.log('🔍 Campañas en nómina:', campaniasEnNomina.recordset.map(c => c.NombreCampaña));
+    console.log('🔍 Campañas en capacitaciones:', campaniasEnCapacitaciones.recordset.map(c => c.NombreCampaña));
+
+    res.json({
+      success: true,
+      message: 'Campañas obtenidas exitosamente',
+      data: {
+        todasLasCampanias: todasCampanias.recordset,
+        campaniasEnNomina: campaniasEnNomina.recordset,
+        campaniasEnCapacitaciones: campaniasEnCapacitaciones.recordset,
+        totalCampanias: todasCampanias.recordset.length,
+        campaniasEnNominaCount: campaniasEnNomina.recordset.length,
+        campaniasEnCapacitacionesCount: campaniasEnCapacitaciones.recordset.length
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo campañas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo campañas',
+      error: 'INTERNAL_SERVER_ERROR',
+      details: error.message
+    });
+  }
+};
