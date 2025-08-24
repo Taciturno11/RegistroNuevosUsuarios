@@ -3,7 +3,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Bar, Pie } from "react-chartjs-2";
 import { Chart, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from "chart.js";
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { Error as ErrorIcon } from '@mui/icons-material/Error';
+import ErrorIcon from "@mui/icons-material/Error";
 import { 
   Box, 
   Typography, 
