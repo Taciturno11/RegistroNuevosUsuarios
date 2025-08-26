@@ -1,8 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import dotenv from "dotenv";
 
-// https://vitejs.dev/config/
+// Cargar variables de entorno
+dotenv.config();
+
+// Obtener la URL del backend desde .env
+const backendURL = "http://10.182.18.70:3001";
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -11,9 +17,11 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5174,
+    host: true,
     proxy: {
       "/api": {
-        target: "http://localhost:3001", // tu backend
+        target: `${backendURL}`, // usa la variable de entorno
         changeOrigin: true,
         secure: false,
       },

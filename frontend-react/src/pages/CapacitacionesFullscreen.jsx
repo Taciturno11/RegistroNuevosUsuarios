@@ -799,8 +799,8 @@ const CapacitacionesFullscreen = () => {
     try {
       setIsLoading(true);
       console.log('🔄 Renovando token manualmente...');
-      
-      const response = await fetch('http://localhost:3001/api/capacitaciones/generate-token', {
+       const envHost = 'http://10.182.18.70:3001';
+      const response = await fetch(`${envHost}/api/capacitaciones/generate-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

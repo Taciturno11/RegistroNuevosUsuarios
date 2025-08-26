@@ -1,18 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-// Función para obtener la URL del backend dinámicamente
+// 🌐 Obtener URL del backend desde variable de entorno
 const getBackendURL = () => {
-  // Obtener la IP del hostname actual (funciona en cualquier red)
-  const hostname = window.location.hostname;
-  
-  // Si no es localhost, usar la IP actual
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    return `http://${hostname}:3001/api`;
+  const envHost = 'http://10.182.18.70:3001';
+
+  if (envHost && envHost !== 'localhost') {
+    return `${envHost}/api`;
   }
-  
-  // Fallback a localhost
-  return 'http://localhost:3001/api';
+
+  return envHost;
 };
 
 // Crear instancia específica de Axios para el proyecto
@@ -39,16 +36,15 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [selectedEmployee, setSelectedEmployee] = useState(() => {
-    // Persistir empleado seleccionado
     const dni = localStorage.getItem('empleadoDNI');
     const nombre = localStorage.getItem('empleadoNombre');
     return dni && nombre ? { dni, nombre } : null;
   });
 
-  console.log('🔄 AuthContext estado actual:', { 
-    user: user ? `${user.dni} (${user.role})` : 'null', 
-    token: token ? 'presente' : 'null', 
-    isAuthenticated, 
+  console.log('🔄 AuthContext estado actual:', {
+    user: user ? `${user.dni} (${user.role})` : 'null',
+    token: token ? 'presente' : 'null',
+    isAuthenticated,
     loading,
     currentPath: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
     userDetails: user ? {
@@ -59,8 +55,6 @@ export const AuthProvider = ({ children }) => {
       apellidoMaterno: user.apellidoMaterno
     } : 'No user'
   });
-
-
 
   const logout = useCallback(() => {
     console.log('🚪 Cerrando sesión...');
@@ -74,9 +68,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('empleadoNombre');
   }, []);
 
-  // Configurar interceptor para incluir token en todas las peticiones
   useEffect(() => {
-    // Configurar interceptor para incluir token en todas las peticiones
     const requestInterceptor = api.interceptors.request.use(
       (config) => {
         const currentToken = localStorage.getItem('token');
@@ -94,13 +86,11 @@ export const AuthProvider = ({ children }) => {
       }
     );
 
-    // Configurar interceptor de respuesta para manejar errores 401
     const responseInterceptor = api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
           console.log('❌ Token expirado o inválido, limpiando estado');
-          // Solo limpiar estado, no redirigir automáticamente
           setUser(null);
           setToken(null);
           setIsAuthenticated(false);
@@ -114,12 +104,10 @@ export const AuthProvider = ({ children }) => {
       }
     );
 
-    // Lógica SIMPLE: verificar autenticación al cargar
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedToken && storedUser) {
-      // Restaurar inmediatamente sin async
       try {
         const userData = JSON.parse(storedUser);
         setUser(userData);
@@ -135,7 +123,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
 
-    // Cleanup de interceptores
     return () => {
       api.interceptors.request.eject(requestInterceptor);
       api.interceptors.response.eject(responseInterceptor);
@@ -147,46 +134,31 @@ export const AuthProvider = ({ children }) => {
     console.log('🔐 Iniciando login para DNI:', dni);
     console.log('📤 Enviando petición a:', '/api/auth/login');
     console.log('📤 Datos enviados:', { dni, password });
-    
+
     try {
-      console.log('📡 ANTES DE LA PETICIÓN HTTP');
-      
-      // Usar axios directamente para el login
       const response = await axios.post('/api/auth/login', { dni, password });
 
-      console.log('📡 DESPUÉS DE LA PETICIÓN HTTP');
       console.log('📡 Respuesta completa del backend:', response);
-      console.log('📡 response.status:', response.status);
-      console.log('📡 response.headers:', response.headers);
       console.log('📡 response.data:', response.data);
-      console.log('📡 response.data.success:', response.data.success);
-      console.log('📡 Estructura completa de response.data:', JSON.stringify(response.data, null, 2));
-      console.log('📡 response.data.token:', response.data.token);
-      console.log('📡 response.data.user:', response.data.user);
 
       if (response.data.success) {
-        // El backend devuelve: { success: true, data: { user: {...}, token: "..." } }
         const { data } = response.data;
         const newToken = data.token;
         const userData = data.user;
-        
-        console.log('🔑 Token extraído:', newToken);
-        console.log('👤 Usuario extraído:', userData);
-        
+
         if (!newToken) {
           console.error('❌ Token es undefined o null');
           return { success: false, message: 'Token no recibido del servidor' };
         }
 
         console.log('✅ Login exitoso, token recibido:', newToken.substring(0, 20) + '...');
-        
+
         setToken(newToken);
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
-        
-        console.log('💾 Token y usuario guardados en localStorage y estado');
+
         return { success: true };
       } else {
         console.log('❌ Login falló:', response.data.message);
@@ -194,15 +166,9 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('❌ Error en login:', error);
-      console.error('❌ Error completo:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText
-      });
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Error de conexión' 
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Error de conexión'
       };
     }
   };
@@ -246,7 +212,7 @@ export const AuthProvider = ({ children }) => {
     token,
     selectedEmployee,
     setEmployeeData,
-    api // Exportar la instancia de Axios configurada
+    api
   };
 
   return (
