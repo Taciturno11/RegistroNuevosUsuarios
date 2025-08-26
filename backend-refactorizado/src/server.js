@@ -166,7 +166,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log('🚀 Backend Refactorizado iniciado exitosamente');
   console.log(`📍 Escuchando en: http://${HOST}:${PORT}`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+  console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN}`);
   console.log(`📊 Rate Limit: ${process.env.RATE_LIMIT_MAX_REQUESTS || 100} requests por ${(parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000 / 60} minutos`);
   console.log('=====================================');
   console.log('🔐 Endpoints disponibles:');

@@ -15,7 +15,7 @@ app.use(helmet());
 
 // Middleware de CORS
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN,
   credentials: true
 }));
 
@@ -68,7 +68,7 @@ app.listen(PORT, HOST, () => {
   console.log('🚀 Servidor de prueba iniciado exitosamente');
   console.log(`📍 Escuchando en: http://${HOST}:${PORT}`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+  console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN}`);
   console.log('🧪 Rutas de prueba disponibles en: /test');
   console.log('=====================================');
 });
