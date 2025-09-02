@@ -75,7 +75,6 @@ const authMiddleware = async (req, res, next) => {
       else if (user.CargoID === 5) role = 'supervisor';
       else if (user.CargoID === 6) role = 'monitor';
       else if (user.CargoID === 7) role = 'capacitador';
-      else if (user.CargoID === 8) role = 'jefe';
       else if (user.CargoID === 9) role = 'controller';
       
       // El creador siempre tiene acceso especial
@@ -175,8 +174,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
         
         // Determinar rol basado en CargoID
         let role = 'empleado';
-        if (user.CargoID === 8) role = 'admin';
-        else if (user.CargoID === 2) role = 'supervisor';
+        if (user.CargoID === 2) role = 'supervisor';
         else if (user.CargoID === 5) role = 'auditor';
         else if (user.CargoID === 9) role = 'creador';
         else if (user.DNI === '73766815') role = 'creador'; // Asegurar que el creador tenga el rol correcto
