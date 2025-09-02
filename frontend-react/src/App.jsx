@@ -220,16 +220,16 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
-          {/* Reporte de Asistencias - Solo para analistas y creador */}
+          {/* Reporte de Asistencias - Solo para analistas, creador y todos los jefes */}
           <Route path="/reporte-asistencias" element={
-            <ProtectedRoute requireRole={['analista', 'creador']}>
+            <ProtectedRoute requireRole={['analista', 'creador', 'jefe_reportes', 'jefe_capacitaciones']}>
               <ReporteAsistencias />
             </ProtectedRoute>
           } />
           
-          {/* Reporte de Tardanzas - Solo para analistas y creador */}
+          {/* Reporte de Tardanzas - Solo para analistas, creador y todos los jefes */}
           <Route path="/reporte-tardanzas" element={
-            <ProtectedRoute requireRole={['analista', 'creador']}>
+            <ProtectedRoute requireRole={['analista', 'creador', 'jefe_reportes', 'jefe_capacitaciones']}>
               <ReporteTardanzas />
             </ProtectedRoute>
           } />
@@ -242,8 +242,16 @@ const AppContent = () => {
           } />
           
           <Route path="/control-maestro" element={<ControlMaestro />} />
+          
+          {/* Capacitaciones - Solo para analistas, creador, jefa especial, capacitadores, coordinadoras y administradores */}
+          <Route path="/capacitaciones" element={
+            <ProtectedRoute requireRole={['capacitador', 'coordinadora', 'admin', 'creador', 'jefe_capacitaciones']}>
+              <CapacitacionesFullscreen />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/pagos-nomina" element={
-            <ProtectedRoute requireRole={['analista', 'creador']}>
+            <ProtectedRoute requireRole={['analista', 'creador', 'jefe_reportes', 'jefe_capacitaciones']}>
               <PagosNomina />
             </ProtectedRoute>
           } />

@@ -112,6 +112,12 @@ const Sidebar = () => {
 
   // Verificar si el usuario es analista (para reporte de asistencias)
   const isAnalista = user?.role === 'analista';
+  
+  // Verificar si el usuario es jefe especial con acceso a capacitaciones
+  const isJefeCapacitaciones = user?.dni === '76157106';
+  
+  // Verificar si el usuario es jefe normal (solo reportes)
+  const isJefeNormal = user?.role === 'jefe_reportes';
 
   // Ocultar sidebar completamente en la vista de capacitaciones
   const isCapacitacionesView = location.pathname === '/capacitaciones';
@@ -308,8 +314,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Reporte de Asistencias - Solo para analistas y creador */}
-        {(isAnalista || user?.dni === '73766815') && (
+        {/* Reporte de Asistencias - Solo para analistas, creador y todos los jefes */}
+        {(isAnalista || user?.dni === '73766815' || isJefeCapacitaciones || isJefeNormal) && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -369,8 +375,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Capacitaciones - Solo para analistas, creador, capacitadores, coordinadoras, jefas y administradores */}
-        {(isAnalista || user?.dni === '73766815' || user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'jefe' || user?.role === 'admin') && (
+        {/* Capacitaciones - Solo para analistas, creador, jefa especial, capacitadores, coordinadoras, jefas y administradores */}
+        {(isAnalista || user?.dni === '73766815' || isJefeCapacitaciones || user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'jefe' || user?.role === 'admin') && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -402,8 +408,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Pagos de Nómina - Solo para analistas y creador */}
-        {(isAnalista || user?.dni === '73766815') && (
+        {/* Pagos de Nómina - Solo para analistas, creador y todos los jefes */}
+        {(isAnalista || user?.dni === '73766815' || isJefeCapacitaciones || isJefeNormal) && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>

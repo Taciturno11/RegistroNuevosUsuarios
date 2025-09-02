@@ -80,6 +80,12 @@ const authMiddleware = async (req, res, next) => {
       
       // El creador siempre tiene acceso especial
       if (user.DNI === '73766815') role = 'creador';
+      // La jefa especial tiene acceso a capacitaciones además de reportes
+      else if (user.DNI === '76157106') role = 'jefe_capacitaciones';
+      // Los demás jefes solo tienen acceso a reportes
+      else if (user.CargoID === 8) role = 'jefe_reportes';
+
+
 
       // Agregar información del usuario al request
       req.user = {
@@ -174,6 +180,8 @@ const optionalAuthMiddleware = async (req, res, next) => {
         else if (user.CargoID === 5) role = 'auditor';
         else if (user.CargoID === 9) role = 'creador';
         else if (user.DNI === '73766815') role = 'creador'; // Asegurar que el creador tenga el rol correcto
+        else if (user.DNI === '76157106') role = 'jefe_capacitaciones'; // Asegurar que la jefa especial tenga el rol correcto
+        else if (user.CargoID === 8) role = 'jefe_reportes'; // Los demás jefes solo reportes
         
         req.user = {
           dni: user.DNI,
