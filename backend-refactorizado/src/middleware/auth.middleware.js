@@ -39,7 +39,7 @@ const authMiddleware = async (req, res, next) => {
 
     try {
       // Verificar el token JWT
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_simple_2024');
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
       
       // Verificar que el usuario existe en la base de datos
       const userResult = await executeQuery(
@@ -161,7 +161,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
     const token = tokenParts[1];
     
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'clave_secreta_simple_2024');
+      const payload = jwt.verify(token, process.env.JWT_SECRET);
       
       // Verificar usuario en BD
       const userResult = await executeQuery(

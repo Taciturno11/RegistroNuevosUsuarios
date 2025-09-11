@@ -36,7 +36,7 @@ function getMainIP() {
   }
   
   console.log('🏠 No se detectaron IPs externas, usando localhost');
-  return '127.0.0.1';
+  return '127.0.0.1'; //CAMBIAR
 }
 
 /**
@@ -46,7 +46,7 @@ function getMainIP() {
  */
 function getServerURLs(port = 5000) {
   const ips = getServerIPs();
-  const urls = [`http://localhost:${port}`];
+  const urls = [`http://localhost:${port}`]; //CAMBIAR
   
   ips.all.forEach(ip => urls.push(`http://${ip}:${port}`));
   

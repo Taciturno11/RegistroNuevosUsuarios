@@ -11,10 +11,10 @@ const generateToken = (userData) => {
     apellidoPaterno: userData.ApellidoPaterno,
     cargoID: userData.CargoID,
     iat: Date.now(),
-    exp: Date.now() + (parseInt(process.env.JWT_EXPIRES_IN || '8h') * 60 * 60 * 1000)
+    exp: Date.now() + (parseInt(process.env.JWT_EXPIRES_IN) * 60 * 60 * 1000)
   };
 
-  return jwt.sign(payload, process.env.JWT_SECRET || 'clave_secreta_simple_2024');
+  return jwt.sign(payload, process.env.JWT_SECRET);
 };
 
 // Login de usuario
@@ -144,7 +144,7 @@ exports.login = async (req, res) => {
       data: {
         user: userResponse,
         token: token,
-        expiresIn: process.env.JWT_EXPIRES_IN || '8h'
+        expiresIn: process.env.JWT_EXPIRES_IN
       }
     });
 
@@ -240,7 +240,7 @@ exports.verifyToken = async (req, res) => {
         tokenInfo: {
           iat: req.user.iat,
           exp: req.user.exp,
-          expiresIn: process.env.JWT_EXPIRES_IN || '8h'
+          expiresIn: process.env.JWT_EXPIRES_IN
         }
       }
     });
@@ -392,7 +392,7 @@ exports.refreshToken = async (req, res) => {
       message: 'Token renovado exitosamente',
       data: {
         token: newToken,
-        expiresIn: process.env.JWT_EXPIRES_IN || '8h'
+        expiresIn: process.env.JWT_EXPIRES_IN
       }
     });
 

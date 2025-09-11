@@ -3,13 +3,9 @@ import axios from 'axios';
 
 // 🌐 Obtener URL del backend desde variable de entorno
 const getBackendURL = () => {
-  const envHost = 'http://10.182.18.70:3001';
-
-  if (envHost && envHost !== 'localhost') {
-    return `${envHost}/api`;
-  }
-
-  return envHost;
+  // Usar variable de entorno obligatoria
+  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  return `${backendURL}/api`;
 };
 
 // Crear instancia específica de Axios para el proyecto
@@ -136,7 +132,7 @@ export const AuthProvider = ({ children }) => {
     console.log('📤 Datos enviados:', { dni, password });
 
     try {
-      const response = await axios.post('/api/auth/login', { dni, password });
+      const response = await api.post('/auth/login', { dni, password });
 
       console.log('📡 Respuesta completa del backend:', response);
       console.log('📡 response.data:', response.data);

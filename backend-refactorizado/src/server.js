@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 require('dotenv').config();
 
@@ -41,15 +42,13 @@ app.use(helmet({
   },
 }));
 
-// Middleware de CORS - Permitir cualquier origen para desarrollo
+// CORS mínimo para intranet - Configurable por IP
+const frontendURL = process.env.FRONTEND_URL;
 app.use(cors({
-  origin: true, // Permitir cualquier origen
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: (origin, callback) => callback(null, true),
+  credentials: true //esta bien
+
 }));
-
-
 
 // Middleware de logging
 app.use(morgan('combined'));
@@ -57,6 +56,8 @@ app.use(morgan('combined'));
 // Middleware para parsear JSON
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Frontend y backend en puertos separados (intranet)
 
 // Middleware para logging de requests
 app.use((req, res, next) => {
@@ -157,17 +158,17 @@ app.use('*', (req, res) => {
   });
 });
 
-// Puerto del servidor
+// Puerto del servidor - Configuración desde .env
 const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0';
+const HOST = '0.0.0.0';
 
 // Iniciar servidor
 const server = app.listen(PORT, HOST, () => {
   console.log('🚀 Backend Refactorizado iniciado exitosamente');
   console.log(`📍 Escuchando en: http://${HOST}:${PORT}`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 CORS Origin: ${process.env.CORS_ORIGIN}`);
-  console.log(`📊 Rate Limit: ${process.env.RATE_LIMIT_MAX_REQUESTS || 100} requests por ${(parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000) / 1000 / 60} minutos`);
+  console.log(`🌐 Frontend URL: ${frontendURL}`);
+  console.log(`📊 Rate Limit: 100 requests por 15 minutos`);
   console.log('=====================================');
   console.log('🔐 Endpoints disponibles:');
   console.log('🔐 Endpoints disponibles:');

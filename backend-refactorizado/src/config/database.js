@@ -1,13 +1,13 @@
 const sql = require('mssql');
 require('dotenv').config();
 
-// Configuración de la base de datos - USANDO LA CONFIGURACIÓN DEL PROYECTO ORIGINAL CAPACITACIONES_BACK
+// Configuración de la base de datos - Variables de entorno obligatorias
 const dbConfig = {
-  server: process.env.SQL_SERVER || '127.0.0.1',        // SQL_SERVER del .env original
-  database: process.env.SQL_DATABASE || 'Partner',       // SQL_DATABASE del .env original
-  user: process.env.SQL_USER || 'tu_usuario',            // SQL_USER del .env original
-  password: process.env.SQL_PASSWORD || 'tu_password',   // SQL_PASSWORD del .env original
-  port: parseInt(process.env.SQL_PORT || '1433'),        // SQL_PORT del .env original
+  server: process.env.SQL_SERVER,        // IP del servidor de BD
+  database: process.env.SQL_DATABASE,    // Nombre de la BD
+  user: process.env.SQL_USER,            // Usuario de BD
+  password: process.env.SQL_PASSWORD,    // Password de BD
+  port: parseInt(process.env.SQL_PORT),  // Puerto de BD
   options: {
     encrypt: false,                                    // Misma configuración
     trustServerCertificate: true,                      // Misma configuración

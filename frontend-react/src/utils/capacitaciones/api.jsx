@@ -1,17 +1,7 @@
 // ✅ Obtener la URL del backend desde la variable de entorno
 const getBackendURL = () => {
-  const envHost = 'http://10.182.18.70:3001';
-  
-  if (envHost && envHost !== 'localhost' && envHost !== '127.0.0.1') {
-    return `${envHost}/api`;
-  }
-
-  const hostname = window.location.hostname;
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    return `${hostname}/api`;
-  }
-
-  return 'http://localhost:3001/api';
+  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  return `${backendURL}/api`;
 };
 
 // ✅ Función para hacer peticiones al backend usando fetch
