@@ -161,14 +161,14 @@ const Excepciones = () => {
       return;
     }
 
-    // No más de 1 mes atrás
-    const unMesAtras = new Date();
-    unMesAtras.setMonth(unMesAtras.getMonth() - 1);
+    // No más de 1 mes atrás (comparación por fecha local, sin afectar por horas)
+    const ahora = new Date();
+    const unMesAtras = new Date(ahora.getFullYear(), ahora.getMonth() - 1, ahora.getDate(), 0, 0, 0, 0);
     const parseYmdToLocalDate = (ymd) => {
       const [yy, mm, dd] = String(ymd).split('T')[0].split('-');
       const y = parseInt(yy, 10); const m = parseInt(mm, 10); const d = parseInt(dd, 10);
       if ([y, m, d].some(Number.isNaN)) return null;
-      return new Date(y, m - 1, d, 12, 0, 0, 0);
+      return new Date(y, m - 1, d, 0, 0, 0, 0);
     };
     if (parseYmdToLocalDate(formData.fecha) < unMesAtras) {
       setError('No se pueden crear excepciones para fechas anteriores a 1 mes');
@@ -408,9 +408,11 @@ const Excepciones = () => {
         sx={{
           mb: 3,
           p: 2,
-          borderRadius: 2,
-          background: 'linear-gradient(135deg, #223a4e, #2f4f68)',
+          borderRadius: 4,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
+          overflow: 'hidden',
+          boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -458,23 +460,22 @@ const Excepciones = () => {
 
       {/* Formulario - COMPACTO y optimizado */}
       {showForm && (
-        <Box sx={{ 
-          background: 'white',
-          borderRadius: '15px',
-          boxShadow: '0 5px 20px rgba(0,0,0,0.1)',
-          padding: '1.5rem',
-          marginBottom: '1.5rem'
+        <Paper sx={{
+          mb: 3,
+          borderRadius: 4,
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          overflow: 'visible',
+          border: '2px solid #667eea',
+          p: 0
         }}>
           {/* Header del formulario */}
           <Box sx={{
-            background: 'linear-gradient(135deg, #2c3e50, #34495e)',
+            backgroundColor: '#667eea',
             color: 'white',
-            borderRadius: '10px 10px 0 0',
-            padding: '1rem',
-            margin: '-1.5rem -1.5rem 1rem -1.5rem',
+            p: 1.5,
             display: 'flex',
             alignItems: 'center',
-            gap: 1
+            gap: 1.5
           }}>
             <AddCircleOutlineIcon />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -482,264 +483,147 @@ const Excepciones = () => {
             </Typography>
           </Box>
           
-          <Box component="form" onSubmit={handleSubmit}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ px: 2, pt: 2, pb: 1 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ 
-                  background: '#ecf0f1',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  marginBottom: '1rem'
-                }}>
-                  <Typography variant="subtitle2" sx={{ 
-                    fontWeight: 600, 
-                    color: '#2c3e50',
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}>
-                    <CalendarMonthIcon fontSize="small" />
-                    Fecha de Excepción
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    type="date"
-                    value={formData.fecha}
-                    onChange={(e) => handleInputChange('fecha', e.target.value)}
-                    required
-                    InputLabelProps={{ shrink: true }}
-                    size="small"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        border: '2px solid #e9ecef',
-                        borderRadius: '6px',
-                        transition: 'all 0.3s ease',
-                        backgroundColor: 'white',
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#3498db'
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                          borderColor: '#3498db',
-                          boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
-                        }
-                      }
-                    }}
-                  />
-                  <Box sx={{ mt: 1 }}>
-                    <TextField
-                      fullWidth
-                      type="date"
-                      label="Fecha fin (opcional)"
-                      value={formData.fechaFin}
-                      onChange={(e) => handleInputChange('fechaFin', e.target.value)}
-                      InputLabelProps={{ shrink: true }}
-                      size="small"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          border: '2px solid #e9ecef',
-                          borderRadius: '6px',
-                          transition: 'all 0.3s ease',
-                          backgroundColor: 'white',
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#3498db'
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#3498db',
-                            boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
-                          }
-                        }
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ 
-                    marginTop: '0.25rem',
-                    color: '#7f8c8d',
-                    fontSize: '0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}>
-                    <InfoIcon fontSize="small" />
-                    <Typography variant="caption">
-                      Puede seleccionar fechas pasadas hasta 1 mes atrás
-                    </Typography>
-                  </Box>
-                </Box>
+              {/* Fecha inicio */}
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Fecha de Excepción *"
+                  type="date"
+                  value={formData.fecha}
+                  onChange={(e) => handleInputChange('fecha', e.target.value)}
+                  fullWidth
+                  required
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#667eea' },
+                      '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    },
+                  }}
+                />
               </Grid>
-              
+              {/* Fecha fin */}
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Fecha fin (opcional)"
+                  type="date"
+                  value={formData.fechaFin}
+                  onChange={(e) => handleInputChange('fechaFin', e.target.value)}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#667eea' },
+                      '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    },
+                  }}
+                />
+              </Grid>
+              {/* Horario */}
               <Grid item xs={12} md={6}>
-                <Box sx={{ 
-                  background: '#ecf0f1',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  marginBottom: '1rem'
-                }}>
-                  <Typography variant="subtitle2" sx={{ 
-                    fontWeight: 600, 
-                    color: '#2c3e50',
-                    marginBottom: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }}>
-                    <AccessTimeIcon fontSize="small" />
-                    Horario Excepcional
-                  </Typography>
-                  <FormControl fullWidth size="small">
-                    <Select
-                      value={formData.horarioID}
-                      onChange={(e) => handleInputChange('horarioID', e.target.value)}
-                      displayEmpty
-                      MenuProps={{ disableScrollLock: true }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          border: '2px solid #e9ecef',
-                          borderRadius: '6px',
-                          transition: 'all 0.3s ease',
-                          backgroundColor: 'white',
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#3498db'
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#3498db',
-                            boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
-                          }
-                        }
-                      }}
-                    >
-                      <MenuItem value="">
-                        -- Seleccionar Horario --
+                <FormControl fullWidth required size="small">
+                  <InputLabel shrink sx={{ fontSize: '0.95rem', fontWeight: 500, '&.Mui-focused': { color: '#667eea' } }}>
+                    Horario Excepcional *
+                  </InputLabel>
+                  <Select
+                    value={formData.horarioID}
+                    onChange={(e) => handleInputChange('horarioID', e.target.value)}
+                    label="Horario Excepcional *"
+                    displayEmpty
+                    MenuProps={{ disableScrollLock: true }}
+                    sx={{
+                      borderRadius: 2,
+                      backgroundColor: 'white',
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea', borderWidth: 2 },
+                    }}
+                  >
+                    <MenuItem value="" disabled>
+                      <em>Seleccione una opción</em>
+                    </MenuItem>
+                    <MenuItem value="__DESCANSO__">Descanso</MenuItem>
+                    {(() => {
+                      const baseText = (horarioBase || '').split('(')[0]?.trim();
+                      const baseTipo = baseText ? baseText.split(' ').slice(0,2).join(' ') : '';
+                      const lista = baseTipo
+                        ? horarios.filter(h => ((h.NombreHorario || h.nombre || '').split(' ').slice(0,2).join(' ')) === baseTipo)
+                        : horarios;
+                      return lista;
+                    })().map((h) => (
+                      <MenuItem key={h.HorarioID || h.id} value={h.HorarioID || h.id}>
+                        {formatearHora(h.HoraEntrada || h.horaEntrada)} - {formatearHora(h.HoraSalida || h.horaSalida)}
                       </MenuItem>
-                      <MenuItem value="__DESCANSO__">Descanso</MenuItem>
-                      {(() => {
-                        const baseText = (horarioBase || '').split('(')[0]?.trim();
-                        const baseTipo = baseText ? baseText.split(' ').slice(0,2).join(' ') : '';
-                        
-                        const lista = baseTipo
-                          ? horarios.filter(h => ((h.NombreHorario || h.nombre || '').split(' ').slice(0,2).join(' ')) === baseTipo)
-                          : horarios;
-                        return lista;
-                      })().map((h) => (
-                        <MenuItem key={h.HorarioID || h.id} value={h.HorarioID || h.id}>
-                          {formatearHora(h.HoraEntrada || h.horaEntrada)} - {formatearHora(h.HoraSalida || h.horaSalida)}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Motivo */}
+              <Grid item xs={12}>
+                <TextField
+                  label="Motivo *"
+                  value={formData.motivo}
+                  onChange={(e) => handleInputChange('motivo', e.target.value)}
+                  fullWidth
+                  required
+                  size="small"
+                  multiline
+                  rows={2}
+                  placeholder="Escriba el motivo (máx. 200 caracteres)"
+                  inputProps={{ maxLength: 200 }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: 'white',
+                      '&:hover fieldset': { borderColor: '#667eea' },
+                      '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                    },
+                  }}
+                />
+              </Grid>
+
+              {/* Botón */}
+              <Grid item xs={12} sx={{ pb: 0 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={18} /> : <SaveIcon />}
+                    sx={{
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      px: 3,
+                      py: 1,
+                      minWidth: 120,
+                      boxShadow: '0 3px 12px rgba(16, 185, 129, 0.28)',
+                      '&:hover': { background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', transform: 'translateY(-2px)', boxShadow: '0 5px 16px rgba(16, 185, 129, 0.34)' },
+                      '&:disabled': { background: '#9ca3af', transform: 'none', boxShadow: 'none' },
+                    }}
+                  >
+                    {loading ? 'Guardando...' : (editingExcepcion ? 'Actualizar' : 'Guardar Excepción')}
+                  </Button>
                 </Box>
               </Grid>
             </Grid>
-            
-            <Box sx={{ 
-              background: '#ecf0f1',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1rem'
-            }}>
-              <Typography variant="subtitle2" sx={{ 
-                fontWeight: 600, 
-                color: '#2c3e50',
-                marginBottom: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}>
-                <ChatBubbleOutlineIcon fontSize="small" />
-                Motivo de la Excepción
-              </Typography>
-              <TextField
-                fullWidth
-                value={formData.motivo}
-                onChange={(e) => handleInputChange('motivo', e.target.value)}
-                required
-                placeholder="Describa el motivo de la asignación excepcional..."
-                multiline
-                rows={2}
-                size="small"
-                                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      border: '2px solid #e9ecef',
-                      borderRadius: '6px',
-                      transition: 'all 0.3s ease',
-                      backgroundColor: 'white',
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#3498db'
-                      },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#3498db',
-                        boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
-                      }
-                    }
-                  }}
-              />
-            </Box>
-            
-            <Box sx={{ 
-              textAlign: 'center',
-              marginTop: '1rem'
-            }}>
-              <Button
-                type="submit"
-                variant="contained"
-                size="medium"
-                startIcon={loading ? <CircularProgress size={18} /> : <SaveIcon />}
-                disabled={loading}
-                sx={{ 
-                  background: 'linear-gradient(135deg, #3498db, #2980b9)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.5rem 1.5rem',
-                  fontWeight: 600,
-                  transition: 'all 0.3s ease',
-                  marginRight: 2,
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 5px 15px rgba(52, 152, 219, 0.4)',
-                    background: 'linear-gradient(135deg, #2980b9, #1f5f8b)'
-                  },
-                  '&:disabled': {
-                    transform: 'none',
-                    boxShadow: 'none'
-                  }
-                }}
-              >
-                {loading ? 'Guardando...' : (editingExcepcion ? 'Actualizar' : 'Guardar Excepción')}
-              </Button>
-              <Button
-                type="button"
-                variant="contained"
-                size="medium"
-                startIcon={<ArrowBackIcon />}
-                onClick={() => navigate('/dashboard')}
-                sx={{ 
-                  background: 'linear-gradient(135deg, #34495e, #2c3e50)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.5rem 1.5rem',
-                  fontWeight: 600,
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 5px 15px rgba(52, 73, 94, 0.4)',
-                    background: 'linear-gradient(135deg, #2c3e50, #1a252f)'
-                  }
-                }}
-              >
-                Volver al Dashboard
-              </Button>
-            </Box>
           </Box>
-        </Box>
+        </Paper>
       )}
 
       {/* Lista de Excepciones */}
-      <Paper sx={{ p: 3, borderRadius: 2 }}>
+      <Paper sx={{ p: 3, borderRadius: 4, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
         <Box sx={{
-          background: 'linear-gradient(135deg, #223a4e, #2f4f68)',
+          backgroundColor: '#1f2937',
           color: 'white',
-          px: 2.5,
-          py: 1.5,
+          p: 3,
           borderRadius: 1,
           mb: 2
         }}>
@@ -758,28 +642,53 @@ const Excepciones = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#223a4e' }}>
-                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                <TableRow>
+                  <TableCell sx={{ 
+                    backgroundColor: '#e2e8f0',
+                    fontWeight: 700,
+                    color: '#374151',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CalendarMonthIcon fontSize="small" /> Fecha
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                  <TableCell sx={{ 
+                    backgroundColor: '#e2e8f0',
+                    fontWeight: 700,
+                    color: '#374151',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <AccessTimeIcon fontSize="small" /> Horario
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                  <TableCell sx={{ 
+                    backgroundColor: '#e2e8f0',
+                    fontWeight: 700,
+                    color: '#374151',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <AccessTimeIcon fontSize="small" /> Rango Horario
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                  <TableCell sx={{ 
+                    backgroundColor: '#e2e8f0',
+                    fontWeight: 700,
+                    color: '#374151',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <ChatBubbleOutlineIcon fontSize="small" /> Motivo
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: 'white', border: 'none' }}>
+                  <TableCell sx={{ 
+                    backgroundColor: '#e2e8f0',
+                    fontWeight: 700,
+                    color: '#374151',
+                    borderBottom: '2px solid #e5e7eb'
+                  }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <SettingsIcon fontSize="small" /> Acciones
                     </Box>
