@@ -69,6 +69,7 @@ const Excepciones = () => {
   // Estado del formulario
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
+    fechaFin: '',
     horarioID: '', // null ⇒ descanso
     motivo: ''
   });
@@ -163,19 +164,42 @@ const Excepciones = () => {
     // No más de 1 mes atrás
     const unMesAtras = new Date();
     unMesAtras.setMonth(unMesAtras.getMonth() - 1);
-    if (new Date(formData.fecha) < unMesAtras) {
+    const parseYmdToLocalDate = (ymd) => {
+      const [yy, mm, dd] = String(ymd).split('T')[0].split('-');
+      const y = parseInt(yy, 10); const m = parseInt(mm, 10); const d = parseInt(dd, 10);
+      if ([y, m, d].some(Number.isNaN)) return null;
+      return new Date(y, m - 1, d, 12, 0, 0, 0);
+    };
+    if (parseYmdToLocalDate(formData.fecha) < unMesAtras) {
       setError('No se pueden crear excepciones para fechas anteriores a 1 mes');
       setLoading(false);
       return;
     }
 
-    // No duplicar fecha
-    const yaExiste = excepciones.some(ex => new Date(ex.Fecha || ex.fecha).toISOString().slice(0,10) === formData.fecha);
-    if (yaExiste) {
-      setError('Ya existe una excepción para esa fecha');
+    // Helpers local time
+    const toYmd = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    };
+    const start = parseYmdToLocalDate(formData.fecha);
+    const end = formData.fechaFin ? parseYmdToLocalDate(formData.fechaFin) : null;
+    if (end && end < start) {
+      setError('La fecha fin no puede ser menor que la fecha inicio');
       setLoading(false);
       return;
     }
+    const buildDates = () => {
+      if (!end) return [toYmd(start)];
+      const dates = [];
+      const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 12, 0, 0, 0);
+      const last = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 12, 0, 0, 0);
+      while (cur <= last) { dates.push(toYmd(cur)); cur.setDate(cur.getDate() + 1); }
+      return dates;
+    };
+    const dates = buildDates();
+    const existsDate = (ymd) => excepciones.some(ex => String(ex.Fecha || ex.fecha).slice(0,10) === ymd);
 
     try {
       // Crear (no implementamos editar en esta versión)
@@ -185,19 +209,34 @@ const Excepciones = () => {
         return Number.isNaN(n) ? null : n;
       };
 
-      const payload = {
-        EmpleadoDNI: dni,
-        Fecha: formData.fecha,
-        HorarioID: horarioIdValue(formData.horarioID),
-        Motivo: formData.motivo.trim()
-      };
+      const results = await Promise.allSettled(
+        dates.map(async (ymd) => {
+          if (existsDate(ymd)) return { skipped: true, fecha: ymd };
+          const payload = {
+            EmpleadoDNI: dni,
+            Fecha: ymd,
+            HorarioID: horarioIdValue(formData.horarioID),
+            Motivo: formData.motivo.trim()
+          };
+          const { data } = await api.post('/excepciones', payload);
+          if (data.success) return { ok: true, fecha: ymd };
+          throw new Error(data.message || 'Error procesando excepción');
+        })
+      );
 
-      const { data } = await api.post('/excepciones', payload);
+      const created = results.filter(r => r.status === 'fulfilled' && r.value?.ok).length;
+      const skipped = results.filter(r => r.status === 'fulfilled' && r.value?.skipped).length;
+      const failed = results.filter(r => r.status === 'rejected').length;
 
-      if (data.success) {
+      if (created || skipped) {
+        const parts = [];
+        if (created) parts.push(`${created} creadas`);
+        if (skipped) parts.push(`${skipped} omitidas (duplicadas)`);
+        if (failed) parts.push(`${failed} con error`);
+        setSuccess(`Excepciones: ${parts.join(', ')}`);
         const mensaje = editingExcepcion ? 'Excepción actualizada exitosamente' : 'Excepción registrada exitosamente';
         console.log('✅ Configurando mensaje de éxito:', mensaje);
-        setSuccess(mensaje);
+        // mantener el mensaje resumido construido
         
         // Recargar lista y limpiar formulario
         await cargarExcepciones(dni);
@@ -212,7 +251,7 @@ const Excepciones = () => {
         }, 3000);
         
       } else {
-        setError(data.message || 'Error procesando excepción');
+        setError('No se pudo crear ninguna excepción');
       }
     } catch (error) {
       setError(error.response?.data?.message || 'Error de conexión');
@@ -260,6 +299,7 @@ const Excepciones = () => {
   const handleClear = () => {
     setFormData({
       fecha: new Date().toISOString().split('T')[0],
+      fechaFin: '',
       horarioID: '',
       motivo: ''
     });
@@ -486,6 +526,32 @@ const Excepciones = () => {
                       }
                     }}
                   />
+                  <Box sx={{ mt: 1 }}>
+                    <TextField
+                      fullWidth
+                      type="date"
+                      label="Fecha fin (opcional)"
+                      value={formData.fechaFin}
+                      onChange={(e) => handleInputChange('fechaFin', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      size="small"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          border: '2px solid #e9ecef',
+                          borderRadius: '6px',
+                          transition: 'all 0.3s ease',
+                          backgroundColor: 'white',
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#3498db'
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#3498db',
+                            boxShadow: '0 0 0 0.2rem rgba(52, 152, 219, 0.25)'
+                          }
+                        }
+                      }}
+                    />
+                  </Box>
                   <Box sx={{ 
                     marginTop: '0.25rem',
                     color: '#7f8c8d',

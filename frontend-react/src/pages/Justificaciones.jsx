@@ -66,6 +66,7 @@ const Justificaciones = () => {
   // Estados del formulario
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
+    fechaFin: '',
     tipo: '',
     motivo: '',
     estado: '',
@@ -253,36 +254,106 @@ const Justificaciones = () => {
     setSuccess('');
 
     try {
-      const payload = {
-        empleadoDNI: dni,
-        fecha: formData.fecha,
-        tipo: formData.tipo,
-        motivo: formData.motivo,
-        estado: formData.estado,
-        aprobadorDNI: formData.aprobadorDNI || null
+      if (!formData.fecha) {
+        setError('La fecha de inicio es obligatoria');
+        setLoading(false);
+        return;
+      }
+
+      // Parsear YYYY-MM-DD a fecha local (mediodía) para evitar desfase UTC
+      const parseYmdToLocalDate = (ymd) => {
+        const [yy, mm, dd] = String(ymd).split('T')[0].split('-');
+        const y = parseInt(yy, 10);
+        const m = parseInt(mm, 10);
+        const d = parseInt(dd, 10);
+        if ([y, m, d].some(Number.isNaN)) return null;
+        return new Date(y, m - 1, d, 12, 0, 0, 0);
       };
 
-      const response = await api.post('/justificaciones', payload);
-      
-      if (response.data.success) {
-        setSuccess('Justificación registrada exitosamente');
-        setFormData({
-          fecha: new Date().toISOString().split('T')[0],
-          tipo: '',
-          motivo: '',
-          estado: '',
-          aprobadorDNI: ''
-        });
-        await cargarJustificaciones();
-      } else {
-        setError(response.data.message || 'Error registrando justificación');
+      const start = parseYmdToLocalDate(formData.fecha);
+      const end = formData.fechaFin ? parseYmdToLocalDate(formData.fechaFin) : null;
+      if (end && end < start) {
+        setError('La fecha fin no puede ser menor que la fecha inicio');
+        setLoading(false);
+        return;
       }
+
+      const toYmd = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+      };
+
+      const buildDates = () => {
+        if (!end) return [toYmd(start)];
+        const dates = [];
+        const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 12, 0, 0, 0);
+        const last = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 12, 0, 0, 0);
+        while (cur <= last) {
+          dates.push(toYmd(cur));
+          cur.setDate(cur.getDate() + 1);
+        }
+        return dates;
+      };
+
+      const dates = buildDates();
+
+      const existsSameDateType = (ymd) => {
+        return justificaciones.some(j => {
+          const f = (j.Fecha || j.fecha || '').slice(0,10);
+          const t = (j.TipoJustificacion || j.tipo || '').trim();
+          return f === ymd && t === (formData.tipo || '').trim();
+        });
+      };
+
+      const results = await Promise.allSettled(
+        dates.map(async (ymd) => {
+          if (existsSameDateType(ymd)) {
+            return { skipped: true, fecha: ymd };
+          }
+          const payload = {
+            empleadoDNI: dni,
+            fecha: ymd,
+            tipo: formData.tipo,
+            motivo: formData.motivo,
+            estado: formData.estado,
+            aprobadorDNI: formData.aprobadorDNI || null
+          };
+          const response = await api.post('/justificaciones', payload);
+          if (response.data.success) return { ok: true, fecha: ymd };
+          throw new Error(response.data.message || 'Error registrando justificación');
+        })
+      );
+
+      const created = results.filter(r => r.status === 'fulfilled' && r.value?.ok).length;
+      const skipped = results.filter(r => r.status === 'fulfilled' && r.value?.skipped).length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+
+      if (created > 0 || skipped > 0) {
+        const parts = [];
+        if (created) parts.push(`${created} creadas`);
+        if (skipped) parts.push(`${skipped} omitidas (duplicadas)`);
+        if (failed) parts.push(`${failed} con error`);
+        setSuccess(`Justificaciones: ${parts.join(', ')}`);
+        await cargarJustificaciones();
+      } else if (failed > 0) {
+        setError('No se pudo crear ninguna justificación');
+      } else {
+        setSuccess('No hay nuevas justificaciones para crear');
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        fecha: new Date().toISOString().split('T')[0],
+        fechaFin: ''
+      }));
     } catch (error) {
       setError(error.response?.data?.message || 'Error de conexión');
     } finally {
       setLoading(false);
     }
-  }, [api, dni, formData, cargarJustificaciones]);
+  }, [api, dni, formData, cargarJustificaciones, justificaciones]);
 
   const handleEliminar = useCallback(async (id) => {
     if (!window.confirm('¿Está seguro de eliminar esta justificación?')) return;
@@ -327,6 +398,10 @@ const Justificaciones = () => {
   // Handlers específicos para cada input del formulario (evita recreación)
   const handleFechaChange = useCallback((e) => {
     handleInputChange('fecha', e.target.value);
+  }, [handleInputChange]);
+
+  const handleFechaFinChange = useCallback((e) => {
+    handleInputChange('fechaFin', e.target.value);
   }, [handleInputChange]);
 
   const handleTipoChange = useCallback((e) => {
@@ -698,8 +773,8 @@ const Justificaciones = () => {
           <Box sx={{ px: 2, pt: 2, pb: 1 }}>
             <form onSubmit={handleSubmit}>
               <Grid container spacing={2}>
-                {/* Fecha */}
-                <Grid item xs={12} md={6}>
+                {/* Fecha Inicio */}
+                <Grid item xs={12} md={3}>
                   <TextField
                     label="Fecha de Justificación *"
                     type="date"
@@ -707,6 +782,26 @@ const Justificaciones = () => {
                     onChange={handleFechaChange}
                     fullWidth
                     required
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        backgroundColor: 'white',
+                        '&:hover fieldset': { borderColor: '#667eea' },
+                        '&.Mui-focused fieldset': { borderColor: '#667eea', borderWidth: 2 },
+                      },
+                    }}
+                  />
+                </Grid>
+                {/* Fecha Fin (opcional) */}
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    label="Fecha fin (opcional)"
+                    type="date"
+                    value={formData.fechaFin}
+                    onChange={handleFechaFinChange}
+                    fullWidth
                     size="small"
                     InputLabelProps={{ shrink: true }}
                     sx={{
@@ -741,6 +836,7 @@ const Justificaciones = () => {
                         PaperProps: { sx: { minWidth: 360, width: 360, maxWidth: 360, fontSize: 15, '& .MuiMenuItem-root': { fontSize: 15 } } },
                       }}
                       sx={{
+                        width: { xs: '100%', md: '11.5rem' },
                         borderRadius: 2,
                         backgroundColor: 'white',
                         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#667eea' },
@@ -760,8 +856,9 @@ const Justificaciones = () => {
                 </Grid>
 
                 {/* Motivo */}
-                <Grid item xs={12}>
+                <Grid item xs={12} md={8}>
                   <TextField
+                  
                     label="Motivo *"
                     value={formData.motivo}
                     onChange={handleMotivoChange}
@@ -773,6 +870,7 @@ const Justificaciones = () => {
                     placeholder="Escriba el motivo (máx. 200 caracteres)"
                     inputProps={{ maxLength: 200 }}
                     sx={{
+                      width: { xs: '100%', md: '11.5rem' },
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
                         backgroundColor: 'white',
@@ -784,7 +882,7 @@ const Justificaciones = () => {
                 </Grid>
 
                 {/* Estado */}
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={5}>
                   <FormControl fullWidth required size="small">
                     <InputLabel shrink sx={{ fontSize: '0.95rem', fontWeight: 500, '&.Mui-focused': { color: '#667eea' } }}>
                       Estado *
@@ -821,19 +919,20 @@ const Justificaciones = () => {
                 </Grid>
 
                 {/* Aprobador DNI */}
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ position: 'relative' }} ref={aprobadorRef}>
+                <Grid item xs={12} md={2}>
+                  <Box sx={{ position: 'relative', width: { xs: '100%', md: '9rem' } }} ref={aprobadorRef}>
                     <TextField
                       label="Aprobador DNI"
                       value={formData.aprobadorDNI}
                       onChange={handleAprobadorChange}
                       onKeyDown={handleAprobadorKeyDown}
-                      fullWidth
+                      fullWidth={false}
                       size="small"
                       placeholder="Ingrese DNI o nombre del aprobador"
                       helperText={aprobadorNombreSel ? `Seleccionado: ${aprobadorNombreSel}` : ' '}
                       FormHelperTextProps={{ sx: { minHeight: 20 } }}
                       sx={{
+                        width: { xs: '100%', md: '10rem' },
                         '& .MuiOutlinedInput-root': {
                           borderRadius: 2,
                           backgroundColor: 'white',
@@ -880,7 +979,7 @@ const Justificaciones = () => {
                 </Grid>
 
                 {/* Botón */}
-                <Grid item xs={12} sx={{ pb: 0 }}>
+                <Grid item xs={12} md={2} sx={{ pb: 0 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
                       type="submit"
@@ -891,9 +990,10 @@ const Justificaciones = () => {
                         background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                         borderRadius: 2,
                         fontWeight: 600,
-                        px: 3,
+                        px: 0,
                         py: 1,
-                        minWidth: 120,
+                        width: '8rem',
+                        ml: 1,
                         boxShadow: '0 3px 12px rgba(16, 185, 129, 0.28)',
                         '&:hover': { background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', transform: 'translateY(-2px)', boxShadow: '0 5px 16px rgba(16, 185, 129, 0.34)' },
                         '&:disabled': { background: '#9ca3af', transform: 'none', boxShadow: 'none' },
