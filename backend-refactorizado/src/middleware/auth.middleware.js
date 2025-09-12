@@ -57,8 +57,9 @@ const authMiddleware = async (req, res, next) => {
 
       const user = userResult.recordset[0];
 
-      // Verificar que el empleado esté activo
-      if (user.EstadoEmpleado !== 'Activo') {
+      // Verificar que el empleado esté activo (aceptar variantes de mayúsculas)
+      const estadoEmpleado = String(user.EstadoEmpleado || '').trim().toLowerCase();
+      if (estadoEmpleado !== 'activo') {
         return res.status(401).json({
           success: false,
           message: 'Usuario inactivo',

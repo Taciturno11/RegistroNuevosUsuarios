@@ -799,20 +799,13 @@ const CapacitacionesFullscreen = () => {
     try {
       setIsLoading(true);
       console.log('🔄 Renovando token manualmente...');
-       const envHost = 'http://10.182.18.70:3001';
-      const response = await fetch(`${envHost}/api/capacitaciones/generate-token`, {
+      const response = await api('/api/capacitaciones/generate-token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dni: '70907372' })
       });
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = response;
       
       if (data.success && data.token) {
         localStorage.setItem('token', data.token);

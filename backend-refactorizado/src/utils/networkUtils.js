@@ -6,10 +6,7 @@ const os = require('os');
  */
 function getServerIPs() {
   const interfaces = os.networkInterfaces();
-  const ips = {
-    localhost: '127.0.0.1',
-    all: []
-  };
+  const ips = { all: [] };
 
   for (const [name, nets] of Object.entries(interfaces)) {
     for (const net of nets) {
@@ -34,41 +31,37 @@ function getMainIP() {
     console.log('🌐 Usando IP:', ips.all[0]);
     return ips.all[0];
   }
-  
-  console.log('🏠 No se detectaron IPs externas, usando localhost');
-  return '127.0.0.1'; //CAMBIAR
 }
 
 /**
  * Obtiene todas las URLs disponibles del servidor
- * @param {number} port Puerto del servidor
+ * Usa el puerto definido por la variable de entorno PORT.
  * @returns {Array} URLs disponibles
  */
-function getServerURLs(port = 5000) {
+function getServerURLs() {
+  const resolvedPort = parseInt(process.env.PORT, 10);
   const ips = getServerIPs();
-  const urls = [`http://localhost:${port}`]; //CAMBIAR
+  const urls = [];
   
-  ips.all.forEach(ip => urls.push(`http://${ip}:${port}`));
+  ips.all.forEach(ip => urls.push(`http://${ip}:${resolvedPort}`));
   
   return urls;
 }
 
 /**
  * Imprime información de red del servidor
- * @param {number} port Puerto del servidor
+ * Usa el puerto definido por la variable de entorno PORT.
  */
-function printNetworkInfo(port = 5000) {
+function printNetworkInfo() {
+  const resolvedPort = parseInt(process.env.PORT, 10);
   const ips = getServerIPs();
   
   console.log('🌐 INFORMACIÓN DE RED DEL SERVIDOR:');
   console.log('=====================================');
   
-  console.log('🏠 Localhost:');
-  console.log(`   http://localhost:${port}`);
-  
   if (ips.all.length > 0) {
     console.log('🌐 Todas las IPs disponibles:');
-    ips.all.forEach(ip => console.log(`   http://${ip}:${port}`));
+    ips.all.forEach(ip => console.log(`   http://${ip}:${resolvedPort}`));
   }
   
   console.log('=====================================');

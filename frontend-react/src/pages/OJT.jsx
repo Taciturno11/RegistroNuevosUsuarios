@@ -58,7 +58,8 @@ const OJT = () => {
       setLoading(true);
       console.log('📡 Cargando historial OJT para DNI:', dni);
       
-      const response = await axios.get(`/api/ojt/${dni}/historial`, {
+      const { api } = useAuth();
+      const response = await api.get(`/ojt/${dni}/historial`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -159,7 +160,7 @@ const OJT = () => {
       let response;
       if (editingOJT) {
         // Actualizar OJT existente
-        response = await axios.patch(`/api/ojt/${editingOJT.UsoCICID}`, payload, {
+        response = await api.patch(`/ojt/${editingOJT.UsoCICID}`, payload, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
@@ -167,7 +168,7 @@ const OJT = () => {
         });
       } else {
         // Crear nuevo OJT
-        response = await axios.post('/api/ojt', payload, {
+        response = await api.post('/ojt', payload, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
@@ -219,7 +220,7 @@ const OJT = () => {
 
     try {
       setLoading(true);
-      const response = await axios.delete(`/api/ojt/${id}`, {
+      const response = await api.delete(`/ojt/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }

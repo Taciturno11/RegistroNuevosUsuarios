@@ -9,12 +9,11 @@ const generateToken = (userData) => {
     dni: userData.DNI,
     nombres: userData.Nombres,
     apellidoPaterno: userData.ApellidoPaterno,
-    cargoID: userData.CargoID,
-    iat: Date.now(),
-    exp: Date.now() + (parseInt(process.env.JWT_EXPIRES_IN) * 60 * 60 * 1000)
+    cargoID: userData.CargoID
   };
 
-  return jwt.sign(payload, process.env.JWT_SECRET);
+  const hours = parseInt(process.env.JWT_EXPIRES_IN || '8', 10);
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: `${hours}h` });
 };
 
 // Login de usuario
