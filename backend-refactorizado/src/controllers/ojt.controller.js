@@ -4,29 +4,42 @@ const { executeQuery, sql } = require('../config/database');
 // GESTIÓN DE OJT (ON-THE-JOB TRAINING) / CIC
 // ========================================
 
-// Función utilitaria para convertir fechas del formato datetime-local al formato SQL Server
+// Función utilitaria: convierte 'YYYY-MM-DDTHH:mm' del input datetime-local a Date en hora local
 const convertirFecha = (fechaString) => {
   if (!fechaString) return null;
-  
   try {
-    // Convertir "2025-01-15T14:30" a "2025-01-15 14:30:00"
-    const fecha = new Date(fechaString);
-    if (isNaN(fecha.getTime())) {
+    // Aceptar tanto 'YYYY-MM-DDTHH:mm' como 'YYYY-MM-DD HH:mm:ss'
+    const base = String(fechaString).trim().replace(' ', 'T');
+    const [fecha, tiempo] = base.split('T');
+    const [yStr, mStr, dStr] = fecha.split('-');
+    const [hhStr = '0', mmStr = '0', ssStr = '0'] = (tiempo || '').split(':');
+    const year = parseInt(yStr, 10);
+    const month = parseInt(mStr, 10);
+    const day = parseInt(dStr, 10);
+    const hours = parseInt(hhStr, 10);
+    const minutes = parseInt(mmStr, 10);
+    const seconds = parseInt(ssStr, 10);
+    if ([year, month, day, hours, minutes].some(Number.isNaN)) {
       throw new Error('Fecha inválida');
     }
-    
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    const hours = String(fecha.getHours()).padStart(2, '0');
-    const minutes = String(fecha.getMinutes()).padStart(2, '0');
-    const seconds = String(fecha.getSeconds()).padStart(2, '0');
-    
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    // Construir Date en hora local para evitar desfases por zona horaria
+    return new Date(year, month - 1, day, hours, minutes, seconds || 0, 0);
   } catch (error) {
     console.error('Error convirtiendo fecha:', error, 'Fecha original:', fechaString);
     throw new Error(`Formato de fecha inválido: ${fechaString}`);
   }
+};
+
+// Formatea Date (local) a 'YYYY-MM-DD HH:mm:ss' sin zona horaria
+const formatearFechaLocalSQL = (date) => {
+  if (!date) return null;
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
+  return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
 };
 
 // Obtener lista de DNIs de empleados activos para autocomplete
@@ -160,12 +173,19 @@ exports.crearOJT = async (req, res) => {
     }
 
     // Convertir fechas
-    const fechaInicioSQL = convertirFecha(FechaHoraInicio);
-    const fechaFinSQL = FechaHoraFin ? convertirFecha(FechaHoraFin) : null;
+    const fechaInicioDate = convertirFecha(FechaHoraInicio);
+    const fechaFinDate = FechaHoraFin ? convertirFecha(FechaHoraFin) : null;
 
     console.log('🕐 Fechas convertidas:', {
       original: { FechaHoraInicio, FechaHoraFin },
-      convertidas: { fechaInicioSQL, fechaFinSQL }
+      convertidas: { 
+        inicio_toString: fechaInicioDate?.toString(),
+        inicio_toISOString: fechaInicioDate?.toISOString(),
+        fin_toString: fechaFinDate?.toString(),
+        fin_toISOString: fechaFinDate?.toISOString(),
+        inicio_sql_string: formatearFechaLocalSQL(fechaInicioDate),
+        fin_sql_string: formatearFechaLocalSQL(fechaFinDate)
+      }
     });
 
     // Insertar nuevo registro OJT
@@ -181,10 +201,18 @@ exports.crearOJT = async (req, res) => {
     const params = [
       { name: 'UsuarioCIC', type: sql.VarChar, value: UsuarioCIC },
       { name: 'DNIEmpleado', type: sql.VarChar, value: DNIEmpleado },
-      { name: 'FechaHoraInicio', type: sql.DateTime, value: new Date(fechaInicioSQL) },
-      { name: 'FechaHoraFin', type: sql.DateTime, value: fechaFinSQL ? new Date(fechaFinSQL) : null },
+      { name: 'FechaHoraInicio', type: sql.DateTime, value: fechaInicioDate },
+      { name: 'FechaHoraFin', type: sql.DateTime, value: fechaFinDate },
       { name: 'Observaciones', type: sql.VarChar, value: Observaciones }
     ];
+
+    console.log('🗄️ Parámetros INSERT OJT (local):', {
+      UsuarioCIC,
+      DNIEmpleado,
+      FechaHoraInicio: formatearFechaLocalSQL(fechaInicioDate),
+      FechaHoraFin: formatearFechaLocalSQL(fechaFinDate),
+      Observaciones
+    });
 
     await executeQuery(insertQuery, params);
 
@@ -196,8 +224,8 @@ exports.crearOJT = async (req, res) => {
       data: {
         DNIEmpleado,
         UsuarioCIC,
-        FechaHoraInicio: fechaInicioSQL,
-        FechaHoraFin: fechaFinSQL,
+        FechaHoraInicio: formatearFechaLocalSQL(fechaInicioDate),
+        FechaHoraFin: formatearFechaLocalSQL(fechaFinDate),
         Observaciones
       }
     });
@@ -247,12 +275,19 @@ exports.actualizarOJT = async (req, res) => {
     }
 
     // Convertir fechas
-    const fechaInicioSQL = convertirFecha(FechaHoraInicio);
-    const fechaFinSQL = FechaHoraFin ? convertirFecha(FechaHoraFin) : null;
+    const fechaInicioDate = convertirFecha(FechaHoraInicio);
+    const fechaFinDate = FechaHoraFin ? convertirFecha(FechaHoraFin) : null;
 
     console.log('🕐 Fechas convertidas para actualización:', {
       original: { FechaHoraInicio, FechaHoraFin },
-      convertidas: { fechaInicioSQL, fechaFinSQL }
+      convertidas: { 
+        inicio_toString: fechaInicioDate?.toString(),
+        inicio_toISOString: fechaInicioDate?.toISOString(),
+        fin_toString: fechaFinDate?.toString(),
+        fin_toISOString: fechaFinDate?.toISOString(),
+        inicio_sql_string: formatearFechaLocalSQL(fechaInicioDate),
+        fin_sql_string: formatearFechaLocalSQL(fechaFinDate)
+      }
     });
 
     // Actualizar registro
@@ -268,11 +303,19 @@ exports.actualizarOJT = async (req, res) => {
 
     const params = [
       { name: 'UsuarioCIC', type: sql.VarChar, value: UsuarioCIC },
-      { name: 'FechaHoraInicio', type: sql.DateTime, value: new Date(fechaInicioSQL) },
-      { name: 'FechaHoraFin', type: sql.DateTime, value: fechaFinSQL ? new Date(fechaFinSQL) : null },
+      { name: 'FechaHoraInicio', type: sql.DateTime, value: fechaInicioDate },
+      { name: 'FechaHoraFin', type: sql.DateTime, value: fechaFinDate },
       { name: 'Observaciones', type: sql.VarChar, value: Observaciones },
       { name: 'ID', type: sql.Int, value: parseInt(id) }
     ];
+
+    console.log('🗄️ Parámetros UPDATE OJT (local):', {
+      UsuarioCIC,
+      FechaHoraInicio: formatearFechaLocalSQL(fechaInicioDate),
+      FechaHoraFin: formatearFechaLocalSQL(fechaFinDate),
+      Observaciones,
+      ID: parseInt(id)
+    });
 
     await executeQuery(updateQuery, params);
 
@@ -284,8 +327,8 @@ exports.actualizarOJT = async (req, res) => {
       data: {
         UsoCICID: parseInt(id),
         UsuarioCIC,
-        FechaHoraInicio: fechaInicioSQL,
-        FechaHoraFin: fechaFinSQL,
+        FechaHoraInicio: formatearFechaLocalSQL(fechaInicioDate),
+        FechaHoraFin: formatearFechaLocalSQL(fechaFinDate),
         Observaciones
       }
     });

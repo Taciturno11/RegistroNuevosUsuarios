@@ -12,6 +12,7 @@ const dbConfig = {
     encrypt: false,                                    // Misma configuración
     trustServerCertificate: true,                      // Misma configuración
     enableArithAbort: true,
+    useUTC: false,                                     // Manejar DATETIME en hora local (evita desfase)
     requestTimeout: 30000,                             // 30 segundos
     connectionTimeout: 30000
   },

@@ -30,10 +30,11 @@ import {
   Save as SaveIcon,
   Clear as ClearIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const OJT = () => {
   const navigate = useNavigate();
+  const { api } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -58,12 +59,7 @@ const OJT = () => {
       setLoading(true);
       console.log('📡 Cargando historial OJT para DNI:', dni);
       
-      const { api } = useAuth();
-      const response = await api.get(`/ojt/${dni}/historial`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.get(`/ojt/${dni}/historial`);
       
       console.log('📊 Respuesta historial OJT:', response.data);
       
@@ -78,7 +74,7 @@ const OJT = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [api]);
 
   // Cargar empleado seleccionado desde localStorage
   useEffect(() => {
@@ -150,6 +146,27 @@ const OJT = () => {
     }
 
     try {
+      // Debug de fechas en el front antes de enviar
+      try {
+        const di = formData.FechaHoraInicio ? new Date(formData.FechaHoraInicio) : null;
+        const df = formData.FechaHoraFin ? new Date(formData.FechaHoraFin) : null;
+        console.log('🧪 Front OJT debug fechas:', {
+          inputInicio: formData.FechaHoraInicio,
+          inputFin: formData.FechaHoraFin,
+          tzOffsetMinutes: new Date().getTimezoneOffset(),
+          inicio: di ? {
+            toString: di.toString(),
+            toISOString: di.toISOString(),
+            y: di.getFullYear(), m: di.getMonth()+1, d: di.getDate(), hh: di.getHours(), mm: di.getMinutes()
+          } : null,
+          fin: df ? {
+            toString: df.toString(),
+            toISOString: df.toISOString(),
+            y: df.getFullYear(), m: df.getMonth()+1, d: df.getDate(), hh: df.getHours(), mm: df.getMinutes()
+          } : null
+        });
+      } catch {}
+
       const payload = {
         ...formData,
         DNIEmpleado: selectedEmployee.DNI
@@ -160,20 +177,10 @@ const OJT = () => {
       let response;
       if (editingOJT) {
         // Actualizar OJT existente
-        response = await api.patch(`/ojt/${editingOJT.UsoCICID}`, payload, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        response = await api.patch(`/ojt/${editingOJT.UsoCICID}`, payload);
       } else {
         // Crear nuevo OJT
-        response = await api.post('/ojt', payload, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        response = await api.post('/ojt', payload);
       }
       
       console.log('✅ Respuesta OJT:', response.data);
@@ -220,11 +227,7 @@ const OJT = () => {
 
     try {
       setLoading(true);
-      const response = await api.delete(`/ojt/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await api.delete(`/ojt/${id}`);
       
       if (response.data.success) {
         setSuccess('OJT eliminado exitosamente');
