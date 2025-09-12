@@ -1,4 +1,5 @@
 const { executeQuery, sql } = require('../config/database');
+const { parseFechaLocal } = require('../utils/dateUtils');
 
 // ========================================
 // GESTIÓN DE ASIGNACIÓN DE EXCEPCIONES
@@ -184,7 +185,7 @@ exports.crearExcepcion = async (req, res) => {
     
     const excepcionResult = await executeQuery(excepcionQuery, [
       { name: 'DNI', type: sql.VarChar, value: EmpleadoDNI },
-      { name: 'Fecha', type: sql.Date, value: new Date(Fecha) }
+      { name: 'Fecha', type: sql.Date, value: parseFechaLocal(Fecha) }
     ]);
 
     if (excepcionResult.recordset.length > 0) {
@@ -197,9 +198,8 @@ exports.crearExcepcion = async (req, res) => {
 
     // Verificar que la fecha no sea muy antigua (más de 1 mes)
     const fechaActual = new Date();
-    const fechaUnMesAtras = new Date();
-    fechaUnMesAtras.setMonth(fechaUnMesAtras.getMonth() - 1);
-    const fechaExcepcion = new Date(Fecha);
+    const fechaUnMesAtras = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - 1, fechaActual.getDate(), 12, 0, 0, 0);
+    const fechaExcepcion = parseFechaLocal(Fecha);
     
     if (fechaExcepcion < fechaUnMesAtras) {
       return res.status(400).json({
@@ -219,7 +219,7 @@ exports.crearExcepcion = async (req, res) => {
 
     const params = [
       { name: 'EmpleadoDNI', type: sql.VarChar, value: EmpleadoDNI },
-      { name: 'Fecha', type: sql.Date, value: new Date(Fecha) },
+      { name: 'Fecha', type: sql.Date, value: parseFechaLocal(Fecha) },
       { name: 'HorarioID', type: sql.Int, value: HorarioID || null },
       { name: 'Motivo', type: sql.VarChar, value: Motivo }
     ];

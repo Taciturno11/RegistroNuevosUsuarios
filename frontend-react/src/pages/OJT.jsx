@@ -431,14 +431,15 @@ const OJT = () => {
               </Grid>
               <Grid item xs={12}>
                 <TextField
-                  fullWidth
+                  fullWidth={false}
                   label="Observaciones"
                   value={formData.Observaciones}
                   onChange={(e) => handleInputChange('Observaciones', e.target.value)}
                   placeholder="Observaciones adicionales..."
                   multiline
-                  rows={3}
+                  rows={2}
                   disabled={loading}
+                  sx={{ width: { xs: '100%', md: '18rem' } }}
                 />
               </Grid>
             </Grid>
