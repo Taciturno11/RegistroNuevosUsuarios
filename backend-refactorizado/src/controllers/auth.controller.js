@@ -99,6 +99,7 @@ exports.login = async (req, res) => {
     // Determinar rol desde tablas ge (fallback a admin/agente)
     let role = 'agente';
     try {
+      console.log(`🔍 Buscando rol para DNI: ${dni}`);
       const rolResult = await executeQuery(
         `SELECT r.NombreRol
          FROM ge.UsuarioRol ur
@@ -106,10 +107,15 @@ exports.login = async (req, res) => {
          WHERE ur.DNI = @DNI`,
         [{ name: 'DNI', type: sql.VarChar, value: dni }]
       );
+      console.log(`🔍 Resultado consulta rol:`, rolResult.recordset);
       if (rolResult.recordset.length > 0) {
         role = rolResult.recordset[0].NombreRol || 'agente';
+        console.log(`✅ Rol encontrado: ${role}`);
       } else if (user.DNI === '73766815') {
         role = 'admin';
+        console.log(`✅ Rol admin asignado a creador`);
+      } else {
+        console.log(`⚠️ No se encontró rol para DNI ${dni}, usando 'agente'`);
       }
     } catch (e) {
       console.warn('⚠️ No se pudo obtener rol desde ge.UsuarioRol. Usando fallback.', e.message);
@@ -119,6 +125,7 @@ exports.login = async (req, res) => {
     // Obtener vistas del rol desde ge.RolVista → ge.Vistas
     let vistas = [];
     try {
+      console.log(`🔍 Buscando vistas para rol: ${role}`);
       const vistasResult = await executeQuery(
         `SELECT v.NombreVista
          FROM ge.RolVista rv
@@ -127,7 +134,9 @@ exports.login = async (req, res) => {
          WHERE r.NombreRol = @NombreRol`,
         [{ name: 'NombreRol', type: sql.VarChar, value: role }]
       );
+      console.log(`🔍 Resultado consulta vistas:`, vistasResult.recordset);
       vistas = vistasResult.recordset.map(r => r.NombreVista);
+      console.log(`✅ Vistas asignadas:`, vistas);
     } catch (e) {
       console.warn('⚠️ No se pudieron obtener vistas del rol. Continuando sin vistas.', e.message);
       vistas = [];

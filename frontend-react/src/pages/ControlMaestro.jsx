@@ -898,12 +898,16 @@ const ControlMaestro = () => {
             Selecciona las vistas a las que este rol tendrá acceso en el sistema.
           </Typography>
           
-          {/* Organizar vistas por categorías verticalmente */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Organizar vistas por categorías en 2 columnas */}
+          <Grid container spacing={3}>
             {[
               {
+                titulo: 'Dashboard',
+                vistas: ['Dashboard']
+              },
+              {
                 titulo: 'Gestión de Empleados',
-                vistas: ['Registrar Empleado', 'Actualizar Empleado', 'Cese de Empleado', 'Justificaciones', 'OJT / CIC', 'Asignación Excepciones', 'Bonos', 'Ejecutar SP']
+                vistas: ['Registrar Empleado', 'Actualizar Empleado', 'Cese de Empleado', 'JUSTIFICACIONES', 'OJT / CIC', 'Asignación Excepciones', 'BONOS', 'Ejecutar SP']
               },
               {
                 titulo: 'Reporte de Asistencias',
@@ -915,7 +919,7 @@ const ControlMaestro = () => {
               },
               {
                 titulo: 'Capacitaciones',
-                vistas: ['Capacitaciones']
+                vistas: ['CAPACITACIONES']
               },
               {
                 titulo: 'Pagos de Nómina',
@@ -926,9 +930,18 @@ const ControlMaestro = () => {
                 vistas: ['Control Maestro']
               }
             ].map((categoria, index) => {
-              const vistasDisponibles = categoria.vistas.filter(nombreVista => 
-                catalogo.vistas.some(v => v.NombreVista === nombreVista)
-              );
+            const vistasDisponibles = categoria.vistas.filter(nombreVista => 
+              catalogo.vistas.some(v => v.NombreVista === nombreVista)
+            );
+            
+            // Debug: mostrar qué vistas faltan
+            const vistasFaltantes = categoria.vistas.filter(nombreVista => 
+              !catalogo.vistas.some(v => v.NombreVista === nombreVista)
+            );
+            if (vistasFaltantes.length > 0) {
+              console.log(`❌ Vistas faltantes en ${categoria.titulo}:`, vistasFaltantes);
+              console.log('📋 Vistas disponibles en catálogo:', catalogo.vistas.map(v => v.NombreVista));
+            }
               
               if (vistasDisponibles.length === 0) return null;
               
@@ -936,105 +949,107 @@ const ControlMaestro = () => {
               const algunaSeleccionada = vistasDisponibles.some(v => vistasRolSeleccionado.includes(v));
               
               return (
-                <Box key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 2 }}>
-                  {/* Título con checkbox */}
-                  <Box 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      mb: 2, 
-                      cursor: 'pointer',
-                      p: 1,
-                      borderRadius: 1,
-                      '&:hover': { bgcolor: '#f5f5f5' }
-                    }}
-                    onClick={() => {
-                      if (todasSeleccionadas) {
-                        // Deseleccionar todas de la categoría
-                        setVistasRolSeleccionado(prev => prev.filter(v => !vistasDisponibles.includes(v)));
-                      } else {
-                        // Seleccionar todas de la categoría
-                        setVistasRolSeleccionado(prev => [...new Set([...prev, ...vistasDisponibles])]);
-                      }
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        border: '2px solid #1976d2',
+                <Grid item xs={12} md={6} key={index}>
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 2, height: '100%' }}>
+                    {/* Título con checkbox */}
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        mb: 2, 
+                        cursor: 'pointer',
+                        p: 1,
                         borderRadius: 1,
-                        mr: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: todasSeleccionadas ? '#1976d2' : (algunaSeleccionada ? '#1976d2' : 'transparent')
+                        '&:hover': { bgcolor: '#f5f5f5' }
+                      }}
+                      onClick={() => {
+                        if (todasSeleccionadas) {
+                          // Deseleccionar todas de la categoría
+                          setVistasRolSeleccionado(prev => prev.filter(v => !vistasDisponibles.includes(v)));
+                        } else {
+                          // Seleccionar todas de la categoría
+                          setVistasRolSeleccionado(prev => [...new Set([...prev, ...vistasDisponibles])]);
+                        }
                       }}
                     >
-                      {todasSeleccionadas ? (
-                        <CheckIcon sx={{ fontSize: 16, color: 'white' }} />
-                      ) : algunaSeleccionada ? (
-                        <Box sx={{ width: 8, height: 8, bgcolor: 'white', borderRadius: 0.5 }} />
-                      ) : null}
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          border: '2px solid #1976d2',
+                          borderRadius: 1,
+                          mr: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: todasSeleccionadas ? '#1976d2' : (algunaSeleccionada ? '#1976d2' : 'transparent')
+                        }}
+                      >
+                        {todasSeleccionadas ? (
+                          <CheckIcon sx={{ fontSize: 16, color: 'white' }} />
+                        ) : algunaSeleccionada ? (
+                          <Box sx={{ width: 8, height: 8, bgcolor: 'white', borderRadius: 0.5 }} />
+                        ) : null}
+                      </Box>
+                      <Typography variant="h6" fontWeight={600} color="primary.main">
+                        📁 {categoria.titulo}
+                      </Typography>
                     </Box>
-                    <Typography variant="h6" fontWeight={600} color="primary.main">
-                      📁 {categoria.titulo} ({vistasDisponibles.length} vistas)
-                    </Typography>
-                  </Box>
-                  
-                  {/* Lista vertical de vistas */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 4 }}>
-                    {vistasDisponibles.map(nombreVista => {
-                      const vista = catalogo.vistas.find(v => v.NombreVista === nombreVista);
-                      const seleccionada = vistasRolSeleccionado.includes(vista.NombreVista);
-                      
-                      return (
-                        <Box
-                          key={vista.VistaID}
-                          sx={{ 
-                            display: 'flex',
-                            alignItems: 'center',
-                            p: 1.5,
-                            cursor: 'pointer',
-                            borderRadius: 1,
-                            border: '1px solid #e0e0e0',
-                            bgcolor: seleccionada ? '#f3f8ff' : 'white',
-                            '&:hover': { bgcolor: seleccionada ? '#e3f2fd' : '#f9f9f9' }
-                          }}
-                          onClick={() => {
-                            if (seleccionada) {
-                              setVistasRolSeleccionado(prev => prev.filter(v => v !== vista.NombreVista));
-                            } else {
-                              setVistasRolSeleccionado(prev => [...prev, vista.NombreVista]);
-                            }
-                          }}
-                        >
+                    
+                    {/* Lista vertical de vistas */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 3 }}>
+                      {vistasDisponibles.map(nombreVista => {
+                        const vista = catalogo.vistas.find(v => v.NombreVista === nombreVista);
+                        const seleccionada = vistasRolSeleccionado.includes(vista.NombreVista);
+                        
+                        return (
                           <Box
-                            sx={{
-                              width: 18,
-                              height: 18,
-                              border: '2px solid #1976d2',
-                              borderRadius: 1,
-                              mr: 2,
+                            key={vista.VistaID}
+                            sx={{ 
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              bgcolor: seleccionada ? '#1976d2' : 'transparent'
+                              p: 1,
+                              cursor: 'pointer',
+                              borderRadius: 1,
+                              border: '1px solid #e0e0e0',
+                              bgcolor: seleccionada ? '#f3f8ff' : 'white',
+                              '&:hover': { bgcolor: seleccionada ? '#e3f2fd' : '#f9f9f9' }
+                            }}
+                            onClick={() => {
+                              if (seleccionada) {
+                                setVistasRolSeleccionado(prev => prev.filter(v => v !== vista.NombreVista));
+                              } else {
+                                setVistasRolSeleccionado(prev => [...prev, vista.NombreVista]);
+                              }
                             }}
                           >
-                            {seleccionada && <CheckIcon sx={{ fontSize: 14, color: 'white' }} />}
+                            <Box
+                              sx={{
+                                width: 16,
+                                height: 16,
+                                border: '2px solid #1976d2',
+                                borderRadius: 1,
+                                mr: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                bgcolor: seleccionada ? '#1976d2' : 'transparent'
+                              }}
+                            >
+                              {seleccionada && <CheckIcon sx={{ fontSize: 12, color: 'white' }} />}
+                            </Box>
+                            <Typography variant="body2" fontWeight={500}>
+                              {vista.NombreVista}
+                            </Typography>
                           </Box>
-                          <Typography variant="body1" fontWeight={500}>
-                            {vista.NombreVista}
-                          </Typography>
-                        </Box>
-                      );
-                    })}
+                        );
+                      })}
+                    </Box>
                   </Box>
-                </Box>
+                </Grid>
               );
             })}
-          </Box>
+          </Grid>
 
           {catalogo.vistas.length === 0 && (
             <Alert severity="info">

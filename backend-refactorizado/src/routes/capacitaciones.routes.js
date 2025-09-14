@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const capacitacionesController = require('../controllers/capacitaciones.controller');
-const { requireRole, authMiddleware } = require('../middleware/auth.middleware');
+const { requireRole, authMiddleware, requireVista } = require('../middleware/auth.middleware');
 
 // Generar token JWT temporal (SOLO PARA PRUEBAS - sin autenticación)
 router.post('/generate-token', capacitacionesController.generateToken);
@@ -22,34 +22,34 @@ router.get('/probar-consulta-campanias', capacitacionesController.probarConsulta
 router.get('/capas', capacitacionesController.getCapas);
 
 // Obtener meses disponibles para un capacitador (requiere autenticación)
-router.get('/meses', authMiddleware, requireRole(['admin']), capacitacionesController.getMeses);
+router.get('/meses', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.getMeses);
 
 // Obtener postulantes y asistencias (requiere autenticación)
-router.get('/postulantes', authMiddleware, requireRole(['admin']), capacitacionesController.getPostulantes);
+router.get('/postulantes', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.getPostulantes);
 
 // Obtener deserciones (requiere autenticación)
-router.get('/deserciones', authMiddleware, requireRole(['admin']), capacitacionesController.getDeserciones);
+router.get('/deserciones', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.getDeserciones);
 
 // Obtener evaluaciones (requiere autenticación)
-router.get('/evaluaciones', authMiddleware, requireRole(['admin']), capacitacionesController.getEvaluaciones);
+router.get('/evaluaciones', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.getEvaluaciones);
 
 // Obtener horarios base (SIN autenticación - como en el original)
 router.get('/horarios-base', capacitacionesController.getHorariosBase);
 
 // Guardar asistencias en lote (requiere autenticación)
-router.post('/asistencia/bulk', authMiddleware, requireRole(['admin']), capacitacionesController.saveAsistencias);
+router.post('/asistencia/bulk', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.saveAsistencias);
 
 // Guardar deserciones en lote (requiere autenticación)
-router.post('/deserciones/bulk', authMiddleware, requireRole(['admin']), capacitacionesController.saveDeserciones);
+router.post('/deserciones/bulk', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.saveDeserciones);
 
 // Guardar evaluaciones en lote (requiere autenticación)
-router.post('/evaluaciones/bulk', authMiddleware, requireRole(['admin']), capacitacionesController.saveEvaluaciones);
+router.post('/evaluaciones/bulk', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.saveEvaluaciones);
 
 // Actualizar estado de postulantes (requiere autenticación)
-router.post('/postulantes/estado', authMiddleware, requireRole(['admin']), capacitacionesController.updateEstadoPostulantes);
+router.post('/postulantes/estado', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.updateEstadoPostulantes);
 
 // Actualizar horarios de postulantes (requiere autenticación)
-router.post('/postulantes/horario', authMiddleware, requireRole(['admin']), capacitacionesController.updateHorariosPostulantes);
+router.post('/postulantes/horario', authMiddleware, requireVista('CAPACITACIONES'), capacitacionesController.updateHorariosPostulantes);
 
 // ============================================================================
 // RUTAS PARA DASHBOARD DE JEFA

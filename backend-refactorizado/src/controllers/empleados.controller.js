@@ -806,7 +806,7 @@ exports.obtenerHistorialRoles = async (req, res) => {
   }
 };
 
-// Obtener todos los empleados con roles mapeados para el Control Maestro
+// Obtener todos los empleados con roles REALES desde ge.UsuarioRol (no CargoID)
 exports.getAllEmpleadosConRoles = async (req, res) => {
   try {
     const query = `
@@ -830,34 +830,29 @@ exports.getAllEmpleadosConRoles = async (req, res) => {
         j.NombreJornada,
         camp.NombreCampaña,
         m.NombreModalidad,
-        gh.NombreGrupo as NombreGrupoHorario
+        gh.NombreGrupo as NombreGrupoHorario,
+        r.NombreRol as RolAsignado
       FROM PRI.Empleados e
       LEFT JOIN PRI.Cargos c ON e.CargoID = c.CargoID
       LEFT JOIN PRI.Jornada j ON e.JornadaID = j.JornadaID
       LEFT JOIN PRI.Campanias camp ON e.CampañaID = camp.CampañaID
       LEFT JOIN PRI.ModalidadesTrabajo m ON e.ModalidadID = m.ModalidadID
       LEFT JOIN dbo.GruposDeHorario gh ON e.GrupoHorarioID = gh.GrupoID
+      LEFT JOIN ge.UsuarioRol ur ON ur.DNI = e.DNI
+      LEFT JOIN ge.Roles r ON r.RoleID = ur.RoleID AND r.Activo = 1
       ORDER BY e.ApellidoPaterno, e.ApellidoMaterno, e.Nombres
     `;
 
     const result = await executeQuery(query);
 
-    // Mapear CargoID a roles del sistema
+    // Usar roles REALES de ge.UsuarioRol (no mapear por CargoID)
     const empleadosConRoles = result.recordset.map(emp => {
-      let role = 'empleado'; // Rol por defecto
+      let role = emp.RolAsignado || 'agente'; // Rol desde ge.UsuarioRol o 'agente' por defecto
       
-      if (emp.CargoID === 1) role = 'agente';
-      else if (emp.CargoID === 2) role = 'coordinador';
-      else if (emp.CargoID === 3) role = 'back office';
-      else if (emp.CargoID === 4) role = 'analista';
-      else if (emp.CargoID === 5) role = 'supervisor';
-      else if (emp.CargoID === 6) role = 'monitor';
-      else if (emp.CargoID === 7) role = 'capacitador';
-      else if (emp.CargoID === 8) role = 'jefe';
-      else if (emp.CargoID === 9) role = 'controller';
-      
-      // Admin siempre tiene acceso especial
-      if (emp.DNI === '73766815') role = 'admin';
+      // Admin especial (fallback)
+      if (emp.DNI === '73766815' && !emp.RolAsignado) {
+        role = 'admin';
+      }
       
       return {
         ...emp,
@@ -867,7 +862,7 @@ exports.getAllEmpleadosConRoles = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Empleados con roles obtenidos exitosamente',
+      message: 'Empleados con roles reales obtenidos exitosamente',
       data: empleadosConRoles
     });
 

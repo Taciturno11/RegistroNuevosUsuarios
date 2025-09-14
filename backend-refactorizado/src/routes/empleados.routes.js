@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, requireRole } = require('../middleware/auth.middleware');
+const { authMiddleware, requireRole, requireVista } = require('../middleware/auth.middleware');
 const {
   getAllEmpleados,
   getEmpleadoByDNI,
@@ -20,42 +20,54 @@ const { getHorarioBaseEmpleado } = require('../controllers/grupos.controller');
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
-// Middleware: permitir solo al propio usuario (o admin)
-const allowSelfOrAdmin = (req, res, next) => {
+// Middleware: permitir al propio usuario, admin, o usuarios con Dashboard
+const allowSelfAdminOrDashboard = (req, res, next) => {
   const requester = req.user;
   const targetDni = req.params.dni;
   if (!requester) {
     return res.status(401).json({ success: false, message: 'Autenticación requerida' });
   }
-  if (requester.role === 'admin' || requester.dni === targetDni) {
+  
+  console.log(`🔍 allowSelfAdminOrDashboard: requester=${requester.dni} (${requester.role}), target=${targetDni}, vistas:`, requester.vistas);
+  
+  // Admin siempre puede
+  if (requester.role === 'admin') {
+    console.log('✅ allowSelfAdminOrDashboard: Admin acceso permitido');
     return next();
   }
+  
+  // Usuario accediendo a su propio perfil
+  if (requester.dni === targetDni) {
+    console.log('✅ allowSelfAdminOrDashboard: Acceso a propio perfil permitido');
+    return next();
+  }
+  
+  // Usuario con vista Dashboard puede ver otros empleados
+  if (requester.vistas && requester.vistas.includes('Dashboard')) {
+    console.log('✅ allowSelfAdminOrDashboard: Acceso permitido por vista Dashboard');
+    return next();
+  }
+  
+  console.log('❌ allowSelfAdminOrDashboard: Acceso denegado');
   return res.status(403).json({ success: false, message: 'Acceso denegado' });
 };
 
-// A partir de aquí, solo admin
-router.use(requireRole(['admin']));
+// Rutas específicas primero (antes de /:dni para evitar interceptación)
 
-// Rutas específicas deben ir ANTES de las rutas con parámetros
-// Obtener todos los empleados con roles mapeados para el Control Maestro
-router.get('/control-maestro', getAllEmpleadosConRoles);
+// Control Maestro (solo admin)
+router.get('/control-maestro', requireRole(['admin']), getAllEmpleadosConRoles);
 
-// Obtener estadísticas de empleados
-router.get('/stats', getEmpleadosStats);
+// Stats y búsquedas (Dashboard o admin)
+router.get('/stats', requireVista('Dashboard'), getEmpleadosStats);
+router.get('/buscar', requireVista('Dashboard'), searchEmpleados);
+router.get('/lookup', requireVista('Dashboard'), lookupEmpleados);
 
-// Buscar empleados por término de búsqueda
-router.get('/buscar', searchEmpleados);
+// Lista general (solo admin)
+router.get('/', requireRole(['admin']), getAllEmpleados);
 
-// Lookup para autocompletar DNI (acepta varios cargos: ?cargo=5&search=7156)
-router.get('/lookup', lookupEmpleados);
-
-// Obtener todos los empleados (con filtros y paginación)
-router.get('/', getAllEmpleados);
-
-// Accesos para agentes: solo su propio perfil y horario
-// IMPORTANTE: las rutas con parámetros deben ir al final para no interceptar rutas específicas
-router.get('/:dni/horario', allowSelfOrAdmin, getHorarioBaseEmpleado);
-router.get('/:dni', allowSelfOrAdmin, getEmpleadoByDNI);
+// Rutas de perfil individual (propio perfil o Dashboard)
+router.get('/:dni/horario', allowSelfAdminOrDashboard, getHorarioBaseEmpleado);
+router.get('/:dni', allowSelfAdminOrDashboard, getEmpleadoByDNI);
 
 // (Rutas movidas arriba con allowSelfOrAdmin)
 

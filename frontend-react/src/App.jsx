@@ -162,9 +162,9 @@ const AppContent = () => {
           {/* Perfil del usuario como ruta principal */}
           <Route path="/" element={<EmployeeProfile />} />
           
-          {/* Dashboard - solo admin */}
+          {/* Dashboard */}
           <Route path="/dashboard" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Dashboard">
               <Dashboard />
             </ProtectedRoute>
           } />
@@ -172,79 +172,77 @@ const AppContent = () => {
           {/* Vista de perfil de empleado (mantener para compatibilidad) */}
           <Route path="/profile" element={<EmployeeProfile />} />
           
-          {/* Rutas administrativas - solo admin */}
+          {/* Rutas de gestión de empleados */}
           <Route path="/registrar-empleado" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Registrar Empleado">
               <RegistrarEmpleado />
             </ProtectedRoute>
           } />
           <Route path="/actualizar-empleado" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Actualizar Empleado">
               <ActualizarEmpleado />
             </ProtectedRoute>
           } />
           <Route path="/cese" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Cese de Empleado">
               <Cese />
             </ProtectedRoute>
           } />
           <Route path="/justificaciones" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="JUSTIFICACIONES">
               <Justificaciones />
             </ProtectedRoute>
           } />
           <Route path="/ojt" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="OJT / CIC">
               <OJT />
             </ProtectedRoute>
           } />
           <Route path="/excepciones" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Asignación Excepciones">
               <Excepciones />
             </ProtectedRoute>
           } />
           <Route path="/bonos" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="BONOS">
               <Bonos />
             </ProtectedRoute>
           } />
           
-          {/* Reporte de Asistencias - solo admin */}
+          {/* Reportes */}
           <Route path="/reporte-asistencias" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Reporte de Asistencias">
               <ReporteAsistencias />
             </ProtectedRoute>
           } />
           
-          {/* Reporte de Tardanzas - solo admin */}
           <Route path="/reporte-tardanzas" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Reporte de Tardanzas">
               <ReporteTardanzas />
             </ProtectedRoute>
           } />
           
-          {/* Ejecutar SP - solo admin */}
+          {/* Otros módulos */}
           <Route path="/ejecutar-sp" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Ejecutar SP">
               <EjecutarSP />
             </ProtectedRoute>
           } />
           
           <Route path="/control-maestro" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Control Maestro">
               <ControlMaestro />
             </ProtectedRoute>
           } />
           
-          {/* Capacitaciones - Solo para analistas, creador, jefa especial, capacitadores, coordinadoras y administradores */}
           <Route path="/capacitaciones" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="CAPACITACIONES">
               <CapacitacionesFullscreen />
             </ProtectedRoute>
           } />
           
           <Route path="/pagos-nomina" element={
-            <ProtectedRoute requireRole={['admin']}>
+            <ProtectedRoute requireVista="Pagos de Nómina">
               <PagosNomina />
             </ProtectedRoute>
           } />

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth.middleware');
+const { authMiddleware, requireVista } = require('../middleware/auth.middleware');
 const {
   listarDNIsOJT,
   listarHistorial,
@@ -11,8 +11,8 @@ const {
   getOJTById
 } = require('../controllers/ojt.controller');
 
-// Todas las rutas requieren autenticación
-router.use(authMiddleware);
+// Todas las rutas requieren autenticación y vista de OJT / CIC
+router.use(authMiddleware, requireVista('OJT / CIC'));
 
 // ========================================
 // RUTAS DE OJT (ON-THE-JOB TRAINING) / CIC

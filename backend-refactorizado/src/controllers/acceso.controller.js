@@ -5,6 +5,7 @@ const { executeQuery, sql } = require('../config/database');
 exports.getCatalogo = async (req, res) => {
   try {
     // Asegurar que las vistas estén creadas
+    console.log('🔄 getCatalogo: Creando vistas iniciales...');
     await crearVistasIniciales();
     
     const [rolesRes, vistasRes] = await Promise.all([
@@ -29,6 +30,8 @@ exports.getCatalogo = async (req, res) => {
 const crearVistasIniciales = async () => {
   try {
     const vistas = [
+      // Dashboard
+      'Dashboard',
       // Gestión de Empleados
       'Registrar Empleado',
       'Actualizar Empleado', 
@@ -49,13 +52,32 @@ const crearVistasIniciales = async () => {
       'Control Maestro'
     ];
 
+    console.log('🔍 Creando vistas:', vistas);
+
     for (const vista of vistas) {
-      await executeQuery(
-        `IF NOT EXISTS (SELECT 1 FROM ge.Vistas WHERE NombreVista = @NombreVista)
-         INSERT INTO ge.Vistas (NombreVista, Activo) VALUES (@NombreVista, 1)`,
+      console.log(`🔍 Verificando/creando vista: ${vista}`);
+      
+      // Verificar si existe
+      const exists = await executeQuery(
+        `SELECT 1 FROM ge.Vistas WHERE NombreVista = @NombreVista`,
         [{ name: 'NombreVista', type: sql.VarChar, value: vista }]
       );
+      
+      if (exists.recordset.length === 0) {
+        console.log(`➕ Creando vista nueva: ${vista}`);
+        await executeQuery(
+          `INSERT INTO ge.Vistas (NombreVista, Activo) VALUES (@NombreVista, 1)`,
+          [{ name: 'NombreVista', type: sql.VarChar, value: vista }]
+        );
+        console.log(`✅ Vista creada: ${vista}`);
+      } else {
+        console.log(`✅ Vista ya existe: ${vista}`);
+      }
     }
+    
+    // Verificar qué vistas se crearon
+    const verificacion = await executeQuery(`SELECT NombreVista FROM ge.Vistas ORDER BY NombreVista`);
+    console.log('🔍 Vistas en BD:', verificacion.recordset.map(v => v.NombreVista));
   } catch (error) {
     console.warn('⚠️ Error creando vistas iniciales:', error);
   }

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth.middleware');
+const { authMiddleware, requireVista } = require('../middleware/auth.middleware');
 const {
   getAllCeses,
   getCeseByDNI,
@@ -11,8 +11,8 @@ const {
   anularCese
 } = require('../controllers/cese.controller');
 
-// Todas las rutas requieren autenticación
-router.use(authMiddleware);
+// Todas las rutas requieren autenticación y vista de Cese de Empleado
+router.use(authMiddleware, requireVista('Cese de Empleado'));
 
 // ========================================
 // RUTAS DE CESE

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth.middleware');
+const { authMiddleware, requireVista } = require('../middleware/auth.middleware');
 const {
   obtenerHorarios,
   obtenerExcepciones,
@@ -11,8 +11,8 @@ const {
   getEstadisticasExcepciones
 } = require('../controllers/excepciones.controller');
 
-// Todas las rutas requieren autenticación
-router.use(authMiddleware);
+// Todas las rutas requieren autenticación y vista de Asignación Excepciones
+router.use(authMiddleware, requireVista('Asignación Excepciones'));
 
 // ========================================
 // RUTAS DE ASIGNACIÓN DE EXCEPCIONES

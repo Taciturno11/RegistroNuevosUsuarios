@@ -78,6 +78,7 @@ const authMiddleware = async (req, res, next) => {
         CargoID: user.CargoID,
         cargoID: user.CargoID,
         role: role,
+        vistas: payload.vistas || [],
         estadoEmpleado: user.EstadoEmpleado,
         iat: payload.iat,
         exp: payload.exp
@@ -86,6 +87,8 @@ const authMiddleware = async (req, res, next) => {
       // Log de autenticación exitosa
       console.log(`🔐 Usuario autenticado: ${user.DNI} - ${user.Nombres} ${user.ApellidoPaterno}`);
       console.log(`🔐 req.user.dni: ${req.user.dni}`);
+      console.log(`🔐 req.user.role: ${req.user.role}`);
+      console.log(`🔐 req.user.vistas:`, req.user.vistas);
       console.log(`🔐 payload.dni: ${payload.dni}`);
 
       next();
@@ -212,8 +215,46 @@ const requireRole = (allowedRoles) => {
   };
 };
 
+// Middleware para verificar vistas específicas
+const requireVista = (requiredVista) => {
+  return (req, res, next) => {
+    console.log('🔐 requireVista ejecutándose para vista:', requiredVista, 'Usuario:', req.user?.dni, 'Role:', req.user?.role, 'Vistas:', req.user?.vistas);
+    
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Autenticación requerida',
+        error: 'AUTHENTICATION_REQUIRED'
+      });
+    }
+
+    // Admin siempre tiene acceso
+    if (req.user.role === 'admin') {
+      console.log('✅ requireVista: Admin acceso permitido');
+      return next();
+    }
+
+    // Verificar si tiene la vista específica
+    if (req.user.vistas && req.user.vistas.includes(requiredVista)) {
+      console.log('✅ requireVista: Acceso permitido por vista');
+      return next();
+    }
+
+    console.log('❌ requireVista: Acceso denegado');
+    return res.status(403).json({
+      success: false,
+      message: 'Acceso denegado - Vista no autorizada',
+      error: 'INSUFFICIENT_PERMISSIONS',
+      requiredVista: requiredVista,
+      userRole: req.user.role,
+      userVistas: req.user.vistas
+    });
+  };
+};
+
 module.exports = {
   authMiddleware,
   optionalAuthMiddleware,
-  requireRole
+  requireRole,
+  requireVista
 };

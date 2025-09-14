@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
     userDetails: user ? {
       dni: user.dni,
       role: user.role,
+      vistas: user.vistas || [],
       nombres: user.nombres,
       apellidoPaterno: user.apellidoPaterno,
       apellidoMaterno: user.apellidoMaterno
@@ -148,6 +149,7 @@ export const AuthProvider = ({ children }) => {
         }
 
         console.log('✅ Login exitoso, token recibido:', newToken.substring(0, 20) + '...');
+        console.log('✅ Datos del usuario:', userData);
 
         setToken(newToken);
         setUser(userData);

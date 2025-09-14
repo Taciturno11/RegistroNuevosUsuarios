@@ -104,6 +104,11 @@ const Sidebar = () => {
 
   // Solo dos roles: admin y agente
   const isAdmin = user?.role === 'admin';
+  
+  // Helper para verificar si tiene acceso a una vista
+  const tieneVista = (nombreVista) => {
+    return isAdmin || (user?.vistas && user.vistas.includes(nombreVista));
+  };
 
   // Ocultar sidebar completamente en la vista de capacitaciones
   const isCapacitacionesView = location.pathname === '/capacitaciones';
@@ -240,8 +245,8 @@ const Sidebar = () => {
 
         <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
 
-        {/* Sección de administración - Incluye Dashboard y todas las funciones administrativas */}
-        {isAdmin && (
+        {/* Sección de administración - Mostrar si tiene Dashboard o alguna vista de gestión */}
+        {(isAdmin || tieneVista('Dashboard') || tieneVista('JUSTIFICACIONES') || tieneVista('OJT / CIC') || tieneVista('Asignación Excepciones') || tieneVista('BONOS') || tieneVista('Ejecutar SP')) && (
           <>
             <ListItem disablePadding>
               <ListItemButton
@@ -300,8 +305,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Reporte de Asistencias - Solo para admin */}
-        {isAdmin && (
+        {/* Reporte de Asistencias */}
+        {tieneVista('Reporte de Asistencias') && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -361,8 +366,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Capacitaciones - Solo para admin */}
-        {isAdmin && (
+        {/* Capacitaciones */}
+        {tieneVista('CAPACITACIONES') && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -394,8 +399,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Pagos de Nómina - Solo para admin */}
-        {isAdmin && (
+        {/* Pagos de Nómina */}
+        {tieneVista('Pagos de Nómina') && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -427,8 +432,8 @@ const Sidebar = () => {
           </>
         )}
 
-         {/* Control Maestro - Solo para admin - AL FINAL DEL SIDEBAR */}
-         {isAdmin && (
+         {/* Control Maestro - AL FINAL DEL SIDEBAR */}
+         {tieneVista('Control Maestro') && (
            <>
              <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
              <ListItem disablePadding>
