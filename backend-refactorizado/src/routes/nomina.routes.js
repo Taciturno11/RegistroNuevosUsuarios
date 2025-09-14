@@ -11,8 +11,8 @@ const {
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
-// Solo analistas y creador pueden acceder a estas rutas
-router.use(requireRole(['analista', 'creador']));
+// Solo admin puede acceder a estas rutas
+router.use(requireRole(['admin']));
 
 // Generar reporte de nómina y asistencia
 router.get('/generar-reporte', generarReporteNomina);

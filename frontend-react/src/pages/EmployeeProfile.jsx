@@ -438,8 +438,8 @@ const EmployeeProfile = () => {
          </Card>
        )}
 
-       {/* Control Maestro - Solo para el creador */}
-       {user?.dni === '73766815' && (
+       {/* Control Maestro - Solo para admin */}
+       {user?.role === 'admin' && (
          <Card sx={{ boxShadow: 3, mt: 3 }}>
            <CardContent sx={{ p: 3, textAlign: 'center' }}>
              <Typography variant="h5" sx={{ mb: 2, color: 'error.main', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1.5rem' }}>
@@ -447,7 +447,7 @@ const EmployeeProfile = () => {
                🛡️ Control Maestro del Sistema
              </Typography>
              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3, fontSize: '1.1rem' }}>
-               Como creador del sistema, tienes control total sobre roles y permisos de todos los empleados
+               Como administrador del sistema, tienes control total sobre roles y permisos de todos los empleados
              </Typography>
              <Button 
                variant="contained" 

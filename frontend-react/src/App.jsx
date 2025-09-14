@@ -133,28 +133,17 @@ const AppContent = () => {
 
   console.log('✅ AppContent: Usuario autenticado, mostrando aplicación principal');
   
-  // Si estamos en capacitaciones, mostrar componente según el rol
+  // Capacitaciones: restringir a admin (por simplificación actual)
   if (location.pathname === '/capacitaciones') {
-    // La jefa ve su dashboard especial, los capacitadores ven la vista normal
-    if (user?.role === 'jefe') {
-      console.log('👑 Jefa accediendo a capacitaciones - Mostrando DashboardJefa');
-      return (
-        <Routes>
-          <Route path="/capacitaciones" element={<DashboardJefa />} />
-        </Routes>
-      );
-    } else {
-      console.log('👨‍🏫 Capacitador/otro rol accediendo a capacitaciones - Mostrando CapacitacionesFullscreen');
-      return (
-        <Routes>
-          <Route path="/capacitaciones" element={
-            <ProtectedRoute requireRole={['capacitador', 'coordinadora', 'admin', 'creador']}>
-              <CapacitacionesFullscreen />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      );
-    }
+    return (
+      <Routes>
+        <Route path="/capacitaciones" element={
+          <ProtectedRoute requireRole={['admin']}>
+            <CapacitacionesFullscreen />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    );
   }
   
   // Layout normal para todas las demás rutas
@@ -173,9 +162,9 @@ const AppContent = () => {
           {/* Perfil del usuario como ruta principal */}
           <Route path="/" element={<EmployeeProfile />} />
           
-          {/* Dashboard como ruta separada */}
+          {/* Dashboard - solo admin */}
           <Route path="/dashboard" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <Dashboard />
             </ProtectedRoute>
           } />
@@ -183,75 +172,79 @@ const AppContent = () => {
           {/* Vista de perfil de empleado (mantener para compatibilidad) */}
           <Route path="/profile" element={<EmployeeProfile />} />
           
-          {/* Rutas administrativas (solo para roles administrativos) */}
+          {/* Rutas administrativas - solo admin */}
           <Route path="/registrar-empleado" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <RegistrarEmpleado />
             </ProtectedRoute>
           } />
           <Route path="/actualizar-empleado" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <ActualizarEmpleado />
             </ProtectedRoute>
           } />
           <Route path="/cese" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <Cese />
             </ProtectedRoute>
           } />
           <Route path="/justificaciones" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <Justificaciones />
             </ProtectedRoute>
           } />
           <Route path="/ojt" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <OJT />
             </ProtectedRoute>
           } />
           <Route path="/excepciones" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <Excepciones />
             </ProtectedRoute>
           } />
           <Route path="/bonos" element={
-            <ProtectedRoute requireRole={['admin', 'analista', 'coordinador', 'supervisor', 'jefe', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <Bonos />
             </ProtectedRoute>
           } />
           
-          {/* Reporte de Asistencias - Solo para analistas, creador y todos los jefes */}
+          {/* Reporte de Asistencias - solo admin */}
           <Route path="/reporte-asistencias" element={
-            <ProtectedRoute requireRole={['analista', 'creador', 'jefe_reportes', 'jefe_capacitaciones']}>
+            <ProtectedRoute requireRole={['admin']}>
               <ReporteAsistencias />
             </ProtectedRoute>
           } />
           
-          {/* Reporte de Tardanzas - Solo para analistas, creador y todos los jefes */}
+          {/* Reporte de Tardanzas - solo admin */}
           <Route path="/reporte-tardanzas" element={
-            <ProtectedRoute requireRole={['analista', 'creador', 'jefe_reportes', 'jefe_capacitaciones']}>
+            <ProtectedRoute requireRole={['admin']}>
               <ReporteTardanzas />
             </ProtectedRoute>
           } />
           
-          {/* Ejecutar SP - Solo para analistas y creador */}
+          {/* Ejecutar SP - solo admin */}
           <Route path="/ejecutar-sp" element={
-            <ProtectedRoute requireRole={['analista', 'creador']}>
+            <ProtectedRoute requireRole={['admin']}>
               <EjecutarSP />
             </ProtectedRoute>
           } />
           
-          <Route path="/control-maestro" element={<ControlMaestro />} />
+          <Route path="/control-maestro" element={
+            <ProtectedRoute requireRole={['admin']}>
+              <ControlMaestro />
+            </ProtectedRoute>
+          } />
           
           {/* Capacitaciones - Solo para analistas, creador, jefa especial, capacitadores, coordinadoras y administradores */}
           <Route path="/capacitaciones" element={
-            <ProtectedRoute requireRole={['capacitador', 'coordinadora', 'admin', 'creador', 'jefe_capacitaciones']}>
+            <ProtectedRoute requireRole={['admin']}>
               <CapacitacionesFullscreen />
             </ProtectedRoute>
           } />
           
           <Route path="/pagos-nomina" element={
-            <ProtectedRoute requireRole={['analista', 'creador', 'jefe_reportes', 'jefe_capacitaciones']}>
+            <ProtectedRoute requireRole={['admin']}>
               <PagosNomina />
             </ProtectedRoute>
           } />

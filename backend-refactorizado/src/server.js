@@ -116,6 +116,7 @@ app.use('/api/tardanzas', require('./routes/tardanzas.routes'));
 app.use('/api/nomina', require('./routes/nomina.routes'));
 app.use('/api/capacitaciones', capacitacionesRoutes);
 app.use('/api/bonos', bonosRoutes);
+app.use('/api/acceso', require('./routes/acceso.routes'));
 
 // Middleware de manejo de errores
 app.use((err, req, res, next) => {

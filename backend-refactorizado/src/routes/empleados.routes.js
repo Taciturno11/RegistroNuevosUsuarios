@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middleware/auth.middleware');
+const { authMiddleware, requireRole } = require('../middleware/auth.middleware');
 const {
   getAllEmpleados,
   getEmpleadoByDNI,
@@ -20,9 +20,23 @@ const { getHorarioBaseEmpleado } = require('../controllers/grupos.controller');
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
-// Obtener todos los empleados (con filtros y paginación)
-router.get('/', getAllEmpleados);
+// Middleware: permitir solo al propio usuario (o admin)
+const allowSelfOrAdmin = (req, res, next) => {
+  const requester = req.user;
+  const targetDni = req.params.dni;
+  if (!requester) {
+    return res.status(401).json({ success: false, message: 'Autenticación requerida' });
+  }
+  if (requester.role === 'admin' || requester.dni === targetDni) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Acceso denegado' });
+};
 
+// A partir de aquí, solo admin
+router.use(requireRole(['admin']));
+
+// Rutas específicas deben ir ANTES de las rutas con parámetros
 // Obtener todos los empleados con roles mapeados para el Control Maestro
 router.get('/control-maestro', getAllEmpleadosConRoles);
 
@@ -35,11 +49,15 @@ router.get('/buscar', searchEmpleados);
 // Lookup para autocompletar DNI (acepta varios cargos: ?cargo=5&search=7156)
 router.get('/lookup', lookupEmpleados);
 
-// Obtener empleado por DNI
-router.get('/:dni', getEmpleadoByDNI);
+// Obtener todos los empleados (con filtros y paginación)
+router.get('/', getAllEmpleados);
 
-// Obtener horario base del empleado (NombreHorario y opcionalmente rango)
-router.get('/:dni/horario', getHorarioBaseEmpleado);
+// Accesos para agentes: solo su propio perfil y horario
+// IMPORTANTE: las rutas con parámetros deben ir al final para no interceptar rutas específicas
+router.get('/:dni/horario', allowSelfOrAdmin, getHorarioBaseEmpleado);
+router.get('/:dni', allowSelfOrAdmin, getEmpleadoByDNI);
+
+// (Rutas movidas arriba con allowSelfOrAdmin)
 
 // Crear nuevo empleado
 router.post('/', createEmpleado);

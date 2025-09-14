@@ -81,8 +81,8 @@ const ReporteAsistencias = () => {
 
   // Verificar permisos al montar
   useEffect(() => {
-    // Solo analistas y el creador pueden acceder
-    if (user?.role !== 'analista' && user?.dni !== '73766815') {
+    // Solo admin puede acceder
+    if (user?.role !== 'admin') {
       navigate('/');
       return;
     }

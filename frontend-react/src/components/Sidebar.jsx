@@ -102,22 +102,8 @@ const Sidebar = () => {
   const [open, setOpen] = useState(true);
   const [adminMenuOpen, setAdminMenuOpen] = useState(true);
 
-  // Verificar si el usuario es administrador
-  const isAdmin = user?.role === 'admin' || 
-                  user?.role === 'analista' || 
-                  user?.role === 'coordinador' || 
-                  user?.role === 'supervisor' || 
-                  user?.role === 'jefe' || 
-                  user?.role === 'creador';
-
-  // Verificar si el usuario es analista (para reporte de asistencias)
-  const isAnalista = user?.role === 'analista';
-  
-  // Verificar si el usuario es jefe especial con acceso a capacitaciones
-  const isJefeCapacitaciones = user?.dni === '76157106';
-  
-  // Verificar si el usuario es jefe normal (solo reportes)
-  const isJefeNormal = user?.role === 'jefe_reportes';
+  // Solo dos roles: admin y agente
+  const isAdmin = user?.role === 'admin';
 
   // Ocultar sidebar completamente en la vista de capacitaciones
   const isCapacitacionesView = location.pathname === '/capacitaciones';
@@ -314,8 +300,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Reporte de Asistencias - Solo para analistas, creador y todos los jefes */}
-        {(isAnalista || user?.dni === '73766815' || isJefeCapacitaciones || isJefeNormal) && (
+        {/* Reporte de Asistencias - Solo para admin */}
+        {isAdmin && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -375,8 +361,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Capacitaciones - Solo para analistas, creador, jefa especial, capacitadores, coordinadoras, jefas y administradores */}
-        {(isAnalista || user?.dni === '73766815' || isJefeCapacitaciones || user?.role === 'capacitador' || user?.role === 'coordinadora' || user?.role === 'jefe' || user?.role === 'admin') && (
+        {/* Capacitaciones - Solo para admin */}
+        {isAdmin && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -408,8 +394,8 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* Pagos de Nómina - Solo para analistas, creador y todos los jefes */}
-        {(isAnalista || user?.dni === '73766815' || isJefeCapacitaciones || isJefeNormal) && (
+        {/* Pagos de Nómina - Solo para admin */}
+        {isAdmin && (
           <>
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
@@ -441,8 +427,8 @@ const Sidebar = () => {
           </>
         )}
 
-         {/* Control Maestro - Solo para el creador y analistas - AL FINAL DEL SIDEBAR */}
-         {(user?.dni === '73766815' || isAnalista) && (
+         {/* Control Maestro - Solo para admin - AL FINAL DEL SIDEBAR */}
+         {isAdmin && (
            <>
              <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
              <ListItem disablePadding>

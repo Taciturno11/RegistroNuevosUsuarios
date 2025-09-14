@@ -4,7 +4,7 @@ const { executeQuery, sql } = require('../config/database');
 exports.crearPermiso = async (req, res) => {
   try {
     const { dniEmpleado, vista, comentario } = req.body;
-    const dniResponsable = req.user.DNI;
+    const dniResponsable = req.user.dni;
 
     // Debug: Log del usuario que está intentando crear el permiso
     console.log('🔍 Usuario intentando crear permiso:', {
@@ -16,7 +16,7 @@ exports.crearPermiso = async (req, res) => {
     });
 
     // Validar que solo el creador o analistas puedan crear permisos
-    if (req.user.DNI !== '73766815' && req.user.CargoID !== 4) {
+    if (req.user.dni !== '73766815') {
       console.log('❌ Usuario no autorizado para crear permisos');
       return res.status(403).json({
         success: false,
@@ -99,10 +99,10 @@ exports.eliminarPermiso = async (req, res) => {
     const dniResponsable = req.user.DNI;
 
     // Validar que solo el creador o analistas puedan eliminar permisos
-    if (req.user.DNI !== '73766815' && req.user.CargoID !== 4) {
+    if (req.user.dni !== '73766815') {
       return res.status(403).json({
         success: false,
-        message: 'Solo el creador o analistas pueden eliminar permisos especiales'
+        message: 'Solo administradores pueden eliminar permisos especiales'
       });
     }
 
@@ -144,10 +144,10 @@ exports.listarPermisosEmpleado = async (req, res) => {
     const { dni } = req.params;
 
     // Verificar que solo el creador o analistas puedan ver permisos
-    if (req.user.DNI !== '73766815' && req.user.CargoID !== 4) {
+    if (req.user.dni !== '73766815') {
       return res.status(403).json({
         success: false,
-        message: 'Solo el creador o analistas pueden ver permisos especiales'
+        message: 'Solo administradores pueden ver permisos especiales'
       });
     }
 

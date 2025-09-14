@@ -67,34 +67,17 @@ const authMiddleware = async (req, res, next) => {
         });
       }
 
-      // Determinar rol basado en CargoID
-      let role = 'empleado';
-      if (user.CargoID === 1) role = 'agente';
-      else if (user.CargoID === 2) role = 'coordinador';
-      else if (user.CargoID === 3) role = 'back office';
-      else if (user.CargoID === 4) role = 'analista';
-      else if (user.CargoID === 5) role = 'supervisor';
-      else if (user.CargoID === 6) role = 'monitor';
-      else if (user.CargoID === 7) role = 'capacitador';
-      else if (user.CargoID === 9) role = 'controller';
-      
-      // El creador siempre tiene acceso especial
-      if (user.DNI === '73766815') role = 'creador';
-      // La jefa especial tiene acceso a capacitaciones además de reportes
-      else if (user.DNI === '76157106') role = 'jefe_capacitaciones';
-      // Los demás jefes solo tienen acceso a reportes
-      else if (user.CargoID === 8) role = 'jefe_reportes';
-
-
+      // Usar exclusivamente el rol emitido en el JWT (admin/agente)
+      const role = payload.role || (user.DNI === '73766815' ? 'admin' : 'agente');
 
       // Agregar información del usuario al request
       req.user = {
         dni: user.DNI,
         nombres: user.Nombres,
         apellidoPaterno: user.ApellidoPaterno,
-        CargoID: user.CargoID, // Mantener mayúscula para consistencia
-        cargoID: user.CargoID, // También en minúscula para compatibilidad
-        role: role, // Agregar el rol
+        CargoID: user.CargoID,
+        cargoID: user.CargoID,
+        role: role,
         estadoEmpleado: user.EstadoEmpleado,
         iat: payload.iat,
         exp: payload.exp
@@ -173,14 +156,8 @@ const optionalAuthMiddleware = async (req, res, next) => {
       if (userResult.recordset.length > 0) {
         const user = userResult.recordset[0];
         
-        // Determinar rol basado en CargoID
-        let role = 'empleado';
-        if (user.CargoID === 2) role = 'supervisor';
-        else if (user.CargoID === 5) role = 'auditor';
-        else if (user.CargoID === 9) role = 'creador';
-        else if (user.DNI === '73766815') role = 'creador'; // Asegurar que el creador tenga el rol correcto
-        else if (user.DNI === '76157106') role = 'jefe_capacitaciones'; // Asegurar que la jefa especial tenga el rol correcto
-        else if (user.CargoID === 8) role = 'jefe_reportes'; // Los demás jefes solo reportes
+        // Usar rol del JWT (ya no calcular por CargoID)
+        let role = payload.role || (user.DNI === '73766815' ? 'admin' : 'agente');
         
         req.user = {
           dni: user.DNI,

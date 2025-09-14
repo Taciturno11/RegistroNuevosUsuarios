@@ -125,7 +125,7 @@ const EjecutarSP = () => {
               <strong style={{ color: '#000000' }}>Parámetros:&nbsp;&nbsp;</strong> @FechaInicio, @FechaFin
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              <strong style={{ color: '#000000' }}>Acceso:&nbsp;&nbsp;</strong> Solo Analistas y Creador
+              <strong style={{ color: '#000000' }}>Acceso:&nbsp;&nbsp;</strong> Solo Administradores
             </Typography>
           </Grid>
         </Grid>

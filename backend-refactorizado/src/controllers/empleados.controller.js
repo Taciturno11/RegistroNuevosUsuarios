@@ -591,31 +591,28 @@ function getFieldType(fieldName) {
   return typeMap[fieldName] || sql.VarChar;
 }
 
-// Actualizar rol de empleado (solo para el creador del sistema)
+// Actualizar rol de empleado (solo para admin - DEPRECATED, usar /api/acceso)
 exports.actualizarRolEmpleado = async (req, res) => {
   try {
     const { dni } = req.params;
     const { role } = req.body;
     const { user: currentUser } = req;
 
-    // Verificar que solo el creador pueda actualizar roles
-    if (currentUser.dni !== '73766815') {
+    // Verificar que solo admin pueda actualizar roles
+    if (currentUser.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Solo el creador del sistema puede actualizar roles',
+        message: 'Solo administradores pueden actualizar roles',
         error: 'INSUFFICIENT_PERMISSIONS'
       });
     }
 
-    // Validar rol
-    const rolesValidos = ['agente', 'coordinador', 'back office', 'analista', 'supervisor', 'monitor', 'capacitador', 'jefe', 'controller', 'creador'];
-    if (!rolesValidos.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rol inválido',
-        error: 'INVALID_ROLE'
-      });
-    }
+    // DEPRECATED: Esta función ya no se usa, usar /api/acceso/empleados/:dni/rol
+    return res.status(410).json({
+      success: false,
+      message: 'Endpoint deprecado. Usar /api/acceso/empleados/:dni/rol',
+      error: 'DEPRECATED_ENDPOINT'
+    });
 
     // Obtener rol anterior del empleado
     const empleadoActualQuery = `
@@ -750,16 +747,16 @@ exports.actualizarRolEmpleado = async (req, res) => {
   }
 };
 
-// Obtener historial de cambios de roles
+// Obtener historial de cambios de roles (DEPRECATED)
 exports.obtenerHistorialRoles = async (req, res) => {
   try {
     const { user: currentUser } = req;
 
-    // Verificar que solo el creador pueda ver el historial
-    if (currentUser.dni !== '73766815') {
+    // Verificar que solo admin pueda ver el historial
+    if (currentUser.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Solo el creador del sistema puede ver el historial de roles',
+        message: 'Solo administradores pueden ver el historial de roles',
         error: 'INSUFFICIENT_PERMISSIONS'
       });
     }
@@ -859,8 +856,8 @@ exports.getAllEmpleadosConRoles = async (req, res) => {
       else if (emp.CargoID === 8) role = 'jefe';
       else if (emp.CargoID === 9) role = 'controller';
       
-      // El creador siempre tiene acceso especial
-      if (emp.DNI === '73766815') role = 'creador';
+      // Admin siempre tiene acceso especial
+      if (emp.DNI === '73766815') role = 'admin';
       
       return {
         ...emp,

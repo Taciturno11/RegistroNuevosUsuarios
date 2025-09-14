@@ -3,13 +3,15 @@ const bcrypt = require('bcryptjs');
 const { executeQuery, sql } = require('../config/database');
 const { formatearFechaLocal } = require('../utils/dateUtils');
 
-// Función para generar token JWT
-const generateToken = (userData) => {
+// Función para generar token JWT con rol y vistas
+const generateToken = (userData, role, vistas) => {
   const payload = {
     dni: userData.DNI,
     nombres: userData.Nombres,
     apellidoPaterno: userData.ApellidoPaterno,
-    cargoID: userData.CargoID
+    cargoID: userData.CargoID,
+    role,
+    vistas: Array.isArray(vistas) ? vistas : []
   };
 
   const hours = parseInt(process.env.JWT_EXPIRES_IN || '8', 10);
@@ -94,23 +96,45 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Generar token JWT
-    const token = generateToken(user);
+    // Determinar rol desde tablas ge (fallback a admin/agente)
+    let role = 'agente';
+    try {
+      const rolResult = await executeQuery(
+        `SELECT r.NombreRol
+         FROM ge.UsuarioRol ur
+         JOIN ge.Roles r ON r.RoleID = ur.RoleID AND r.Activo = 1
+         WHERE ur.DNI = @DNI`,
+        [{ name: 'DNI', type: sql.VarChar, value: dni }]
+      );
+      if (rolResult.recordset.length > 0) {
+        role = rolResult.recordset[0].NombreRol || 'agente';
+      } else if (user.DNI === '73766815') {
+        role = 'admin';
+      }
+    } catch (e) {
+      console.warn('⚠️ No se pudo obtener rol desde ge.UsuarioRol. Usando fallback.', e.message);
+      role = user.DNI === '73766815' ? 'admin' : 'agente';
+    }
 
-          // Determinar rol basado en CargoID
-      let role = 'empleado'; // Por defecto
-      if (user.CargoID === 1) role = 'agente';
-      else if (user.CargoID === 2) role = 'coordinador';
-      else if (user.CargoID === 3) role = 'back office';
-      else if (user.CargoID === 4) role = 'analista';
-      else if (user.CargoID === 5) role = 'supervisor';
-      else if (user.CargoID === 6) role = 'monitor';
-      else if (user.CargoID === 7) role = 'capacitador';
-      else if (user.CargoID === 8) role = 'jefe';
-      else if (user.CargoID === 9) role = 'controller';
-      
-      // El creador siempre tiene acceso especial
-      if (user.DNI === '73766815') role = 'creador';
+    // Obtener vistas del rol desde ge.RolVista → ge.Vistas
+    let vistas = [];
+    try {
+      const vistasResult = await executeQuery(
+        `SELECT v.NombreVista
+         FROM ge.RolVista rv
+         JOIN ge.Roles r ON r.RoleID = rv.RoleID AND r.Activo = 1
+         JOIN ge.Vistas v ON v.VistaID = rv.VistaID AND v.Activo = 1
+         WHERE r.NombreRol = @NombreRol`,
+        [{ name: 'NombreRol', type: sql.VarChar, value: role }]
+      );
+      vistas = vistasResult.recordset.map(r => r.NombreVista);
+    } catch (e) {
+      console.warn('⚠️ No se pudieron obtener vistas del rol. Continuando sin vistas.', e.message);
+      vistas = [];
+    }
+
+    // Generar token JWT (con role y vistas)
+    const token = generateToken(user, role, vistas);
 
     // Preparar respuesta del usuario (sin información sensible)
     const userResponse = {
@@ -120,7 +144,8 @@ exports.login = async (req, res) => {
       apellidoMaterno: user.ApellidoMaterno,
       cargoID: user.CargoID,
       nombreCargo: user.NombreCargo,
-      role: role, // Agregar el rol
+      role: role,
+      vistas: vistas,
       jornadaID: user.JornadaID,
       nombreJornada: user.NombreJornada,
       campañaID: user.CampañaID,

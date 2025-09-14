@@ -97,8 +97,8 @@ const ReporteTardanzas = () => {
   useEffect(() => {
     console.log('🔍 ReporteTardanzas: useEffect ejecutándose, user:', user);
     
-    // Solo analistas y el creador pueden acceder
-    if (user?.role !== 'analista' && user?.dni !== '73766815') {
+    // Solo admin puede acceder
+    if (user?.role !== 'admin') {
       console.log('❌ ReporteTardanzas: Sin permisos, redirigiendo');
       navigate('/');
       return;

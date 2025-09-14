@@ -89,14 +89,20 @@ const ControlMaestro = () => {
   const [historial, setHistorial] = useState([]);
   const [tabValue, setTabValue] = useState(0);
   
+  // Estados para el nuevo sistema de roles
+  const [catalogo, setCatalogo] = useState({ roles: [], vistas: [] });
+  const [nuevoRol, setNuevoRol] = useState('');
+  const [rolSeleccionado, setRolSeleccionado] = useState('');
+  const [vistasRolSeleccionado, setVistasRolSeleccionado] = useState([]);
+  const [modalCrearRol, setModalCrearRol] = useState(false);
+  const [modalEditarVistas, setModalEditarVistas] = useState(false);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(8);
 
-  // Verificar si es el creador del sistema o analista
-  const isCreador = user?.dni === '73766815';
-  const isAnalista = user?.role === 'analista';
-  const puedeAccederControlMaestro = isCreador || isAnalista;
+  // Solo admin puede acceder
+  const puedeAccederControlMaestro = user?.role === 'admin';
 
   // Estados para permisos especiales
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState('');
@@ -107,7 +113,7 @@ const ControlMaestro = () => {
   useEffect(() => {
     if (puedeAccederControlMaestro) {
       cargarEmpleados();
-      cargarHistorial();
+      cargarCatalogo();
     }
   }, [puedeAccederControlMaestro]);
 
@@ -158,14 +164,90 @@ const ControlMaestro = () => {
     }
   };
 
-  const cargarHistorial = async () => {
+  const cargarCatalogo = async () => {
     try {
-      const response = await api.get('/empleados/historial-roles');
+      const response = await api.get('/acceso/catalogo');
       if (response.data.success) {
-        setHistorial(response.data.data);
+        setCatalogo(response.data.data);
       }
     } catch (error) {
-      console.error('Error cargando historial:', error);
+      console.error('Error cargando catálogo:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al cargar catálogo de roles y vistas',
+        severity: 'error'
+      });
+    }
+  };
+
+  const crearRol = async () => {
+    try {
+      if (!nuevoRol.trim()) {
+        setSnackbar({
+          open: true,
+          message: 'Nombre del rol es requerido',
+          severity: 'warning'
+        });
+        return;
+      }
+
+      const response = await api.post('/acceso/roles', {
+        nombreRol: nuevoRol.trim()
+      });
+
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: 'Rol creado exitosamente',
+          severity: 'success'
+        });
+        setNuevoRol('');
+        setModalCrearRol(false);
+        await cargarCatalogo();
+      }
+    } catch (error) {
+      console.error('Error creando rol:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Error al crear rol',
+        severity: 'error'
+      });
+    }
+  };
+
+  const cargarVistasRol = async (nombreRol) => {
+    try {
+      const response = await api.get(`/acceso/roles/${nombreRol}/vistas`);
+      if (response.data.success) {
+        setVistasRolSeleccionado(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error cargando vistas del rol:', error);
+      setVistasRolSeleccionado([]);
+    }
+  };
+
+  const guardarVistasRol = async () => {
+    try {
+      const response = await api.put(`/acceso/roles/${rolSeleccionado}/vistas`, {
+        vistas: vistasRolSeleccionado
+      });
+
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: 'Vistas del rol actualizadas',
+          severity: 'success'
+        });
+        setModalEditarVistas(false);
+      }
+    } catch (error) {
+      console.error('Error guardando vistas del rol:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al guardar vistas del rol',
+        severity: 'error'
+      });
     }
   };
 
@@ -183,17 +265,17 @@ const ControlMaestro = () => {
     try {
       const nuevoRol = tempRoles[empleado.DNI];
       
-      if (empleado.DNI === '73766815' && nuevoRol !== 'creador') {
+      if (empleado.DNI === '73766815' && nuevoRol !== 'admin') {
         setSnackbar({
           open: true,
-          message: 'No puedes cambiar tu propio rol de creador',
+          message: 'No puedes cambiar tu propio rol de administrador',
           severity: 'warning'
         });
         return;
       }
 
-      const response = await api.put(`/empleados/${empleado.DNI}/rol`, {
-        role: nuevoRol
+      const response = await api.put(`/acceso/empleados/${empleado.DNI}/rol`, {
+        nombreRol: nuevoRol
       });
 
       if (response.data.success) {
@@ -204,11 +286,10 @@ const ControlMaestro = () => {
         ));
         
         setEditMode(prev => ({ ...prev, [empleado.DNI]: false }));
-        await cargarHistorial();
         
         setSnackbar({
           open: true,
-          message: response.data.message,
+          message: 'Rol asignado al empleado exitosamente',
           severity: 'success'
         });
       }
@@ -223,49 +304,28 @@ const ControlMaestro = () => {
   };
 
   const getRoleDisplayName = (role) => {
-    const roles = {
-      'agente': 'Agente',
-      'coordinador': 'Coordinador',
-      'analista': 'Analista',
-      'supervisor': 'Supervisor',
-      'jefe': 'Jefe',
-      'capacitador': 'Capacitador',
-      'back office': 'Back Office',
-      'monitor': 'Monitor',
-      'controller': 'Controller',
-      'creador': 'Creador del Sistema'
-    };
-    return roles[role] || role;
+    const rolEncontrado = catalogo.roles.find(r => r.NombreRol === role);
+    return rolEncontrado ? rolEncontrado.NombreRol : role;
   };
 
   const getRoleColor = (role) => {
     const colors = {
+      'admin': 'error',
       'agente': 'default',
-      'coordinador': 'primary',
       'analista': 'success',
       'supervisor': 'warning',
-      'jefe': 'error',
-      'capacitador': 'secondary',
-      'back office': 'info',
-      'monitor': 'default',
-      'controller': 'default',
-      'creador': 'error'
+      'capacitador': 'secondary'
     };
-    return colors[role] || 'default';
+    return colors[role] || 'primary';
   };
 
   const getRoleIcon = (role) => {
     const icons = {
+      'admin': <SecurityIcon />,
       'agente': <PersonIcon />,
-      'coordinador': <SupervisorIcon />,
-      'analista': <SecurityIcon />,
+      'analista': <AdminIcon />,
       'supervisor': <SupervisorIcon />,
-      'jefe': <AdminIcon />,
-      'capacitador': <SchoolIcon />,
-      'back office': <AdminIcon />,
-      'monitor': <PersonIcon />,
-      'controller': <SecurityIcon />,
-      'creador': <SecurityIcon />
+      'capacitador': <SchoolIcon />
     };
     return icons[role] || <PersonIcon />;
   };
@@ -377,7 +437,7 @@ const ControlMaestro = () => {
     }
   };
 
-  // Si no es el creador o analista, mostrar mensaje de acceso restringido
+  // Si no es admin, mostrar mensaje de acceso restringido
   if (!puedeAccederControlMaestro) {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
@@ -386,7 +446,7 @@ const ControlMaestro = () => {
             🔐 Acceso Restringido
           </Typography>
           <Typography variant="body1">
-            Solo el creador del sistema o analistas pueden acceder a esta vista de control maestro.
+            Solo administradores pueden acceder a esta vista de control maestro.
           </Typography>
           <Button 
             variant="contained" 
@@ -423,7 +483,7 @@ const ControlMaestro = () => {
               🛡️ Control Maestro del Sistema
             </Typography>
             <Typography variant="body1" sx={{ opacity: 0.9 }}>
-              Gestión de Roles y Permisos - {isCreador ? 'Creador del Sistema' : 'Analista'}
+              Gestión de Roles y Permisos - Administrador
             </Typography>
           </Box>
         </Box>
@@ -431,19 +491,19 @@ const ControlMaestro = () => {
 
       {/* Estadísticas Compactas */}
       <Grid container spacing={2} sx={{ mb: 2, justifyContent: 'center' }}>
-        {['agente', 'coordinador', 'analista', 'supervisor', 'jefe', 'back office', 'capacitador', 'monitor', 'controller'].map(role => {
-          const count = empleados.filter(emp => emp.role === role).length;
+        {catalogo.roles.map(role => {
+          const count = empleados.filter(emp => emp.role === role.NombreRol).length;
           return (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={role}>
+            <Grid item xs={12} sm={6} md={4} lg={3} key={role.RoleID}>
               <Card sx={{ textAlign: 'center', p: 1.5, height: '100%', minWidth: 120 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-                  {getRoleIcon(role)}
+                  {getRoleIcon(role.NombreRol)}
                 </Box>
                 <Typography variant="h5" component="div" sx={{ fontWeight: 700, color: 'primary.main' }}>
                   {count}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {getRoleDisplayName(role)}
+                  {role.NombreRol}
                 </Typography>
               </Card>
             </Grid>
@@ -451,29 +511,29 @@ const ControlMaestro = () => {
         })}
       </Grid>
 
-      {/* Tabs Compactos */}
-      <Card sx={{ boxShadow: 2, mb: 2 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto">
-            <Tab 
-              icon={<AssignmentIcon />} 
-              label="Gestión de Roles" 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<HistoryIcon />} 
-              label="Historial" 
-              iconPosition="start"
-            />
-            <Tab 
-              icon={<SecurityIcon />} 
-              label="Permisos Especiales" 
-              iconPosition="start"
-            />
-          </Tabs>
-        </Box>
+        {/* Tabs Compactos */}
+        <Card sx={{ boxShadow: 2, mb: 2 }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} variant="scrollable" scrollButtons="auto">
+              <Tab 
+                icon={<AssignmentIcon />} 
+                label="Gestión de Empleados" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<SecurityIcon />} 
+                label="Crear Roles" 
+                iconPosition="start"
+              />
+              <Tab 
+                icon={<HistoryIcon />} 
+                label="Configurar Vistas por Rol" 
+                iconPosition="start"
+              />
+            </Tabs>
+          </Box>
 
-        {/* Tab 1: Gestión de Roles */}
+        {/* Tab 1: Gestión de Empleados */}
         {tabValue === 0 && (
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ mb: 2 }}>
@@ -499,15 +559,11 @@ const ControlMaestro = () => {
                       label="Filtrar por Rol"
                     >
                       <MenuItem value="todos">Todos los Roles</MenuItem>
-                      <MenuItem value="agente">Agente</MenuItem>
-                      <MenuItem value="coordinador">Coordinador</MenuItem>
-                      <MenuItem value="analista">Analista</MenuItem>
-                      <MenuItem value="supervisor">Supervisor</MenuItem>
-                      <MenuItem value="jefe">Jefe</MenuItem>
-                      <MenuItem value="back office">Back Office</MenuItem>
-                      <MenuItem value="capacitador">Capacitador</MenuItem>
-                      <MenuItem value="monitor">Monitor</MenuItem>
-                      <MenuItem value="controller">Controller</MenuItem>
+                      {catalogo.roles.map(rol => (
+                        <MenuItem key={rol.RoleID} value={rol.NombreRol}>
+                          {rol.NombreRol}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -604,18 +660,11 @@ const ControlMaestro = () => {
                                   }))}
                                   size="small"
                                 >
-                                  <MenuItem value="agente">Agente</MenuItem>
-                                  <MenuItem value="coordinador">Coordinador</MenuItem>
-                                  <MenuItem value="analista">Analista</MenuItem>
-                                  <MenuItem value="supervisor">Supervisor</MenuItem>
-                                  <MenuItem value="jefe">Jefe</MenuItem>
-                                  <MenuItem value="back office">Back Office</MenuItem>
-                                  <MenuItem value="capacitador">Capacitador</MenuItem>
-                                  <MenuItem value="monitor">Monitor</MenuItem>
-                                  <MenuItem value="controller">Controller</MenuItem>
-                                  {empleado.DNI === '73766815' && (
-                                    <MenuItem value="creador" disabled>Creador</MenuItem>
-                                  )}
+                                  {catalogo.roles.map(rol => (
+                                    <MenuItem key={rol.RoleID} value={rol.NombreRol}>
+                                      {rol.NombreRol}
+                                    </MenuItem>
+                                  ))}
                                 </Select>
                               </FormControl>
                             ) : (
@@ -687,252 +736,322 @@ const ControlMaestro = () => {
           </CardContent>
         )}
 
-        {/* Tab 2: Historial Compacto */}
+        {/* Tab 2: Crear Roles */}
         {tabValue === 1 && (
           <CardContent sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                <HistoryIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Historial de Cambios de Roles
+                <SecurityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Gestión de Roles del Sistema
               </Typography>
               <Button
-                startIcon={<RefreshIcon />}
-                onClick={cargarHistorial}
-                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => setModalCrearRol(true)}
+                variant="contained"
                 size="small"
               >
-                Actualizar
+                Crear Nuevo Rol
               </Button>
             </Box>
 
-            {historial.length === 0 ? (
-              <Alert severity="info">
-                No hay registros de cambios de roles en el historial.
+            <Grid container spacing={2}>
+              {catalogo.roles.map(rol => (
+                <Grid item xs={12} sm={6} md={4} key={rol.RoleID}>
+                  <Card sx={{ p: 2, border: '1px solid #e0e0e0' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <SecurityIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="h6" fontWeight={600}>
+                        {rol.NombreRol}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Rol: {rol.NombreRol}
+                    </Typography>
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setRolSeleccionado(rol.NombreRol);
+                        cargarVistasRol(rol.NombreRol);
+                        setModalEditarVistas(true);
+                      }}
+                    >
+                      Configurar Vistas
+                    </Button>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            {catalogo.roles.length === 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                No hay roles creados. Haz clic en "Crear Nuevo Rol" para comenzar.
               </Alert>
-            ) : (
-              <TableContainer sx={{ maxHeight: 400 }}>
-                <Table size="small" stickyHeader>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell><strong>Empleado</strong></TableCell>
-                      <TableCell><strong>Rol Anterior</strong></TableCell>
-                      <TableCell><strong>Rol Nuevo</strong></TableCell>
-                      <TableCell><strong>Fecha</strong></TableCell>
-                      <TableCell><strong>Responsable</strong></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {historial.slice(0, 20).map((registro, index) => (
-                      <TableRow key={index} hover>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main', fontSize: '0.75rem' }}>
-                              {registro.Nombres?.charAt(0)}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="body2" fontWeight={600} fontSize="0.875rem">
-                                {registro.Nombres} {registro.ApellidoPaterno}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                                {registro.DNIEmpleado}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={registro.RolAnterior || 'Sin asignar'} 
-                            size="small" 
-                            variant="outlined"
-                            color="default"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={getRoleDisplayName(registro.RolNuevo)} 
-                            size="small" 
-                            color={getRoleColor(registro.RolNuevo)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
-                            {formatearFecha(registro.FechaCambio)}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
-                            {registro.DNIResponsable}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
             )}
           </CardContent>
         )}
 
-        {/* Tab 3: Permisos Especiales Compacto */}
+        {/* Tab 3: Configurar Vistas por Rol */}
         {tabValue === 2 && (
           <CardContent sx={{ p: 2 }}>
             <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 600 }}>
-              <SecurityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Gestión de Permisos Especiales
+              <HistoryIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Configurar Vistas por Rol
             </Typography>
             
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Habilita acceso a vistas específicas para empleados individuales.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Selecciona un rol para configurar qué vistas del sistema puede acceder.
             </Typography>
 
-            {/* Buscar Empleado */}
-            <Box sx={{ mb: 2 }}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="🔍 Buscar empleado por DNI o nombre..."
-                value={empleadoSeleccionado}
-                onChange={(e) => setEmpleadoSeleccionado(e.target.value)}
-                sx={{ mb: 1 }}
-              />
-              
-              {/* Lista de empleados filtrados */}
-              <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
-                {empleados
-                  .filter(emp => 
-                    !empleadoSeleccionado || 
-                    emp.DNI?.toLowerCase().includes(empleadoSeleccionado.toLowerCase()) ||
-                    emp.Nombres?.toLowerCase().includes(empleadoSeleccionado.toLowerCase()) ||
-                    emp.ApellidoPaterno?.toLowerCase().includes(empleadoSeleccionado.toLowerCase())
-                  )
-                  .slice(0, 8)
-                  .map(emp => (
-                    <Card key={emp.DNI} sx={{ mb: 1, p: 1.5 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="body2" fontWeight={600}>
-                            {emp.Nombres} {emp.ApellidoPaterno}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            DNI: {emp.DNI} • Cargo: {emp.NombreCargo || `ID: ${emp.CargoID}`}
-                          </Typography>
-                        </Box>
-                        
-                        <Button
-                          variant="outlined"
-                          onClick={() => abrirModalPermisos(emp)}
-                          startIcon={<AddIcon />}
-                          size="small"
-                        >
-                          Gestionar
-                        </Button>
-                      </Box>
-                    </Card>
-                  ))}
-              </Box>
-            </Box>
+            <Grid container spacing={3}>
+              {catalogo.roles.map(rol => (
+                <Grid item xs={12} md={6} key={rol.RoleID}>
+                  <Card sx={{ p: 2, border: '2px solid #e0e0e0', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <SecurityIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <Typography variant="h6" fontWeight={600}>
+                        {rol.NombreRol}
+                      </Typography>
+                    </Box>
+                    
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => {
+                        setRolSeleccionado(rol.NombreRol);
+                        cargarVistasRol(rol.NombreRol);
+                        setModalEditarVistas(true);
+                      }}
+                      sx={{ mb: 2 }}
+                    >
+                      Configurar Vistas de este Rol
+                    </Button>
+                    
+                    <Typography variant="body2" color="text.secondary">
+                      Código: {rol.CodigoRol}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            {catalogo.roles.length === 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                No hay roles disponibles. Crea primero un rol en la pestaña "Crear Roles".
+              </Alert>
+            )}
           </CardContent>
         )}
       </Card>
 
-      {/* Modal para Gestionar Permisos */}
-      <Dialog open={modalPermisos.open} maxWidth="md" fullWidth>
+      {/* Modal para Crear Rol */}
+      <Dialog open={modalCrearRol} maxWidth="sm" fullWidth>
         <DialogTitle>
-          🔓 Permisos Especiales - {modalPermisos.empleado?.Nombres} {modalPermisos.empleado?.ApellidoPaterno}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <SecurityIcon sx={{ mr: 1, color: 'primary.main' }} />
+            Crear Nuevo Rol
+          </Box>
         </DialogTitle>
         
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            Cargo actual: <strong>{modalPermisos.empleado?.NombreCargo || `ID: ${modalPermisos.empleado?.CargoID}`}</strong>
-          </Typography>
-          
-          {/* Permisos actuales */}
-          <Typography variant="h6" sx={{ mb: 1 }}>Permisos Actuales:</Typography>
-          <Box sx={{ mb: 3 }}>
-            {permisosEmpleado.length === 0 ? (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                No tiene permisos especiales habilitados
-              </Alert>
-            ) : (
-              permisosEmpleado.map(permiso => (
-                <Chip
-                  key={permiso.ID}
-                  label={permiso.VistaHabilitada}
-                  color="success"
-                  onDelete={() => eliminarPermiso(permiso.ID)}
-                  sx={{ mr: 1, mb: 1 }}
-                />
-              ))
-            )}
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Nombre del Rol"
+              placeholder="ej: analista, supervisor, capacitador"
+              value={nuevoRol}
+              onChange={(e) => setNuevoRol(e.target.value)}
+              helperText="Nombre único del rol (ej: analista1, jefe, supervisor)"
+            />
           </Box>
-          
-          {/* Habilitar nuevo permiso */}
-          <Typography variant="h6" sx={{ mb: 1 }}>Habilitar Nuevo Permiso:</Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
-              <FormControl fullWidth>
-                <InputLabel>Vista a habilitar</InputLabel>
-                <Select
-                  value={nuevaVista}
-                  onChange={(e) => setNuevaVista(e.target.value)}
-                  label="Vista a habilitar"
-                >
-                  <MenuItem value="/admin">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <DashboardIcon /> Dashboard Administrativo
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="/empleados">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PeopleIcon /> Gestión de Empleados
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="/reportes">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <AssessmentIcon /> Reportes y Estadísticas
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="/cese">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ExitIcon /> Registro de Cese
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="/justificaciones">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <DescriptionIcon /> Justificaciones
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="/ojt">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <SchoolIcon /> OJT/CIC
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="/asignaciones">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <ScheduleIcon /> Asignaciones Excepciones
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            
-            <Grid item xs={12} md={4}>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={habilitarPermiso}
-                disabled={!nuevaVista}
-                startIcon={<CheckIcon />}
-              >
-                Habilitar
-              </Button>
-            </Grid>
-          </Grid>
         </DialogContent>
         
         <DialogActions>
-          <Button onClick={() => setModalPermisos({ open: false, empleado: null })}>
-            Cerrar
+          <Button onClick={() => {
+            setModalCrearRol(false);
+            setNuevoRol('');
+          }}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={crearRol} 
+            variant="contained"
+            disabled={!nuevoRol.trim()}
+          >
+            Crear Rol
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal para Configurar Vistas del Rol */}
+      <Dialog open={modalEditarVistas} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <HistoryIcon sx={{ mr: 1, color: 'primary.main' }} />
+            Configurar Vistas - {catalogo.roles.find(r => r.NombreRol === rolSeleccionado)?.NombreRol}
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Selecciona las vistas a las que este rol tendrá acceso en el sistema.
+          </Typography>
+          
+          {/* Organizar vistas por categorías verticalmente */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {[
+              {
+                titulo: 'Gestión de Empleados',
+                vistas: ['Registrar Empleado', 'Actualizar Empleado', 'Cese de Empleado', 'Justificaciones', 'OJT / CIC', 'Asignación Excepciones', 'Bonos', 'Ejecutar SP']
+              },
+              {
+                titulo: 'Reporte de Asistencias',
+                vistas: ['Reporte de Asistencias']
+              },
+              {
+                titulo: 'Reporte de Tardanzas', 
+                vistas: ['Reporte de Tardanzas']
+              },
+              {
+                titulo: 'Capacitaciones',
+                vistas: ['Capacitaciones']
+              },
+              {
+                titulo: 'Pagos de Nómina',
+                vistas: ['Pagos de Nómina']
+              },
+              {
+                titulo: 'Seguridad',
+                vistas: ['Control Maestro']
+              }
+            ].map((categoria, index) => {
+              const vistasDisponibles = categoria.vistas.filter(nombreVista => 
+                catalogo.vistas.some(v => v.NombreVista === nombreVista)
+              );
+              
+              if (vistasDisponibles.length === 0) return null;
+              
+              const todasSeleccionadas = vistasDisponibles.every(v => vistasRolSeleccionado.includes(v));
+              const algunaSeleccionada = vistasDisponibles.some(v => vistasRolSeleccionado.includes(v));
+              
+              return (
+                <Box key={index} sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 2 }}>
+                  {/* Título con checkbox */}
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      mb: 2, 
+                      cursor: 'pointer',
+                      p: 1,
+                      borderRadius: 1,
+                      '&:hover': { bgcolor: '#f5f5f5' }
+                    }}
+                    onClick={() => {
+                      if (todasSeleccionadas) {
+                        // Deseleccionar todas de la categoría
+                        setVistasRolSeleccionado(prev => prev.filter(v => !vistasDisponibles.includes(v)));
+                      } else {
+                        // Seleccionar todas de la categoría
+                        setVistasRolSeleccionado(prev => [...new Set([...prev, ...vistasDisponibles])]);
+                      }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        border: '2px solid #1976d2',
+                        borderRadius: 1,
+                        mr: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: todasSeleccionadas ? '#1976d2' : (algunaSeleccionada ? '#1976d2' : 'transparent')
+                      }}
+                    >
+                      {todasSeleccionadas ? (
+                        <CheckIcon sx={{ fontSize: 16, color: 'white' }} />
+                      ) : algunaSeleccionada ? (
+                        <Box sx={{ width: 8, height: 8, bgcolor: 'white', borderRadius: 0.5 }} />
+                      ) : null}
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} color="primary.main">
+                      📁 {categoria.titulo} ({vistasDisponibles.length} vistas)
+                    </Typography>
+                  </Box>
+                  
+                  {/* Lista vertical de vistas */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 4 }}>
+                    {vistasDisponibles.map(nombreVista => {
+                      const vista = catalogo.vistas.find(v => v.NombreVista === nombreVista);
+                      const seleccionada = vistasRolSeleccionado.includes(vista.NombreVista);
+                      
+                      return (
+                        <Box
+                          key={vista.VistaID}
+                          sx={{ 
+                            display: 'flex',
+                            alignItems: 'center',
+                            p: 1.5,
+                            cursor: 'pointer',
+                            borderRadius: 1,
+                            border: '1px solid #e0e0e0',
+                            bgcolor: seleccionada ? '#f3f8ff' : 'white',
+                            '&:hover': { bgcolor: seleccionada ? '#e3f2fd' : '#f9f9f9' }
+                          }}
+                          onClick={() => {
+                            if (seleccionada) {
+                              setVistasRolSeleccionado(prev => prev.filter(v => v !== vista.NombreVista));
+                            } else {
+                              setVistasRolSeleccionado(prev => [...prev, vista.NombreVista]);
+                            }
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 18,
+                              height: 18,
+                              border: '2px solid #1976d2',
+                              borderRadius: 1,
+                              mr: 2,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: seleccionada ? '#1976d2' : 'transparent'
+                            }}
+                          >
+                            {seleccionada && <CheckIcon sx={{ fontSize: 14, color: 'white' }} />}
+                          </Box>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vista.NombreVista}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+
+          {catalogo.vistas.length === 0 && (
+            <Alert severity="info">
+              No hay vistas disponibles en el sistema.
+            </Alert>
+          )}
+        </DialogContent>
+        
+        <DialogActions>
+          <Button onClick={() => setModalEditarVistas(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={guardarVistasRol} 
+            variant="contained"
+          >
+            Guardar Configuración
           </Button>
         </DialogActions>
       </Dialog>
