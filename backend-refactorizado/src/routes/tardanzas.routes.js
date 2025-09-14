@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const tardanzasController = require('../controllers/tardanzas.controller');
-const { authMiddleware, requireRole } = require('../middleware/auth.middleware');
+const { authMiddleware, requireRole, requireVista } = require('../middleware/auth.middleware');
 
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
@@ -11,12 +11,12 @@ router.use(authMiddleware);
 // ========================================
 
 // Obtener reporte detallado de tardanzas
-router.get('/reporte', requireRole(['admin']), tardanzasController.getReporteTardanzas);
+router.get('/reporte', requireVista('Reporte de Tardanzas'), tardanzasController.getReporteTardanzas);
 
 // Obtener reporte resumido por empleado
-router.get('/resumido', requireRole(['admin']), tardanzasController.getReporteResumido);
+router.get('/resumido', requireVista('Reporte de Tardanzas'), tardanzasController.getReporteResumido);
 
 // Obtener estadísticas resumidas de tardanzas
-router.get('/estadisticas', requireRole(['admin']), tardanzasController.getEstadisticasTardanzas);
+router.get('/estadisticas', requireVista('Reporte de Tardanzas'), tardanzasController.getEstadisticasTardanzas);
 
 module.exports = router;

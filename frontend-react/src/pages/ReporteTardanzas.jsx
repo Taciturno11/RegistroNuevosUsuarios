@@ -97,9 +97,9 @@ const ReporteTardanzas = () => {
   useEffect(() => {
     console.log('🔍 ReporteTardanzas: useEffect ejecutándose, user:', user);
     
-    // Solo admin puede acceder
-    if (user?.role !== 'admin') {
-      console.log('❌ ReporteTardanzas: Sin permisos, redirigiendo');
+    // Admin o usuarios con vista de Reporte de Tardanzas pueden acceder
+    if (user?.role !== 'admin' && (!user?.vistas || !user.vistas.includes('Reporte de Tardanzas'))) {
+      console.log('❌ ReporteTardanzas: Sin permisos, redirigiendo. Role:', user?.role, 'Vistas:', user?.vistas);
       navigate('/');
       return;
     }

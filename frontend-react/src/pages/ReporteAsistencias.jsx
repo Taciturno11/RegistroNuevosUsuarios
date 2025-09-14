@@ -81,11 +81,13 @@ const ReporteAsistencias = () => {
 
   // Verificar permisos al montar
   useEffect(() => {
-    // Solo admin puede acceder
-    if (user?.role !== 'admin') {
+    // Admin o usuarios con vista de Reporte de Asistencias pueden acceder
+    if (user?.role !== 'admin' && (!user?.vistas || !user.vistas.includes('Reporte de Asistencias'))) {
+      console.log('❌ ReporteAsistencias: Sin permisos, redirigiendo. Role:', user?.role, 'Vistas:', user?.vistas);
       navigate('/');
       return;
     }
+    console.log('✅ ReporteAsistencias: Permisos OK, cargando datos');
     
     cargarOpcionesFiltros();
     restaurarEstadoPersistente();

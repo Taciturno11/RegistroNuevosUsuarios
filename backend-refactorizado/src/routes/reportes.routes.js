@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reportesController = require('../controllers/reportes.controller');
-const { authMiddleware, requireRole } = require('../middleware/auth.middleware');
+const { authMiddleware, requireRole, requireVista } = require('../middleware/auth.middleware');
 
 // Todas las rutas requieren autenticación
 router.use(authMiddleware);
@@ -10,17 +10,26 @@ router.use(authMiddleware);
 // RUTAS DE REPORTES - SOLO ANALISTAS
 // ========================================
 
-// Obtener reporte de asistencias (solo analistas y creador)
-router.get('/asistencias', requireRole(['admin']), reportesController.getReporteAsistencias);
+// Middleware para reportes: admin o usuarios con cualquier vista de reporte
+const requireReportAccess = (req, res, next) => {
+  if (req.user.role === 'admin' || 
+      (req.user.vistas && (req.user.vistas.includes('Reporte de Asistencias') || req.user.vistas.includes('Reporte de Tardanzas')))) {
+    return next();
+  }
+  return res.status(403).json({
+    success: false,
+    message: 'Acceso denegado - Necesita vista de reportes',
+    error: 'INSUFFICIENT_PERMISSIONS'
+  });
+};
 
-// Obtener años disponibles para reportes (solo analistas y creador)
-router.get('/anios-disponibles', requireRole(['admin']), reportesController.getAniosDisponibles);
+// Obtener reporte de asistencias
+router.get('/asistencias', requireVista('Reporte de Asistencias'), reportesController.getReporteAsistencias);
 
-// Obtener campañas disponibles (solo analistas y creador)
-router.get('/campanias-disponibles', requireRole(['admin']), reportesController.getCampaniasDisponibles);
-
-// Obtener cargos disponibles (solo analistas y creador)
-router.get('/cargos-disponibles', requireRole(['admin']), reportesController.getCargosDisponibles);
+// Opciones de filtros (disponibles para cualquier vista de reporte)
+router.get('/anios-disponibles', requireReportAccess, reportesController.getAniosDisponibles);
+router.get('/campanias-disponibles', requireReportAccess, reportesController.getCampaniasDisponibles);
+router.get('/cargos-disponibles', requireReportAccess, reportesController.getCargosDisponibles);
 
 // ========================================
 // GENERAR REPORTE DE ASISTENCIA MAESTRO
