@@ -7,7 +7,7 @@ const { executeQuery, sql } = require('../config/database');
 // Obtener reporte de asistencias por mes/año
 exports.getReporteAsistencias = async (req, res) => {
   try {
-    const { mes, anio, campania, cargo } = req.query;
+    const { mes, anio, campania, cargo, supervisor } = req.query;
     
     // Validar parámetros
     if (!mes || !anio) {
@@ -65,6 +65,11 @@ exports.getReporteAsistencias = async (req, res) => {
     if (cargo && cargo !== 'todos') {
       filtrosAdicionales += ' AND cg.CargoID = @cargoID';
       paramsAdicionales.push({ name: 'cargoID', type: sql.Int, value: parseInt(cargo) });
+    }
+    
+    if (supervisor && supervisor !== 'todos') {
+      filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
+      paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
     }
 
     // Construir la consulta SQL dinámicamente
@@ -229,6 +234,43 @@ exports.getCargosDisponibles = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Error obteniendo cargos disponibles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
+  }
+};
+
+// Obtener supervisores disponibles
+exports.getSupervisoresDisponibles = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        s.DNI as SupervisorDNI,
+        -- Formato: Primera letra mayúscula, resto minúscula
+        UPPER(LEFT(s.ApellidoPaterno, 1)) + LOWER(SUBSTRING(s.ApellidoPaterno, 2, LEN(s.ApellidoPaterno))) + ' ' +
+        UPPER(LEFT(s.ApellidoMaterno, 1)) + LOWER(SUBSTRING(s.ApellidoMaterno, 2, LEN(s.ApellidoMaterno))) + ', ' +
+        UPPER(LEFT(s.Nombres, 1)) + LOWER(SUBSTRING(s.Nombres, 2, LEN(s.Nombres))) as NombreCompleto,
+        ISNULL(COUNT(e.DNI), 0) as CantidadAgentes
+      FROM [Partner].[PRI].[Empleados] s
+      LEFT JOIN [Partner].[PRI].[Empleados] e ON s.DNI = e.SupervisorDNI AND e.EstadoEmpleado = 'ACTIVO'
+      WHERE s.EstadoEmpleado = 'ACTIVO' 
+        AND s.CargoID = 5  -- Solo empleados con CargoID = 5 (Supervisores)
+      GROUP BY s.DNI, s.ApellidoPaterno, s.ApellidoMaterno, s.Nombres
+      ORDER BY NombreCompleto
+    `;
+
+    const result = await executeQuery(query);
+
+    res.json({
+      success: true,
+      message: 'Supervisores disponibles obtenidos exitosamente',
+      data: result.recordset
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo supervisores disponibles:', error);
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor',

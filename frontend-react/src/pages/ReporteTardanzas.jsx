@@ -83,10 +83,12 @@ const ReporteTardanzas = () => {
   });
   const [campania, setCampania] = useState('todas');
   const [cargo, setCargo] = useState('todos');
+  const [supervisor, setSupervisor] = useState('todos');
   
   // Estados para opciones de filtros
   const [campaniasDisponibles, setCampaniasDisponibles] = useState([]);
   const [cargosDisponibles, setCargosDisponibles] = useState([]);
+  const [supervisoresDisponibles, setSupervisoresDisponibles] = useState([]);
 
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -124,6 +126,7 @@ const ReporteTardanzas = () => {
         setFechaFin(filtrosRestaurados.fechaFin);
         setCampania(filtrosRestaurados.campania);
         setCargo(filtrosRestaurados.cargo);
+        setSupervisor(filtrosRestaurados.supervisor || 'todos');
       }
 
       // Restaurar datos del reporte
@@ -164,7 +167,8 @@ const ReporteTardanzas = () => {
         fechaInicio,
         fechaFin,
         campania,
-        cargo
+        cargo,
+        supervisor
       }));
       
       // Guardar datos del reporte
@@ -200,14 +204,15 @@ const ReporteTardanzas = () => {
   // Guardar estado cada vez que cambien los datos importantes
   useEffect(() => {
     guardarEstadoPersistente();
-  }, [fechaInicio, fechaFin, campania, cargo, reporteData, paginaActual, elementosPorPagina, totalElementos, empleadoExpandido, detallesTardanzas]);
+  }, [fechaInicio, fechaFin, campania, cargo, supervisor, reporteData, paginaActual, elementosPorPagina, totalElementos, empleadoExpandido, detallesTardanzas]);
 
   const cargarOpcionesFiltros = async () => {
     try {
       // Usar los mismos endpoints que el reporte de asistencias
-      const [campaniasRes, cargosRes] = await Promise.all([
+      const [campaniasRes, cargosRes, supervisoresRes] = await Promise.all([
         api.get('/reportes/campanias-disponibles'),
-        api.get('/reportes/cargos-disponibles')
+        api.get('/reportes/cargos-disponibles'),
+        api.get('/reportes/supervisores-disponibles')
       ]);
 
       if (campaniasRes.data.success) {
@@ -216,6 +221,10 @@ const ReporteTardanzas = () => {
       
       if (cargosRes.data.success) {
         setCargosDisponibles(cargosRes.data.data);
+      }
+      
+      if (supervisoresRes.data.success) {
+        setSupervisoresDisponibles(supervisoresRes.data.data);
       }
     } catch (error) {
       console.error('Error cargando opciones de filtros:', error);
@@ -235,6 +244,10 @@ const ReporteTardanzas = () => {
       
       if (cargo && cargo !== 'todos') {
         url += `&cargo=${cargo}`;
+      }
+      
+      if (supervisor && supervisor !== 'todos') {
+        url += `&supervisor=${supervisor}`;
       }
       
       const response = await api.get(url);
@@ -325,6 +338,10 @@ const ReporteTardanzas = () => {
       
       if (cargo && cargo !== 'todos') {
         url += `&cargo=${cargo}`;
+      }
+      
+      if (supervisor && supervisor !== 'todos') {
+        url += `&supervisor=${supervisor}`;
       }
       
       const response = await api.get(url);
@@ -643,7 +660,7 @@ const ReporteTardanzas = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Cargo</InputLabel>
                 <Select
@@ -660,8 +677,26 @@ const ReporteTardanzas = () => {
                 </Select>
               </FormControl>
             </Grid>
+
+            <Grid item xs={2.5}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Supervisor</InputLabel>
+                <Select
+                  value={supervisor}
+                  onChange={(e) => setSupervisor(e.target.value)}
+                  label="Supervisor"
+                >
+                  <MenuItem value="todos">Todos los Supervisores</MenuItem>
+                  {supervisoresDisponibles.map((s) => (
+                    <MenuItem key={s.SupervisorDNI} value={s.SupervisorDNI}>
+                      {s.NombreCompleto} ({s.CantidadAgentes})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
             
-            <Grid item xs={3.5}>
+            <Grid item xs={3}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}
