@@ -25,10 +25,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Close as CloseIcon,
-  ZoomIn as ZoomInIcon,
-  ZoomOut as ZoomOutIcon,
-  Refresh as RefreshIcon,
-  AccountCircle as AccountCircleIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { api } from '../utils/capacitaciones/api';
 import partnerLogo from '../assets/partner.svg';
@@ -50,16 +47,48 @@ const OrganigramaFullscreen = () => {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isInteracting, setIsInteracting] = useState(false); // Para optimizar durante interacciones
+  const [isInitialized, setIsInitialized] = useState(false); // Para controlar centrado inicial
 
   // Cargar organigrama inicial
   useEffect(() => {
     cargarOrganigrama();
   }, []);
 
+  // Centrar organigrama cuando se carga por primera vez
+  useEffect(() => {
+    if (organigramaData && !isInitialized) {
+      console.log('🎯 Centrando organigrama en pantalla...');
+      
+      // Calcular el centro de la pantalla
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      
+      // Posición inicial del nodo raíz (está en -140, 0)
+      const rootNodeX = -100; // Offset que usamos en renderNode inicial
+      const rootNodeY = 230;
+      
+      // Calcular el offset necesario para centrar
+      const centerX = screenWidth / 2;
+      const centerY = screenHeight / 2;
+      
+      // El nodo raíz debería estar en el centro, así que calculamos el pan necesario
+      const initialPan = {
+        x: centerX - rootNodeX - 140, // 140 es la mitad del ancho de la tarjeta (280/2)
+        y: centerY - rootNodeY - 140  // 140 es aproximadamente la mitad de la altura de la tarjeta
+      };
+      
+      console.log('📍 Posición inicial calculada:', initialPan);
+      setPan(initialPan);
+      setIsInitialized(true);
+    }
+  }, [organigramaData, isInitialized]);
+
   const cargarOrganigrama = async () => {
     try {
       setLoading(true);
       setError(null);
+      setIsInitialized(false); // Reset para permitir recentrado
       console.log('🔄 Cargando organigrama...');
       
       const response = await api('/organigrama?estado=Activo');
@@ -126,6 +155,53 @@ const OrganigramaFullscreen = () => {
     if (!expandedNodes.has(node.dni) && node.expandible) {
       console.log('🔄 Expandiendo nodo:', node.name);
       
+      // NUEVA LÓGICA: Colapsar hermanos antes de expandir
+      const findAndCollapseHermanos = (data, targetDni) => {
+        if (!data) return data;
+        
+        // Si este nodo tiene hijos, revisar si alguno es nuestro target
+        if (data.children && data.children.length > 0) {
+          const hasTargetChild = data.children.some(child => child.dni === targetDni);
+          
+          if (hasTargetChild) {
+            // Este es el padre del nodo target, colapsar otros hijos expandidos
+            console.log('👨‍👩‍👧‍👦 Encontrado padre de', node.name, ':', data.name);
+            
+            const updatedChildren = data.children.map(child => {
+              if (child.dni === targetDni) {
+                // Este es el nodo que queremos expandir, lo dejamos como está
+                return child;
+              } else if (expandedNodes.has(child.dni) && child.children && child.children.length > 0) {
+                // Este es un hermano expandido, lo colapsamos
+                console.log('🔄 Colapsando hermano:', child.name, 'DNI:', child.dni);
+                setExpandedNodes(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(child.dni);
+                  return newSet;
+                });
+                return { ...child, children: [] };
+              }
+              return child;
+            });
+            
+            return { ...data, children: updatedChildren };
+          }
+        }
+        
+        // Recursivamente buscar en los hijos
+        if (data.children) {
+          return {
+            ...data,
+            children: data.children.map(child => findAndCollapseHermanos(child, targetDni))
+          };
+        }
+        
+        return data;
+      };
+      
+      // Colapsar hermanos antes de expandir
+      setOrganigramaData(prev => findAndCollapseHermanos(prev, node.dni));
+      
       // Marcar como expandido
       setExpandedNodes(prev => new Set([...prev, node.dni]));
       
@@ -166,16 +242,27 @@ const OrganigramaFullscreen = () => {
   // Funciones de zoom y pan
   const handleWheel = useCallback((e) => {
     e.preventDefault();
+    setIsInteracting(true);
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     setZoom(prev => Math.max(0.1, Math.min(3, prev * delta)));
+    
+    // Resetear interacción después de un delay más corto
+    setTimeout(() => setIsInteracting(false), 50);
   }, []);
 
   const handleMouseDown = useCallback((e) => {
+    // Solo activar si no es un click en un nodo (evitar interferencia con expansión)
+    if (e.target.closest('[data-node-clickable]')) {
+      return;
+    }
+    
     setIsDragging(true);
+    setIsInteracting(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   }, [pan]);
 
-  const handleMouseMove = useCallback((e) => {
+  // Throttle para optimizar el movimiento del mouse
+  const throttledMouseMove = useCallback((e) => {
     if (isDragging) {
       setPan({
         x: e.clientX - dragStart.x,
@@ -184,8 +271,16 @@ const OrganigramaFullscreen = () => {
     }
   }, [isDragging, dragStart]);
 
+  const handleMouseMove = useCallback((e) => {
+    if (isDragging) {
+      // Usar requestAnimationFrame para suavizar el movimiento
+      requestAnimationFrame(() => throttledMouseMove(e));
+    }
+  }, [isDragging, throttledMouseMove]);
+
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setTimeout(() => setIsInteracting(false), 30);
   }, []);
 
   const resetView = () => {
@@ -194,7 +289,7 @@ const OrganigramaFullscreen = () => {
   };
 
   // Funciones de utilidad
-  const getAreaColor = useCallback((area) => {
+  const getAreaColor = (area) => {
     const colors = {
       'Call Center': '#2196F3',
       'Ventas': '#4CAF50',
@@ -210,9 +305,9 @@ const OrganigramaFullscreen = () => {
       'OPERACIONES': '#2196F3'
     };
     return colors[area] || '#757575';
-  }, []);
+  };
 
-  const getIniciales = useCallback((nombre) => {
+  const getIniciales = (nombre) => {
     if (!nombre || typeof nombre !== 'string') {
       return '??';
     }
@@ -222,7 +317,7 @@ const OrganigramaFullscreen = () => {
       .join('')
       .toUpperCase()
       .substring(0, 2);
-  }, []);
+  };
 
   // Simplificado: sin cálculo de layout complejo
 
@@ -240,7 +335,7 @@ const OrganigramaFullscreen = () => {
           left: x,
           top: y,
           width: 280,
-          height: 250, // Reducido de 280 a 250 al quitar el chip de área
+          height: 280, // Aumentado de 250 a 280 para mostrar toda la información
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -249,96 +344,53 @@ const OrganigramaFullscreen = () => {
       >
         {/* Nodo del empleado */}
         <Paper
-          elevation={12}
+          data-node-clickable="true"
+          elevation={isInteracting ? 1 : 3} // Reducir elevation durante interacciones
           sx={{
-            p: 2.5,
-            borderRadius: 5,
+            p: 2,
+            borderRadius: isInteracting ? 2 : 3, // Reducir borderRadius durante interacciones
             width: 260,
-            height: 210, // Reducido de 240 a 210 al quitar el chip de área
-            background: `linear-gradient(135deg, ${areaColor} 0%, ${areaColor}E6 100%)`,
+            height: 240,
+            backgroundColor: areaColor,
             color: 'white',
             cursor: 'pointer',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            transform: 'scale(1)',
             position: 'relative',
-            overflow: 'hidden',
-            border: '3px solid rgba(255,255,255,0.15)',
-            boxShadow: `0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1)`,
-            backdropFilter: 'blur(10px)',
-            '&:hover': {
-              transform: 'scale(1.05) translateY(-2px)',
-              boxShadow: `0 16px 48px rgba(0,0,0,0.25), 0 0 0 2px rgba(255,255,255,0.2)`,
-              border: '3px solid rgba(255,255,255,0.3)',
-            },
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '2px',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)',
-            }
+            border: '2px solid rgba(255,255,255,0.2)',
+            // Simplificar hover durante interacciones
+            '&:hover': !isInteracting ? {
+              backgroundColor: `${areaColor}DD`,
+            } : {}
           }}
           onClick={() => handleNodeClick(node)}
           onDoubleClick={() => handleNodeDoubleClick(node)}
         >
-          {/* Avatar con icono de nivel */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5, position: 'relative' }}>
+          {/* Avatar simplificado */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
             <Avatar
               sx={{
-                width: 56,
-                height: 56,
+                width: 52, // Aumentado de 44 a 52
+                height: 52, // Aumentado de 44 a 52
                 bgcolor: 'rgba(255,255,255,0.2)',
-                fontSize: '1.4rem',
-                fontWeight: 'bold',
-                border: '2px solid rgba(255,255,255,0.4)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                backdropFilter: 'blur(5px)'
+                fontSize: '1.2rem', // Aumentado de 1rem a 1.2rem
+                fontWeight: 'bold'
               }}
             >
               {getIniciales(node.name)}
             </Avatar>
-            
-            {/* Icono de nivel */}
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -6,
-                right: -6,
-                bgcolor: 'white',
-                borderRadius: '50%',
-                width: 24,
-                height: 24,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: areaColor,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                border: '1px solid rgba(0,0,0,0.1)'
-              }}
-            >
-              {level === 0 ? <BusinessIcon sx={{ fontSize: 14 }} /> :
-               level === 1 ? <SupervisorAccountIcon sx={{ fontSize: 14 }} /> :
-               level === 2 ? <PersonIcon sx={{ fontSize: 14 }} /> :
-               <WorkIcon sx={{ fontSize: 14 }} />}
-            </Box>
           </Box>
           
           {/* Nombre */}
           <Typography
             variant="h6"
             sx={{
-              fontWeight: '700',
+              fontWeight: '600',
               textAlign: 'center',
               mb: 0.5,
-              fontSize: level === 0 ? '1.1rem' : '1rem',
-              textShadow: '0 1px 3px rgba(0,0,0,0.3)',
-              lineHeight: 1.2,
-              letterSpacing: '0.02em'
+              fontSize: '1.1rem', // Aumentado de 0.95rem a 1.1rem
+              lineHeight: 1.2
             }}
           >
-            {node.name && node.name.length > 16 ? node.name.substring(0, 16) + '...' : (node.name || 'Sin nombre')}
+            {node.name && node.name.length > 14 ? node.name.substring(0, 14) + '...' : (node.name || 'Sin nombre')}
           </Typography>
           
           {/* Cargo */}
@@ -348,29 +400,35 @@ const OrganigramaFullscreen = () => {
               textAlign: 'center',
               mb: 1,
               opacity: 0.9,
-              fontSize: '0.85rem',
-              fontWeight: '400',
-              letterSpacing: '0.01em'
+              fontSize: '0.95rem', // Aumentado de 0.8rem a 0.95rem
+              fontWeight: '500' // Aumentado de 400 a 500
             }}
           >
-            {node.cargo && node.cargo.length > 18 ? node.cargo.substring(0, 18) + '...' : (node.cargo || 'Sin cargo')}
+            {node.cargo && node.cargo.length > 16 ? node.cargo.substring(0, 16) + '...' : (node.cargo || 'Sin cargo')}
           </Typography>
           
-          {/* Información adicional */}
-          <Box sx={{ textAlign: 'center', width: '100%', px: 1 }}>            
+          {/* Información adicional simplificada */}
+          <Box sx={{ 
+            textAlign: 'center', 
+            width: '100%', 
+            px: 1,
+            py: 0.5,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: 1
+          }}>            
             {/* Fecha de Contratación */}
             {node.fechaContratacion && (
               <Typography
-                variant="caption"
+                variant="body2"
                 sx={{
                   display: 'block',
-                  fontSize: '0.7rem',
-                  opacity: 0.85,
-                  mb: 0.5,
-                  fontWeight: '500'
+                  fontSize: '0.9rem', // Aumentado de 0.8rem a 0.9rem
+                  opacity: 0.95,
+                  mb: 0.5, // Aumentado de 0.4 a 0.5
+                  fontWeight: '600'
                 }}
               >
-                📅 Contratación: {new Date(node.fechaContratacion).toLocaleDateString('es-ES', { 
+                📅 {new Date(node.fechaContratacion).toLocaleDateString('es-ES', { 
                   day: '2-digit',
                   month: '2-digit', 
                   year: 'numeric' 
@@ -381,31 +439,31 @@ const OrganigramaFullscreen = () => {
             {/* Nombre de Campaña */}
             {(node.campaniaNombre || node.campaniaId) && (
               <Typography
-                variant="caption"
+                variant="body2"
                 sx={{
                   display: 'block',
-                  fontSize: '0.7rem',
-                  opacity: 0.85,
-                  mb: 0.5,
-                  fontWeight: '500'
+                  fontSize: '0.9rem', // Aumentado de 0.8rem a 0.9rem
+                  opacity: 0.95,
+                  mb: 0.5, // Aumentado de 0.4 a 0.5
+                  fontWeight: '600'
                 }}
               >
-                🏢 Campaña: {node.campaniaNombre || `ID: ${node.campaniaId}`}
+                🏢 {node.campaniaNombre || `ID: ${node.campaniaId}`}
               </Typography>
             )}
             
             {/* Nombre de Cargo */}
             {(node.cargoNombre || node.cargo) && (
               <Typography
-                variant="caption"
+                variant="body2"
                 sx={{
                   display: 'block',
-                  fontSize: '0.7rem',
-                  opacity: 0.85,
-                  fontWeight: '500'
+                  fontSize: '0.9rem', // Aumentado de 0.8rem a 0.9rem
+                  opacity: 0.95,
+                  fontWeight: '600'
                 }}
               >
-                💼 Cargo: {node.cargoNombre || node.cargo}
+                💼 {node.cargoNombre || node.cargo}
               </Typography>
             )}
           </Box>
@@ -415,25 +473,17 @@ const OrganigramaFullscreen = () => {
             <Box
               sx={{
                 position: 'absolute',
-                top: 10,
-                right: 10,
+                top: 8,
+                right: 8,
                 bgcolor: 'white',
                 borderRadius: '50%',
-                width: 28,
-                height: 28,
+                width: 22,
+                height: 22,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: areaColor,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                border: '1px solid rgba(0,0,0,0.05)',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  bgcolor: '#f8f9fa',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                }
+                cursor: 'pointer'
               }}
               title={hasChildren ? "Click para colapsar" : "Click para expandir"}
             >
@@ -484,14 +534,13 @@ const OrganigramaFullscreen = () => {
             <Box
               sx={{
                 position: 'absolute',
-                top: '210px', // Ajustado para la nueva altura de tarjeta (210px)
+                top: '240px', // Ajustado para la nueva altura de tarjeta (240px)
                 left: '50%',
                 transform: 'translateX(-50%)',
-                width: '3px',
-                height: '80px', // Hasta la línea horizontal
+                width: '2px',
+                height: '80px',
                 bgcolor: areaColor,
-                opacity: 0.8,
-                borderRadius: '2px'
+                opacity: 0.7
               }}
             />
             
@@ -499,14 +548,13 @@ const OrganigramaFullscreen = () => {
             <Box
               sx={{
                 position: 'absolute',
-                top: '290px', // Ajustado para la nueva altura (210 + 80 = 290)
+                top: '320px', // Ajustado para la nueva altura (240 + 80 = 320)
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: `${(node.children.length - 1) * 320}px`,
-                height: '3px',
+                height: '2px',
                 bgcolor: areaColor,
-                opacity: 0.8,
-                borderRadius: '2px'
+                opacity: 0.7
               }}
             />
             
@@ -518,14 +566,13 @@ const OrganigramaFullscreen = () => {
                   key={`line-${child.dni}`}
                   sx={{
                     position: 'absolute',
-                    top: '290px', // Desde la línea horizontal
+                    top: '320px', // Desde la línea horizontal
                     left: `calc(50% + ${childX}px)`,
                     transform: 'translateX(-50%)',
-                    width: '3px',
-                    height: '80px', // Hasta el inicio de las tarjetas hijas
+                    width: '2px',
+                    height: '80px',
                     bgcolor: areaColor,
-                    opacity: 0.8,
-                    borderRadius: '2px'
+                    opacity: 0.7
                   }}
                 />
               );
@@ -536,7 +583,7 @@ const OrganigramaFullscreen = () => {
         {/* Nodos hijos con posicionamiento clásico */}
         {hasChildren && node.children.map((child, index) => {
           const childX = (index - (node.children.length - 1) / 2) * 320 - 140; // Centrar la tarjeta (280/2 = 140)
-          const childY = 370; // Reducido de 400 a 370 para tarjetas más compactas
+          const childY = 400; // Aumentado de 370 a 400 para acomodar tarjetas más altas
           return (
             <Box key={child.dni} sx={{ position: 'absolute', zIndex: 2 }}>
               {renderNode(child, level + 1, childX, childY)}
@@ -586,20 +633,20 @@ const OrganigramaFullscreen = () => {
         `}
       </style>
       {/* Header */}
-      <div className="flex items-center px-6 py-4 bg-white shadow-md rounded-b-3xl mb-4 relative" style={{ minHeight: 120 }}>
+      <div className="flex items-center px-6 py-2 bg-white shadow-md rounded-b-3xl mb-4 relative" style={{ minHeight: 80 }}>
         {/* Logo y Saludo - Izquierda */}
-        <div className="flex items-center gap-4 flex-shrink-0">
-          <div className="w-12 h-12 bg-[#297373]/20 rounded-full p-2 flex items-center justify-center">
-            <img src={partnerLogo} alt="Logo" className="w-8 h-8" />
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="w-10 h-10 bg-[#297373]/20 rounded-full p-2 flex items-center justify-center">
+            <img src={partnerLogo} alt="Logo" className="w-6 h-6" />
           </div>
           <div>
             <div className="flex flex-col">
-              <span className="text-base text-gray-600">
+              <span className="text-sm text-gray-600">
                 Hola, bienvenido
               </span>
-              <span className="font-semibold text-black text-xl flex items-center gap-2">
+              <span className="font-semibold text-black text-lg flex items-center gap-2">
                 {user?.nombres || user?.nombre || 'Usuario'} {user?.apellidoPaterno || ''} {user?.apellidoMaterno || ''}
-                <span className="text-2xl">👋</span>
+                <span className="text-xl">👋</span>
               </span>
             </div>
           </div>
@@ -607,14 +654,14 @@ const OrganigramaFullscreen = () => {
 
         {/* Título - Centro */}
         <div className="flex-1 flex items-center justify-center">
-          <h1 className="text-3xl font-bold text-[#297373] flex items-center gap-3">
-            <BusinessIcon sx={{ fontSize: 40 }} />
+          <h1 className="text-2xl font-bold text-[#297373] flex items-center gap-2">
+            <BusinessIcon sx={{ fontSize: 32 }} />
             Organigrama Empresarial
           </h1>
         </div>
 
         {/* Controles - Derecha */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant="contained"
             onClick={resetView}
@@ -649,59 +696,22 @@ const OrganigramaFullscreen = () => {
 
       {/* Contenido del organigrama */}
       <div className="flex-1 w-full overflow-hidden bg-[#e5e7eb] relative">
-        {/* Controles de zoom y navegación */}
-        <div className="absolute top-4 right-4 z-50 flex flex-col gap-2">
-          {/* Botón Volver al Perfil */}
-          <Button
-            variant="contained"
-            onClick={() => navigate('/employee-profile')}
-            startIcon={<AccountCircleIcon />}
-            sx={{
-              bgcolor: '#9C27B0',
-              '&:hover': { bgcolor: '#7B1FA2' },
-              borderRadius: 3,
-              textTransform: 'none',
-              fontSize: '0.9rem',
-              fontWeight: 'bold',
-              px: 2,
-              py: 1,
-              minWidth: 'auto'
-            }}
-          >
-            Perfil
-          </Button>
-          
-          {/* Controles de zoom */}
-          <Button
-            variant="contained"
-            onClick={() => setZoom(prev => Math.min(prev * 1.2, 3))}
-            sx={{ minWidth: 40, height: 40, borderRadius: '50%' }}
-          >
-            <ZoomInIcon />
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => setZoom(prev => Math.max(prev * 0.8, 0.1))}
-            sx={{ minWidth: 40, height: 40, borderRadius: '50%' }}
-          >
-            <ZoomOutIcon />
-          </Button>
-          <div className="bg-white px-2 py-1 rounded text-sm text-center">
-            {Math.round(zoom * 100)}%
-          </div>
-        </div>
 
-        {/* Contenedor del organigrama con zoom y pan */}
+        {/* Contenedor del organigrama con zoom y pan optimizado */}
         <div
           className="w-full h-full overflow-hidden cursor-grab"
-          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+          style={{ 
+            cursor: isDragging ? 'grabbing' : 'grab',
+            willChange: 'transform', // Optimización GPU
+            backfaceVisibility: 'hidden' // Prevenir flickering
+          }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
-          {/* Contenedor del árbol */}
+          {/* Contenedor del árbol optimizado */}
           <div
             className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             style={{
@@ -710,7 +720,10 @@ const OrganigramaFullscreen = () => {
               transition: isDragging ? 'none' : 'transform 0.1s ease-out',
               width: '100%',
               height: '100%',
-              position: 'relative'
+              position: 'relative',
+              willChange: 'transform', // Optimización GPU
+              backfaceVisibility: 'hidden' // Prevenir flickering
+              // Removido pointerEvents para permitir clicks
             }}
           >
             {organigramaData && (
