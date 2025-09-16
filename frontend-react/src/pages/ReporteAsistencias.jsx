@@ -68,11 +68,13 @@ const ReporteAsistencias = () => {
   const [anio, setAnio] = useState(new Date().getFullYear());
   const [campania, setCampania] = useState('todas');
   const [cargo, setCargo] = useState('todos');
+  const [supervisor, setSupervisor] = useState('todos');
   
   // Estados para opciones de filtros
   const [aniosDisponibles, setAniosDisponibles] = useState([]);
   const [campaniasDisponibles, setCampaniasDisponibles] = useState([]);
   const [cargosDisponibles, setCargosDisponibles] = useState([]);
+  const [supervisoresDisponibles, setSupervisoresDisponibles] = useState([]);
 
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -108,6 +110,7 @@ const ReporteAsistencias = () => {
         setAnio(filtrosRestaurados.anio);
         setCampania(filtrosRestaurados.campania);
         setCargo(filtrosRestaurados.cargo);
+        setSupervisor(filtrosRestaurados.supervisor || 'todos');
       }
 
       // Restaurar datos del reporte
@@ -140,7 +143,8 @@ const ReporteAsistencias = () => {
         mes,
         anio,
         campania,
-        cargo
+        cargo,
+        supervisor
       }));
       
       // Guardar datos del reporte
@@ -169,15 +173,16 @@ const ReporteAsistencias = () => {
   // Guardar estado cada vez que cambien los datos importantes
   useEffect(() => {
     guardarEstadoPersistente();
-  }, [mes, anio, campania, cargo, reporteData, paginaActual, elementosPorPagina, totalElementos]);
+  }, [mes, anio, campania, cargo, supervisor, reporteData, paginaActual, elementosPorPagina, totalElementos]);
 
   const cargarOpcionesFiltros = async () => {
     try {
-      // Cargar años, campañas y cargos en paralelo
-      const [aniosRes, campaniasRes, cargosRes] = await Promise.all([
+      // Cargar años, campañas, cargos y supervisores en paralelo
+      const [aniosRes, campaniasRes, cargosRes, supervisoresRes] = await Promise.all([
         api.get('/reportes/anios-disponibles'),
         api.get('/reportes/campanias-disponibles'),
-        api.get('/reportes/cargos-disponibles')
+        api.get('/reportes/cargos-disponibles'),
+        api.get('/reportes/supervisores-disponibles')
       ]);
 
       if (aniosRes.data.success) {
@@ -190,6 +195,10 @@ const ReporteAsistencias = () => {
       
       if (cargosRes.data.success) {
         setCargosDisponibles(cargosRes.data.data);
+      }
+      
+      if (supervisoresRes.data.success) {
+        setSupervisoresDisponibles(supervisoresRes.data.data);
       }
     } catch (error) {
       console.error('Error cargando opciones de filtros:', error);
@@ -218,6 +227,10 @@ const ReporteAsistencias = () => {
         url += `&cargo=${cargo}`;
       }
       
+      if (supervisor && supervisor !== 'todos') {
+        url += `&supervisor=${supervisor}`;
+      }
+      
       const response = await api.get(url);
       
       if (response.data.success) {
@@ -239,7 +252,7 @@ const ReporteAsistencias = () => {
   const handleFiltroChange = useCallback(() => {
     setPaginaActual(1); // Resetear a la primera página
     generarReporte();
-  }, [mes, anio, campania, cargo]);
+  }, [mes, anio, campania, cargo, supervisor]);
 
   const handleCampaniaChange = useCallback((e) => {
     setCampania(e.target.value);
@@ -247,6 +260,10 @@ const ReporteAsistencias = () => {
 
   const handleCargoChange = useCallback((e) => {
     setCargo(e.target.value);
+  }, []);
+
+  const handleSupervisorChange = useCallback((e) => {
+    setSupervisor(e.target.value);
   }, []);
 
   // Calcular datos paginados
@@ -446,7 +463,7 @@ const ReporteAsistencias = () => {
         {/* Barra de Filtros */}
         <Box sx={{ p: 2 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={2}>
+            <Grid item xs={1.5}>
               <FormControl fullWidth size="small">
                 <InputLabel>Mes</InputLabel>
                 <Select
@@ -463,7 +480,7 @@ const ReporteAsistencias = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={2}>
+            <Grid item xs={1.5}>
               <FormControl fullWidth size="small">
                 <InputLabel>Año</InputLabel>
                 <Select
@@ -480,7 +497,7 @@ const ReporteAsistencias = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2}>
               <FormControl fullWidth size="small" className="reporte-asistencias-selector">
                 <InputLabel>Campaña</InputLabel>
                 <Select
@@ -498,7 +515,7 @@ const ReporteAsistencias = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={2.5}>
+            <Grid item xs={2}>
               <FormControl fullWidth size="small" className="reporte-asistencias-selector">
                 <InputLabel>Cargo</InputLabel>
                 <Select
@@ -515,8 +532,26 @@ const ReporteAsistencias = () => {
                 </Select>
               </FormControl>
             </Grid>
+
+            <Grid item xs={2.5}>
+              <FormControl fullWidth size="small" className="reporte-asistencias-selector">
+                <InputLabel>Supervisor</InputLabel>
+                <Select
+                  value={supervisor}
+                  onChange={handleSupervisorChange}
+                  label="Supervisor"
+                >
+                  <MenuItem value="todos">Todos los Supervisores</MenuItem>
+                  {supervisoresDisponibles.map((s) => (
+                    <MenuItem key={s.SupervisorDNI} value={s.SupervisorDNI}>
+                      {s.NombreCompleto} ({s.CantidadAgentes})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
             
-            <Grid item xs={3}>
+            <Grid item xs={2.5}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}

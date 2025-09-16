@@ -30,6 +30,7 @@ router.get('/asistencias', requireVista('Reporte de Asistencias'), reportesContr
 router.get('/anios-disponibles', requireReportAccess, reportesController.getAniosDisponibles);
 router.get('/campanias-disponibles', requireReportAccess, reportesController.getCampaniasDisponibles);
 router.get('/cargos-disponibles', requireReportAccess, reportesController.getCargosDisponibles);
+router.get('/supervisores-disponibles', requireReportAccess, reportesController.getSupervisoresDisponibles);
 
 // ========================================
 // GENERAR REPORTE DE ASISTENCIA MAESTRO

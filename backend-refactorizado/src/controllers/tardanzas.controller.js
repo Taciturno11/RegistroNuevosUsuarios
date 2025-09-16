@@ -7,7 +7,7 @@ const { executeQuery, sql } = require('../config/database');
 // Obtener reporte de tardanzas detallado
 exports.getReporteTardanzas = async (req, res) => {
   try {
-    const { fechaInicio, fechaFin, campania, cargo } = req.query;
+    const { fechaInicio, fechaFin, campania, cargo, supervisor } = req.query;
     
     // Validar parámetros
     if (!fechaInicio || !fechaFin) {
@@ -83,6 +83,11 @@ exports.getReporteTardanzas = async (req, res) => {
           r.Fecha DESC, MinutosTardanza DESC, r.ApellidoPaterno, r.Nombres
     `;
 
+    if (supervisor && supervisor !== 'todos') {
+      filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
+      paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
+    }
+
     const params = [
       { name: 'fechaInicio', type: sql.Date, value: fechaInicio },
       { name: 'fechaFin', type: sql.Date, value: fechaFin },
@@ -93,6 +98,7 @@ exports.getReporteTardanzas = async (req, res) => {
     console.log('🔍 Filtros aplicados:');
     console.log('  - Campaña:', campania);
     console.log('  - Cargo:', cargo);
+    console.log('  - Supervisor:', supervisor);
     console.log('  - Filtros adicionales SQL:', filtrosAdicionales);
     console.log('📋 Parámetros:', params);
     console.log('📋 Consulta SQL:', query);
@@ -173,7 +179,7 @@ exports.getReporteTardanzas = async (req, res) => {
 // Obtener reporte resumido por empleado
 exports.getReporteResumido = async (req, res) => {
   try {
-    const { fechaInicio, fechaFin, campania, cargo } = req.query;
+    const { fechaInicio, fechaFin, campania, cargo, supervisor } = req.query;
     
     // Validar parámetros
     if (!fechaInicio || !fechaFin) {
@@ -196,6 +202,11 @@ exports.getReporteResumido = async (req, res) => {
     if (cargo && cargo !== 'todos') {
       filtrosAdicionales += ' AND cg.CargoID = @cargoID';
       paramsAdicionales.push({ name: 'cargoID', type: sql.Int, value: parseInt(cargo) });
+    }
+    
+    if (supervisor && supervisor !== 'todos') {
+      filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
+      paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
     }
 
     // Consulta para reporte resumido por empleado
