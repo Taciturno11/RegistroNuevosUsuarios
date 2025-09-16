@@ -240,7 +240,7 @@ const OrganigramaFullscreen = () => {
           left: x,
           top: y,
           width: 280,
-          height: 280, // Aumentado de 200 a 280
+          height: 250, // Reducido de 280 a 250 al quitar el chip de área
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -254,7 +254,7 @@ const OrganigramaFullscreen = () => {
             p: 2.5,
             borderRadius: 5,
             width: 260,
-            height: 240, // Aumentado de 160 a 240
+            height: 210, // Reducido de 240 a 210 al quitar el chip de área
             background: `linear-gradient(135deg, ${areaColor} 0%, ${areaColor}E6 100%)`,
             color: 'white',
             cursor: 'pointer',
@@ -356,26 +356,8 @@ const OrganigramaFullscreen = () => {
             {node.cargo && node.cargo.length > 18 ? node.cargo.substring(0, 18) + '...' : (node.cargo || 'Sin cargo')}
           </Typography>
           
-          {/* Área */}
-          <Chip
-            label={node.area || 'Sin área'}
-            size="small"
-            sx={{
-              bgcolor: 'rgba(255,255,255,0.2)',
-              color: 'white',
-              fontWeight: '600',
-              fontSize: '0.75rem',
-              height: '24px',
-              border: '1px solid rgba(255,255,255,0.25)',
-              mb: 1.5,
-              '&:hover': {
-                bgcolor: 'rgba(255,255,255,0.3)'
-              }
-            }}
-          />
-          
           {/* Información adicional */}
-          <Box sx={{ textAlign: 'center', width: '100%', px: 1 }}>
+          <Box sx={{ textAlign: 'center', width: '100%', px: 1 }}>            
             {/* Fecha de Contratación */}
             {node.fechaContratacion && (
               <Typography
@@ -388,16 +370,16 @@ const OrganigramaFullscreen = () => {
                   fontWeight: '500'
                 }}
               >
-                📅 Ingreso: {new Date(node.fechaContratacion).toLocaleDateString('es-ES', { 
-                  year: 'numeric', 
-                  month: 'short', 
-                  day: 'numeric' 
+                📅 Contratación: {new Date(node.fechaContratacion).toLocaleDateString('es-ES', { 
+                  day: '2-digit',
+                  month: '2-digit', 
+                  year: 'numeric' 
                 })}
               </Typography>
             )}
             
-            {/* ID de Campaña */}
-            {node.campaniaId && (
+            {/* Nombre de Campaña */}
+            {(node.campaniaNombre || node.campaniaId) && (
               <Typography
                 variant="caption"
                 sx={{
@@ -408,12 +390,12 @@ const OrganigramaFullscreen = () => {
                   fontWeight: '500'
                 }}
               >
-                🏢 Campaña: {node.campaniaId}
+                🏢 Campaña: {node.campaniaNombre || `ID: ${node.campaniaId}`}
               </Typography>
             )}
             
-            {/* ID de Cargo */}
-            {node.cargoId && (
+            {/* Nombre de Cargo */}
+            {(node.cargoNombre || node.cargo) && (
               <Typography
                 variant="caption"
                 sx={{
@@ -423,7 +405,7 @@ const OrganigramaFullscreen = () => {
                   fontWeight: '500'
                 }}
               >
-                💼 Cargo ID: {node.cargoId}
+                💼 Cargo: {node.cargoNombre || node.cargo}
               </Typography>
             )}
           </Box>
@@ -502,7 +484,7 @@ const OrganigramaFullscreen = () => {
             <Box
               sx={{
                 position: 'absolute',
-                top: '240px', // Desde el final de la tarjeta padre
+                top: '210px', // Ajustado para la nueva altura de tarjeta (210px)
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: '3px',
@@ -517,7 +499,7 @@ const OrganigramaFullscreen = () => {
             <Box
               sx={{
                 position: 'absolute',
-                top: '320px', // Línea horizontal intermedia
+                top: '290px', // Ajustado para la nueva altura (210 + 80 = 290)
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: `${(node.children.length - 1) * 320}px`,
@@ -536,7 +518,7 @@ const OrganigramaFullscreen = () => {
                   key={`line-${child.dni}`}
                   sx={{
                     position: 'absolute',
-                    top: '320px', // Desde la línea horizontal
+                    top: '290px', // Desde la línea horizontal
                     left: `calc(50% + ${childX}px)`,
                     transform: 'translateX(-50%)',
                     width: '3px',
@@ -554,7 +536,7 @@ const OrganigramaFullscreen = () => {
         {/* Nodos hijos con posicionamiento clásico */}
         {hasChildren && node.children.map((child, index) => {
           const childX = (index - (node.children.length - 1) / 2) * 320 - 140; // Centrar la tarjeta (280/2 = 140)
-          const childY = 400; // Aumentado de 320 a 400 para acomodar tarjetas más altas
+          const childY = 370; // Reducido de 400 a 370 para tarjetas más compactas
           return (
             <Box key={child.dni} sx={{ position: 'absolute', zIndex: 2 }}>
               {renderNode(child, level + 1, childX, childY)}

@@ -6,11 +6,13 @@ exports.getOrganigrama = async (req, res) => {
     
     console.log('🌳 Generando organigrama dinámico para área:', area, 'estado:', estado);
     
-    // 1. Obtener el jefe supremo (44991089) con su cargo
+    // 1. Obtener el jefe supremo (44991089) con su cargo y campaña
     const jefeSupremo = await executeQuery(
-      `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.EstadoEmpleado, c.NombreCargo
+      `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+              e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
        FROM PRI.Empleados e
        LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+       LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
        WHERE e.DNI = '44991089' AND e.EstadoEmpleado = @estado`,
       [{ name: 'estado', type: sql.VarChar, value: estado }]
     );
@@ -22,11 +24,13 @@ exports.getOrganigrama = async (req, res) => {
       });
     }
 
-    // 2. Obtener los 3 jefes de área específicos con sus cargos
+    // 2. Obtener los 3 jefes de área específicos con sus cargos y campañas
     const jefesArea = await executeQuery(
-      `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.EstadoEmpleado, c.NombreCargo
+      `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+              e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
        FROM PRI.Empleados e
        LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+       LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
        WHERE e.DNI IN ('002702515', '76157106', '46142691') 
        AND e.EstadoEmpleado = @estado`,
       [{ name: 'estado', type: sql.VarChar, value: estado }]
@@ -41,6 +45,16 @@ exports.getOrganigrama = async (req, res) => {
       area, 
       estado
     );
+    
+    // Debug: mostrar datos del jefe supremo
+    console.log('🐛 DEBUG - Datos del jefe supremo:', {
+      dni: jefeSupremo.recordset[0].DNI,
+      cargoId: jefeSupremo.recordset[0].CargoID,
+      cargoNombre: jefeSupremo.recordset[0].NombreCargo,
+      campaniaId: jefeSupremo.recordset[0].CampañaID,
+      campaniaNombre: jefeSupremo.recordset[0].NombreCampaña,
+      fechaContratacion: jefeSupremo.recordset[0].FechaContratacion
+    });
     
     res.json({
       success: true,
@@ -72,9 +86,11 @@ exports.expandirNodo = async (req, res) => {
 
     // Buscar el empleado y sus subordinados directos
     const empleado = await executeQuery(
-      `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.EstadoEmpleado, c.NombreCargo
+      `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+              e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
        FROM PRI.Empleados e
        LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+       LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
        WHERE e.DNI = @dni AND e.EstadoEmpleado = @estado`,
       [
         { name: 'dni', type: sql.VarChar, value: dni },
@@ -101,9 +117,11 @@ exports.expandirNodo = async (req, res) => {
       // Jefe de Área: buscar coordinadores (JefeDNI) - SOLO coordinadores
       console.log('🔍 Buscando coordinadores para jefe de área');
       subordinados = await executeQuery(
-        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.EstadoEmpleado, c.NombreCargo
+        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
          FROM PRI.Empleados e
          LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+         LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
          WHERE e.JefeDNI = @dni 
          AND e.EstadoEmpleado = @estado
          AND c.NombreCargo LIKE '%coordinador%'`,
@@ -116,9 +134,11 @@ exports.expandirNodo = async (req, res) => {
       // Coordinador: buscar supervisores (CoordinadorDNI) - SOLO supervisores
       console.log('🔍 Buscando supervisores para coordinador');
       subordinados = await executeQuery(
-        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.EstadoEmpleado, c.NombreCargo
+        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
          FROM PRI.Empleados e
          LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+         LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
          WHERE e.CoordinadorDNI = @dni 
          AND e.EstadoEmpleado = @estado
          AND c.NombreCargo LIKE '%supervisor%'`,
@@ -131,9 +151,11 @@ exports.expandirNodo = async (req, res) => {
       // Supervisor: buscar agentes (SupervisorDNI) - SOLO agentes
       console.log('🔍 Buscando agentes para supervisor');
       subordinados = await executeQuery(
-        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.EstadoEmpleado, c.NombreCargo
+        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
          FROM PRI.Empleados e
          LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+         LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
          WHERE e.SupervisorDNI = @dni 
          AND e.EstadoEmpleado = @estado
          AND (c.NombreCargo LIKE '%agente%' OR c.NombreCargo LIKE '%operador%' OR c.NombreCargo LIKE '%asesor%')`,
@@ -156,6 +178,11 @@ exports.expandirNodo = async (req, res) => {
       name: `${sub.Nombres} ${sub.ApellidoPaterno} ${sub.ApellidoMaterno}`.trim(),
       dni: sub.DNI,
       cargo: sub.NombreCargo || 'Empleado',
+      cargoId: sub.CargoID,
+      cargoNombre: sub.NombreCargo,
+      campaniaId: sub.CampañaID,
+      campaniaNombre: sub.NombreCampaña,
+      fechaContratacion: sub.FechaContratacion,
       area: obtenerAreaInfo(dni).area,
       nivel: obtenerNivelCargo(sub.NombreCargo),
       children: [], // Vacío para expansión posterior
@@ -163,6 +190,18 @@ exports.expandirNodo = async (req, res) => {
     }));
 
     console.log('📦 Nodos de subordinados construidos:', nodosSubordinados.length);
+    
+    // Debug: mostrar algunos datos de subordinados
+    if (nodosSubordinados.length > 0) {
+      console.log('🐛 DEBUG - Ejemplo subordinado:', {
+        dni: nodosSubordinados[0].dni,
+        cargoId: nodosSubordinados[0].cargoId,
+        cargoNombre: nodosSubordinados[0].cargoNombre,
+        campaniaId: nodosSubordinados[0].campaniaId,
+        campaniaNombre: nodosSubordinados[0].campaniaNombre,
+        fechaContratacion: nodosSubordinados[0].fechaContratacion
+      });
+    }
 
     res.json({
       success: true,
@@ -183,7 +222,7 @@ exports.expandirNodo = async (req, res) => {
 
 // Función DINÁMICA para call center - Solo jefe supremo + jefes de área
 async function construirArbolDinamico(jefeSupremo, jefesArea, area, estado) {
-  const { DNI, Nombres, ApellidoPaterno, ApellidoMaterno, CargoID, NombreCargo } = jefeSupremo;
+  const { DNI, Nombres, ApellidoPaterno, ApellidoMaterno, CargoID, CampañaID, FechaContratacion, NombreCargo, NombreCampaña } = jefeSupremo;
   
   // Construir nodo del jefe supremo
   const nodo = {
@@ -191,6 +230,11 @@ async function construirArbolDinamico(jefeSupremo, jefesArea, area, estado) {
     name: `${Nombres} ${ApellidoPaterno} ${ApellidoMaterno}`.trim(),
     dni: DNI,
     cargo: NombreCargo || 'Jefe de Operaciones',
+    cargoId: CargoID,
+    cargoNombre: NombreCargo,
+    campaniaId: CampañaID,
+    campaniaNombre: NombreCampaña,
+    fechaContratacion: FechaContratacion,
     area: 'OPERACIONES',
     nivel: 0,
     children: [],
@@ -212,6 +256,11 @@ async function construirArbolDinamico(jefeSupremo, jefesArea, area, estado) {
       name: `${jefe.Nombres} ${jefe.ApellidoPaterno} ${jefe.ApellidoMaterno}`.trim(),
       dni: jefe.DNI,
       cargo: jefe.NombreCargo || `Jefe de ${areaInfo.nombre}`,
+      cargoId: jefe.CargoID,
+      cargoNombre: jefe.NombreCargo,
+      campaniaId: jefe.CampañaID,
+      campaniaNombre: jefe.NombreCampaña,
+      fechaContratacion: jefe.FechaContratacion,
       area: areaInfo.area,
       nivel: 1,
       children: [], // Vacío para expansión posterior
