@@ -84,7 +84,92 @@ exports.expandirNodo = async (req, res) => {
       });
     }
 
-    // Buscar el empleado y sus subordinados directos
+    // CASOS ESPECIALES: Secciones de Calidad (manejar ANTES de buscar en la base de datos)
+    if (dni === 'SEC_CAPACITACION') {
+      console.log('🎯 EXPANDIENDO SECCIÓN: Capacitación - Buscando todos los Capacitadores');
+      const subordinados = await executeQuery(
+        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
+         FROM PRI.Empleados e
+         LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+         LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
+         WHERE e.CargoID = 7
+         AND e.EstadoEmpleado = @estado`,
+        [
+          { name: 'estado', type: sql.VarChar, value: estado }
+        ]
+      );
+      console.log(`📚 Capacitadores encontrados:`, subordinados.recordset.length);
+
+      // Construir nodos de subordinados
+      const nodosSubordinados = subordinados.recordset.map(sub => ({
+        id: sub.DNI,
+        name: `${sub.Nombres} ${sub.ApellidoPaterno} ${sub.ApellidoMaterno}`.trim(),
+        dni: sub.DNI,
+        cargo: sub.NombreCargo,
+        cargoId: sub.CargoID,
+        cargoNombre: sub.NombreCargo,
+        campaniaId: sub.CampañaID,
+        campaniaNombre: sub.NombreCampaña,
+        fechaContratacion: sub.FechaContratacion,
+        area: 'CAPACITACION',
+        nivel: 4,
+        children: [],
+        expandible: false
+      }));
+
+      return res.json({
+        success: true,
+        data: { 
+          empleado: { DNI: 'SEC_CAPACITACION', Nombres: '📚 CAPACITACIÓN' },
+          subordinados: nodosSubordinados 
+        }
+      });
+    }
+    
+    if (dni === 'SEC_MONITOREO') {
+      console.log('🎯 EXPANDIENDO SECCIÓN: Monitoreo - Buscando todos los Monitores');
+      const subordinados = await executeQuery(
+        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
+         FROM PRI.Empleados e
+         LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+         LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
+         WHERE e.CargoID = 6
+         AND e.EstadoEmpleado = @estado`,
+        [
+          { name: 'estado', type: sql.VarChar, value: estado }
+        ]
+      );
+      console.log(`🖥️ Monitores encontrados:`, subordinados.recordset.length);
+
+      // Construir nodos de subordinados
+      const nodosSubordinados = subordinados.recordset.map(sub => ({
+        id: sub.DNI,
+        name: `${sub.Nombres} ${sub.ApellidoPaterno} ${sub.ApellidoMaterno}`.trim(),
+        dni: sub.DNI,
+        cargo: sub.NombreCargo,
+        cargoId: sub.CargoID,
+        cargoNombre: sub.NombreCargo,
+        campaniaId: sub.CampañaID,
+        campaniaNombre: sub.NombreCampaña,
+        fechaContratacion: sub.FechaContratacion,
+        area: 'MONITOREO',
+        nivel: 4,
+        children: [],
+        expandible: false
+      }));
+
+      return res.json({
+        success: true,
+        data: { 
+          empleado: { DNI: 'SEC_MONITOREO', Nombres: '🖥️ MONITOREO' },
+          subordinados: nodosSubordinados 
+        }
+      });
+    }
+
+    // Buscar el empleado y sus subordinados directos (solo para DNIs reales)
     const empleado = await executeQuery(
       `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
               e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
@@ -108,28 +193,83 @@ exports.expandirNodo = async (req, res) => {
     const empleadoData = empleado.recordset[0];
     
     // Determinar el nivel jerárquico del empleado para buscar subordinados correctos
-    const nivelEmpleado = obtenerNivelCargo(empleadoData.NombreCargo);
+    const nivelEmpleado = obtenerNivelCargo(empleadoData.NombreCargo, empleadoData.CargoID);
     console.log(`📊 Nivel del empleado ${empleadoData.Nombres}: ${nivelEmpleado}`);
     
     let subordinados;
     
     if (nivelEmpleado === 1) {
-      // Jefe de Área: buscar coordinadores (JefeDNI) - SOLO coordinadores
-      console.log('🔍 Buscando coordinadores para jefe de área');
-      subordinados = await executeQuery(
-        `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
-                e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
-         FROM PRI.Empleados e
-         LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
-         LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
-         WHERE e.JefeDNI = @dni 
-         AND e.EstadoEmpleado = @estado
-         AND c.NombreCargo LIKE '%coordinador%'`,
-        [
-          { name: 'dni', type: sql.VarChar, value: dni },
-          { name: 'estado', type: sql.VarChar, value: estado }
-        ]
-      );
+      // CASO ESPECIAL: Jefa de Calidad y Monitoreo "76157106" - DIVIDIR EN 2 SECCIONES
+      if (dni === '76157106') {
+        console.log('🎯 CASO ESPECIAL: Jefa de Calidad y Monitoreo - Creando secciones CAPACITACIÓN y MONITOREO');
+        
+        // Crear nodos de secciones
+        subordinados = { recordset: [
+          {
+            DNI: 'SEC_CAPACITACION',
+            Nombres: '📚 CAPACITACIÓN',
+            ApellidoPaterno: '',
+            ApellidoMaterno: '',
+            CargoID: 997,
+            CampañaID: null,
+            FechaContratacion: null,
+            EstadoEmpleado: 'Activo',
+            NombreCargo: 'Sección Capacitación',
+            NombreCampaña: null
+          },
+          {
+            DNI: 'SEC_MONITOREO',
+            Nombres: '🖥️ MONITOREO',
+            ApellidoPaterno: '',
+            ApellidoMaterno: '',
+            CargoID: 996,
+            CampañaID: null,
+            FechaContratacion: null,
+            EstadoEmpleado: 'Activo',
+            NombreCargo: 'Sección Monitoreo',
+            NombreCampaña: null
+          }
+        ]};
+        
+        console.log(`📊 Secciones creadas para jefa de Calidad ${dni}: CAPACITACIÓN y MONITOREO`);
+      } else {
+        // Jefe de Área normal: buscar coordinadores (JefeDNI) - SOLO coordinadores
+        console.log('🔍 Buscando coordinadores para jefe de área');
+        subordinados = await executeQuery(
+          `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                  e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
+           FROM PRI.Empleados e
+           LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+           LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
+           WHERE e.JefeDNI = @dni 
+           AND e.EstadoEmpleado = @estado
+           AND c.NombreCargo LIKE '%coordinador%'`,
+          [
+            { name: 'dni', type: sql.VarChar, value: dni },
+            { name: 'estado', type: sql.VarChar, value: estado }
+          ]
+        );
+
+        // CASO ESPECIAL: Si no hay coordinadores (como el jefe "002702515"), buscar supervisores directamente
+        if (subordinados.recordset.length === 0) {
+          console.log('⚠️ No se encontraron coordinadores, buscando supervisores directamente para jefe:', dni);
+          subordinados = await executeQuery(
+            `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID, 
+                    e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
+             FROM PRI.Empleados e
+             LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+             LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
+             WHERE e.JefeDNI = @dni 
+             AND e.EstadoEmpleado = @estado
+             AND c.NombreCargo LIKE '%supervisor%'`,
+            [
+              { name: 'dni', type: sql.VarChar, value: dni },
+              { name: 'estado', type: sql.VarChar, value: estado }
+            ]
+          );
+          console.log(`📊 Supervisores encontrados directamente para jefe ${dni}:`, subordinados.recordset.length);
+        }
+      }
     } else if (nivelEmpleado === 2) {
       // Coordinador: buscar supervisores (CoordinadorDNI) - SOLO supervisores
       console.log('🔍 Buscando supervisores para coordinador');
@@ -173,21 +313,26 @@ exports.expandirNodo = async (req, res) => {
     console.log(`👥 Subordinados encontrados para ${empleadoData.Nombres}:`, subordinados.recordset.length);
 
     // Construir nodos de subordinados
-    const nodosSubordinados = subordinados.recordset.map(sub => ({
-      id: sub.DNI,
-      name: `${sub.Nombres} ${sub.ApellidoPaterno} ${sub.ApellidoMaterno}`.trim(),
-      dni: sub.DNI,
-      cargo: sub.NombreCargo || 'Empleado',
-      cargoId: sub.CargoID,
-      cargoNombre: sub.NombreCargo,
-      campaniaId: sub.CampañaID,
-      campaniaNombre: sub.NombreCampaña,
-      fechaContratacion: sub.FechaContratacion,
-      area: obtenerAreaInfo(dni).area,
-      nivel: obtenerNivelCargo(sub.NombreCargo),
-      children: [], // Vacío para expansión posterior
-      expandible: true // Indica que se puede expandir
-    }));
+    const nodosSubordinados = subordinados.recordset.map(sub => {
+      const nivel = obtenerNivelCargo(sub.NombreCargo, sub.CargoID);
+      const esSeccion = sub.DNI === 'SEC_CAPACITACION' || sub.DNI === 'SEC_MONITOREO';
+      
+      return {
+        id: sub.DNI,
+        name: `${sub.Nombres} ${sub.ApellidoPaterno} ${sub.ApellidoMaterno}`.trim(),
+        dni: sub.DNI,
+        cargo: sub.NombreCargo || 'Empleado',
+        cargoId: sub.CargoID,
+        cargoNombre: sub.NombreCargo,
+        campaniaId: sub.CampañaID,
+        campaniaNombre: sub.NombreCampaña,
+        fechaContratacion: sub.FechaContratacion,
+        area: obtenerAreaInfo(sub.DNI).area,
+        nivel: nivel,
+        children: [], // Vacío para expansión posterior
+        expandible: esSeccion || nivel < 4 // Secciones y niveles no terminales son expandibles
+      };
+    });
 
     console.log('📦 Nodos de subordinados construidos:', nodosSubordinados.length);
     
@@ -279,16 +424,22 @@ function obtenerAreaInfo(dni) {
   const areas = {
     '002702515': { area: 'OUTBOUND', nombre: 'OUTBOUND' },
     '76157106': { area: 'CALIDAD', nombre: 'Calidad, Formación, Monitoreo' },
-    '46142691': { area: 'ATC', nombre: 'ATC' }
+    '46142691': { area: 'ATC', nombre: 'ATC' },
+    // Secciones de Calidad
+    'SEC_CAPACITACION': { area: 'CAPACITACION', nombre: 'Capacitación' },
+    'SEC_MONITOREO': { area: 'MONITOREO', nombre: 'Monitoreo' }
   };
   return areas[dni] || { area: 'OTRO', nombre: 'Otra Área' };
 }
 
 // Función para determinar el nivel jerárquico basado en el cargo
-function obtenerNivelCargo(cargo) {
+function obtenerNivelCargo(cargo, cargoId = null) {
   if (!cargo) return 4;
   
   const cargoLower = cargo.toLowerCase();
+  
+  // Secciones de Calidad (nivel 2) - se expanden para mostrar empleados
+  if (cargoId === 997 || cargoId === 996) return 2;
   
   // Jefe Supremo (nivel 0)
   if (cargoLower.includes('jefe') && cargoLower.includes('operaciones')) return 0;
@@ -296,11 +447,17 @@ function obtenerNivelCargo(cargo) {
   // Jefe de Área (nivel 1) - busca coordinadores
   if (cargoLower.includes('jefe') && !cargoLower.includes('operaciones')) return 1;
   
+  // Categorías virtuales de Calidad (nivel 2) - se expanden para mostrar empleados
+  if (cargoLower.includes('categoría capacitación') || cargoLower.includes('categoría monitoreo')) return 2;
+  
   // Coordinador (nivel 2) - busca supervisores
   if (cargoLower.includes('coordinador')) return 2;
   
   // Supervisor (nivel 3) - busca agentes
   if (cargoLower.includes('supervisor')) return 3;
+  
+  // Capacitador y Monitor (nivel 4) - roles especiales sin subordinados
+  if (cargoLower.includes('capacitador') || cargoLower.includes('monitor')) return 4;
   
   // Agente o nivel más bajo (nivel 4) - no busca subordinados
   return 4;

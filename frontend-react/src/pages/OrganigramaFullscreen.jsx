@@ -125,6 +125,13 @@ const OrganigramaFullscreen = () => {
 
   const handleNodeClick = async (node) => {
     console.log('🖱️ Click en nodo:', node.name, 'DNI:', node.dni);
+    console.log('🔍 Debug - Estado del nodo:', {
+      dni: node.dni,
+      expandible: node.expandible,
+      hasChildren: node.children && node.children.length > 0,
+      isExpanded: expandedNodes.has(node.dni),
+      childrenCount: node.children ? node.children.length : 0
+    });
     
     // Si el nodo ya está expandido y tiene hijos, colapsarlo
     if (expandedNodes.has(node.dni) && node.children && node.children.length > 0) {
@@ -154,6 +161,7 @@ const OrganigramaFullscreen = () => {
     // Si el nodo no está expandido y es expandible, expandirlo
     if (!expandedNodes.has(node.dni) && node.expandible) {
       console.log('🔄 Expandiendo nodo:', node.name);
+      console.log('✅ Condiciones cumplidas: no expandido y es expandible');
       
       // NUEVA LÓGICA: Colapsar hermanos antes de expandir
       const findAndCollapseHermanos = (data, targetDni) => {
@@ -231,6 +239,14 @@ const OrganigramaFullscreen = () => {
           return newSet;
         });
       }
+    } else {
+      console.log('❌ No se puede expandir el nodo:', {
+        name: node.name,
+        dni: node.dni,
+        expandible: node.expandible,
+        isExpanded: expandedNodes.has(node.dni),
+        reason: !node.expandible ? 'No es expandible' : 'Ya está expandido'
+      });
     }
   };
 
@@ -302,6 +318,8 @@ const OrganigramaFullscreen = () => {
       'ATC': '#E91E63',
       'OUTBOUND': '#4CAF50',
       'CALIDAD': '#FF9800',
+      'CAPACITACION': '#9C27B0',
+      'MONITOREO': '#3F51B5',
       'OPERACIONES': '#2196F3'
     };
     return colors[area] || '#757575';
@@ -356,10 +374,6 @@ const OrganigramaFullscreen = () => {
             cursor: 'pointer',
             position: 'relative',
             border: '2px solid rgba(255,255,255,0.2)',
-            // Simplificar hover durante interacciones
-            '&:hover': !isInteracting ? {
-              backgroundColor: `${areaColor}DD`,
-            } : {}
           }}
           onClick={() => handleNodeClick(node)}
           onDoubleClick={() => handleNodeDoubleClick(node)}
@@ -613,7 +627,7 @@ const OrganigramaFullscreen = () => {
           <p className="text-red-700 mb-4">{error}</p>
           <button
             onClick={cargarOrganigrama}
-            className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="px-6 py-3 bg-red-500 text-white rounded-lg"
           >
             Reintentar
           </button>
@@ -699,11 +713,15 @@ const OrganigramaFullscreen = () => {
 
         {/* Contenedor del organigrama con zoom y pan optimizado */}
         <div
-          className="w-full h-full overflow-hidden cursor-grab"
+          className="w-full h-full overflow-hidden cursor-grab select-none"
           style={{ 
             cursor: isDragging ? 'grabbing' : 'grab',
             willChange: 'transform', // Optimización GPU
-            backfaceVisibility: 'hidden' // Prevenir flickering
+            backfaceVisibility: 'hidden', // Prevenir flickering
+            userSelect: 'none', // Deshabilitar selección de texto
+            WebkitUserSelect: 'none', // Safari
+            MozUserSelect: 'none', // Firefox
+            msUserSelect: 'none' // Internet Explorer/Edge
           }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
@@ -713,7 +731,7 @@ const OrganigramaFullscreen = () => {
         >
           {/* Contenedor del árbol optimizado */}
           <div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 select-none"
             style={{
               transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: 'center center',
