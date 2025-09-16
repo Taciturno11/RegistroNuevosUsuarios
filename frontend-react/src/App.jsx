@@ -24,6 +24,8 @@ import PagosNomina from './pages/PagosNomina';
 import CapacitacionesFullscreen from './pages/CapacitacionesFullscreen';
 import DashboardJefa from './pages/DashboardJefa';
 import VerificarTablas from './components/VerificarTablas';
+import Organigrama from './pages/Organigrama';
+import OrganigramaFullscreen from './pages/OrganigramaFullscreen';
 import './App.css';
 
 // Tema personalizado que mantiene la estética del proyecto original
@@ -145,6 +147,19 @@ const AppContent = () => {
       </Routes>
     );
   }
+
+  // Organigrama Fullscreen: vista completa sin sidebar
+  if (location.pathname === '/organigrama-fullscreen') {
+    return (
+      <Routes>
+        <Route path="/organigrama-fullscreen" element={
+          <ProtectedRoute requireVista="Organigrama">
+            <OrganigramaFullscreen />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    );
+  }
   
   // Layout normal para todas las demás rutas
   return (
@@ -246,6 +261,13 @@ const AppContent = () => {
               <PagosNomina />
             </ProtectedRoute>
           } />
+          
+          <Route path="/organigrama" element={
+            <ProtectedRoute requireVista="Organigrama">
+              <Organigrama />
+            </ProtectedRoute>
+          } />
+          
           
           {/* Ruta temporal para verificar tablas */}
           <Route path="/verificar-tablas" element={<VerificarTablas />} />

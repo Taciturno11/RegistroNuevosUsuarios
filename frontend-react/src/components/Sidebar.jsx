@@ -33,7 +33,8 @@ import {
   TableChart as TableChartIcon,
   AccountBalance as AccountBalanceIcon,
   School as SchoolIcon,
-  AttachMoney as AttachMoneyIcon
+  AttachMoney as AttachMoneyIcon,
+  AccountTree as AccountTreeIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -427,6 +428,39 @@ const Sidebar = () => {
                   <AccountBalanceIcon />
                 </ListItemIcon>
                 {open && <ListItemText primary="Pagos de Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+          </>
+        )}
+
+        {/* Organigrama */}
+        {tieneVista('Organigrama') && (
+          <>
+            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/organigrama-fullscreen')}
+                selected={location.pathname === '/organigrama-fullscreen'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#fef7ff', // Fondo púrpura muy claro
+                  border: '1px solid #f3e8ff', // Borde púrpura claro
+                  '&:hover': {
+                    backgroundColor: '#faf5ff',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#f3e8ff',
+                    '&:hover': {
+                      backgroundColor: '#e9d5ff',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#9333ea', minWidth: open ? 40 : 'auto' }}>
+                  <AccountTreeIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Organigrama" sx={{ color: '#9333ea', fontWeight: 600 }} />}
               </ListItemButton>
             </ListItem>
           </>

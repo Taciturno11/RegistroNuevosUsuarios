@@ -21,6 +21,7 @@ const permisosRoutes = require('./routes/permisos.routes');
 const capacitacionesRoutes = require('./routes/capacitaciones.routes');
 const nominaRoutes = require('./routes/nomina.routes');
 const bonosRoutes = require('./routes/bonos.routes');
+const organigramaRoutes = require('./routes/organigrama.routes');
 
 // Importar utilidades de red
 const { printNetworkInfo, getMainIP } = require('./utils/networkUtils');
@@ -86,7 +87,8 @@ app.get('/', (req, res) => {
       reportes: '/api/reportes',
       tardanzas: '/api/tardanzas',
       permisos: '/api/permisos',
-      capacitaciones: '/api/capacitaciones'
+      capacitaciones: '/api/capacitaciones',
+      organigrama: '/api/organigrama'
     }
   });
 });
@@ -116,6 +118,7 @@ app.use('/api/tardanzas', require('./routes/tardanzas.routes'));
 app.use('/api/nomina', require('./routes/nomina.routes'));
 app.use('/api/capacitaciones', capacitacionesRoutes);
 app.use('/api/bonos', bonosRoutes);
+app.use('/api/organigrama', organigramaRoutes);
 app.use('/api/acceso', require('./routes/acceso.routes'));
 
 // Middleware de manejo de errores
@@ -153,7 +156,8 @@ app.use('*', (req, res) => {
       '/api/permisos',
       '/api/capacitaciones',
       '/api/nomina',
-      '/api/bonos'
+      '/api/bonos',
+      '/api/organigrama'
     ],
     timestamp: new Date().toISOString()
   });
