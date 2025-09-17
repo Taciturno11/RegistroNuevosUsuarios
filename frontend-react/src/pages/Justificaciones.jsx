@@ -63,9 +63,18 @@ const Justificaciones = () => {
   // Estados del empleado seleccionado
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   
+  // Función para obtener fecha local correcta
+  const getFechaLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Estados del formulario
   const [formData, setFormData] = useState({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: getFechaLocal(),
     fechaFin: '',
     tipo: '',
     motivo: '',
@@ -345,7 +354,7 @@ const Justificaciones = () => {
 
       setFormData(prev => ({
         ...prev,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: getFechaLocal(),
         fechaFin: ''
       }));
     } catch (error) {

@@ -132,7 +132,16 @@ export async function descargarExcel({ tablaDatos, dias, capCount }) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Asistencia_${new Date().toISOString().split('T')[0]}.xlsx`;
+  // Función para obtener fecha local correcta
+  const getFechaLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  a.download = `Asistencia_${getFechaLocal()}.xlsx`;
   a.click();
   window.URL.revokeObjectURL(url);
 }

@@ -66,9 +66,18 @@ const Excepciones = () => {
   // Catálogo de horarios disponibles (Horarios_Base)
   const [horarios, setHorarios] = useState([]);
 
+  // Función para obtener fecha local correcta
+  const getFechaLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Estado del formulario
   const [formData, setFormData] = useState({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: getFechaLocal(),
     fechaFin: '',
     horarioID: '', // null ⇒ descanso
     motivo: ''
@@ -298,7 +307,7 @@ const Excepciones = () => {
 
   const handleClear = () => {
     setFormData({
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: getFechaLocal(),
       fechaFin: '',
       horarioID: '',
       motivo: ''
@@ -348,8 +357,9 @@ const Excepciones = () => {
     try {
       if (typeof h === 'string' && h.includes('T')) {
         const f = new Date(h);
-        const hh = String(f.getUTCHours()).padStart(2, '0');
-        const mm = String(f.getUTCMinutes()).padStart(2, '0');
+        // Usar getHours() porque useUTC: false hace que las horas vengan en formato local
+        const hh = String(f.getHours()).padStart(2, '0');
+        const mm = String(f.getMinutes()).padStart(2, '0');
         return `${hh}:${mm}`;
       }
       if (typeof h === 'string' && h.includes(':') && h.includes('.')) {

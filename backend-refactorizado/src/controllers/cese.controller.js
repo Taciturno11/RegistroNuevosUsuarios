@@ -19,16 +19,22 @@ exports.getAllCeses = async (req, res) => {
       params.push({ name: 'search', type: sql.VarChar, value: `%${search}%` });
     }
 
+    // Función para parsear fechas correctamente
+    const parseFechaLocal = (fechaString) => {
+      const [year, month, day] = fechaString.split('-');
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0, 0);
+    };
+
     // Filtro por fecha desde
     if (fechaDesde) {
       whereClause += ` AND e.FechaCese >= @fechaDesde`;
-      params.push({ name: 'fechaDesde', type: sql.Date, value: new Date(fechaDesde) });
+      params.push({ name: 'fechaDesde', type: sql.Date, value: parseFechaLocal(fechaDesde) });
     }
 
     // Filtro por fecha hasta
     if (fechaHasta) {
       whereClause += ` AND e.FechaCese <= @fechaHasta`;
-      params.push({ name: 'fechaHasta', type: sql.Date, value: new Date(fechaHasta) });
+      params.push({ name: 'fechaHasta', type: sql.Date, value: parseFechaLocal(fechaHasta) });
     }
 
     // Consulta principal
@@ -198,8 +204,14 @@ exports.procesarCese = async (req, res) => {
       WHERE DNI = @DNI
     `;
 
+    // Parsear fecha correctamente para evitar problemas de zona horaria
+    const parseFechaLocal = (fechaString) => {
+      const [year, month, day] = fechaString.split('-');
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0, 0);
+    };
+
     await executeQuery(ceseQuery, [
-      { name: 'FechaCese', type: sql.Date, value: new Date(fechaCese) },
+      { name: 'FechaCese', type: sql.Date, value: parseFechaLocal(fechaCese) },
       { name: 'DNI', type: sql.VarChar, value: dni }
     ]);
 
@@ -406,9 +418,15 @@ exports.registrarCese = async (req, res) => {
     console.log(`🔍 Query SQL: ${ceseQuery}`);
     console.log(`🔍 Parámetros: DNI=${dni}, FechaCese=${fechaCese}`);
 
+    // Parsear fecha correctamente para evitar problemas de zona horaria
+    const parseFechaLocal = (fechaString) => {
+      const [year, month, day] = fechaString.split('-');
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 12, 0, 0, 0);
+    };
+
     await executeQuery(ceseQuery, [
       { name: 'DNI', type: sql.VarChar, value: dni },
-      { name: 'FechaCese', type: sql.Date, value: new Date(fechaCese) }
+      { name: 'FechaCese', type: sql.Date, value: parseFechaLocal(fechaCese) }
     ]);
 
     console.log(`✅ Cese registrado exitosamente para empleado: ${dni}`);
