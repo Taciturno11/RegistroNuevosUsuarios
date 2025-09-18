@@ -11,7 +11,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Button,
   TextField,
   CircularProgress,
   Alert,
@@ -20,11 +19,7 @@ import {
   Grid,
   Chip,
   IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  Tooltip
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -33,8 +28,8 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   People as PeopleIcon,
-  TrendingUp as TrendingUpIcon,
-  Assessment as AssessmentIcon
+  Assessment as AssessmentIcon,
+  TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
 
 const Dotacion = () => {
@@ -51,7 +46,6 @@ const Dotacion = () => {
   // Estados para edición de metas
   const [editandoMeta, setEditandoMeta] = useState(null);
   const [nuevaMeta, setNuevaMeta] = useState('');
-  const [showMetaDialog, setShowMetaDialog] = useState(false);
 
   // Cargar datos al montar el componente
   useEffect(() => {
@@ -84,18 +78,22 @@ const Dotacion = () => {
     }
   };
 
-  const handleEditarMeta = (campania) => {
+  const handleIniciarEdicion = (campania) => {
     setEditandoMeta(campania);
     setNuevaMeta(campania.meta.toString());
-    setShowMetaDialog(true);
   };
 
-  const handleGuardarMeta = async () => {
+  const handleGuardarMeta = async (campania) => {
+    if (!nuevaMeta || isNaN(parseInt(nuevaMeta))) {
+      setError('Por favor ingrese una meta válida');
+      return;
+    }
+
     try {
       setLoading(true);
       
       const response = await api.post('/dotacion/meta', {
-        campaniaId: editandoMeta.campania.id,
+        campaniaId: campania.campania.id,
         meta: parseInt(nuevaMeta)
       });
 
@@ -105,7 +103,7 @@ const Dotacion = () => {
         // Actualizar datos locales
         setDotacionData(prevData => 
           prevData.map(item => 
-            item.campania.id === editandoMeta.campania.id
+            item.campania.id === campania.campania.id
               ? {
                   ...item,
                   meta: parseInt(nuevaMeta),
@@ -115,7 +113,6 @@ const Dotacion = () => {
           )
         );
         
-        setShowMetaDialog(false);
         setEditandoMeta(null);
         setNuevaMeta('');
       }
@@ -128,23 +125,31 @@ const Dotacion = () => {
   };
 
   const handleCancelarEdicion = () => {
-    setShowMetaDialog(false);
     setEditandoMeta(null);
     setNuevaMeta('');
   };
 
   const getCumplimientoColor = (cumplimiento) => {
     const valor = parseFloat(cumplimiento);
-    if (valor >= 100) return 'success';
-    if (valor >= 80) return 'warning';
-    return 'error';
+    if (valor >= 100) return '#4caf50'; // Verde
+    if (valor >= 75) return '#ffc107'; // Amarillo
+    return '#f44336'; // Rojo
+  };
+
+  const getCumplimientoStatus = (cumplimiento) => {
+    const valor = parseFloat(cumplimiento);
+    if (valor >= 100) return { text: 'Excelente', color: '#4caf50' };
+    if (valor >= 90) return { text: 'Muy Bueno', color: '#8bc34a' };
+    if (valor >= 80) return { text: 'Bueno', color: '#ff9800' };
+    if (valor >= 70) return { text: 'Regular', color: '#ff5722' };
+    return { text: 'Bajo', color: '#f44336' };
   };
 
   const getCumplimientoIcon = (cumplimiento) => {
     const valor = parseFloat(cumplimiento);
-    if (valor >= 100) return <CheckIcon color="success" />;
-    if (valor >= 80) return <TrendingUpIcon color="warning" />;
-    return <CloseIcon color="error" />;
+    if (valor >= 100) return <CheckIcon sx={{ color: '#4caf50' }} />;
+    if (valor >= 75) return <TrendingUpIcon sx={{ color: '#ffc107' }} />;
+    return <CloseIcon sx={{ color: '#f44336' }} />;
   };
 
   if (loading && dotacionData.length === 0) {
@@ -163,7 +168,7 @@ const Dotacion = () => {
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          📊 Dotación por Campaña
+          Dotación por Campaña
         </Typography>
       </Box>
 
@@ -238,164 +243,206 @@ const Dotacion = () => {
       )}
 
       {/* Tabla de Dotación */}
-      <Paper sx={{ overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'primary.main' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                  Campaña
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
-                  Full Time
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
-                  Part Time
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
-                  Semi Full
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
-                  Dota Actual
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
-                  Meta
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
-                  Cumplimiento
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {dotacionData.map((fila, index) => (
-                <TableRow 
-                  key={fila.campania.id}
-                  sx={{ 
-                    '&:nth-of-type(odd)': { bgcolor: 'grey.50' },
-                    '&:hover': { bgcolor: 'grey.100' }
-                  }}
-                >
-                  {/* Campaña */}
-                  <TableCell>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      {fila.campania.nombre}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      ID: {fila.campania.id}
-                    </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+        <Paper sx={{ overflow: 'hidden', maxWidth: '1100px', width: '100%' }}>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'primary.main' }}>
+                  <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem', minWidth: '180px' }}>
+                    Campaña
                   </TableCell>
-
-                  {/* Full Time */}
-                  <TableCell sx={{ textAlign: 'center' }}>
-                    <Chip 
-                      label={fila.jornadas[1]?.cantidad || 0}
-                      color="primary"
-                      variant="outlined"
-                    />
+                  <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center', minWidth: '100px' }}>
+                    Full Time
                   </TableCell>
-
-                  {/* Part Time */}
-                  <TableCell sx={{ textAlign: 'center' }}>
-                    <Chip 
-                      label={fila.jornadas[2]?.cantidad || 0}
-                      color="secondary"
-                      variant="outlined"
-                    />
+                  <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center', minWidth: '100px' }}>
+                    Semi Full
                   </TableCell>
-
-                  {/* Semi Full */}
-                  <TableCell sx={{ textAlign: 'center' }}>
-                    <Chip 
-                      label={fila.jornadas[3]?.cantidad || 0}
-                      color="info"
-                      variant="outlined"
-                    />
+                  <TableCell sx={{ color: 'white', fontWeight: 'bold', textAlign: 'center', minWidth: '100px' }}>
+                    Part Time
                   </TableCell>
-
-                  {/* Dota Actual */}
-                  <TableCell sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                      {fila.dotaActual}
-                    </Typography>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 'bold', 
+                    textAlign: 'center', 
+                    minWidth: '120px',
+                    backgroundColor: 'rgba(25, 118, 210, 0.1)'
+                  }}>
+                    Dota Actual
                   </TableCell>
-
-                  {/* Meta */}
-                  <TableCell sx={{ textAlign: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {fila.meta}
-                      </Typography>
-                      <Tooltip title="Editar meta">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleEditarMeta(fila)}
-                          color="primary"
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 'bold', 
+                    textAlign: 'center', 
+                    minWidth: '120px',
+                    backgroundColor: 'rgba(245, 124, 0, 0.1)'
+                  }}>
+                    Meta
                   </TableCell>
-
-                  {/* Cumplimiento */}
-                  <TableCell sx={{ textAlign: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                      {getCumplimientoIcon(fila.cumplimiento)}
-                      <Chip 
-                        label={`${fila.cumplimiento}%`}
-                        color={getCumplimientoColor(fila.cumplimiento)}
-                        variant="filled"
-                        sx={{ fontWeight: 'bold' }}
-                      />
-                    </Box>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 'bold', 
+                    textAlign: 'center', 
+                    minWidth: '140px',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)'
+                  }}>
+                    Cumplimiento
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {dotacionData.map((fila, index) => (
+                  <TableRow 
+                    key={fila.campania.id}
+                    sx={{ 
+                      '&:nth-of-type(odd)': { bgcolor: 'grey.50' },
+                      '&:hover': { bgcolor: 'grey.100' }
+                    }}
+                  >
+                    {/* Campaña */}
+                    <TableCell sx={{ minWidth: '180px' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
+                        {fila.campania.nombre}
+                      </Typography>
+                    </TableCell>
 
-      {/* Dialog para editar meta */}
-      <Dialog open={showMetaDialog} onClose={handleCancelarEdicion} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Editar Meta - {editandoMeta?.campania?.nombre}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              label="Nueva Meta"
-              type="number"
-              value={nuevaMeta}
-              onChange={(e) => setNuevaMeta(e.target.value)}
-              placeholder="Ingrese la nueva meta"
-              helperText="La meta se calculará automáticamente el porcentaje de cumplimiento"
-            />
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Dota Actual:</strong> {editandoMeta?.dotaActual} empleados
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Cumplimiento actual:</strong> {editandoMeta?.cumplimiento}%
-              </Typography>
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelarEdicion} color="inherit">
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleGuardarMeta} 
-            variant="contained" 
-            startIcon={<SaveIcon />}
-            disabled={loading || !nuevaMeta || isNaN(parseInt(nuevaMeta))}
-          >
-            Guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
+                    {/* Full Time */}
+                    <TableCell sx={{ textAlign: 'center', minWidth: '100px' }}>
+                      <Typography variant="h5" sx={{ 
+                        fontWeight: 'bold', 
+                        color: 'primary.main',
+                        fontSize: '1rem'
+                      }}>
+                        {fila.jornadas[1]?.cantidad || 0}
+                      </Typography>
+                    </TableCell>
+
+                    {/* Semi Full */}
+                    <TableCell sx={{ textAlign: 'center', minWidth: '100px' }}>
+                      <Typography variant="h5" sx={{ 
+                        fontWeight: 'bold', 
+                        color: 'secondary.main',
+                        fontSize: '1rem'
+                      }}>
+                        {fila.jornadas[2]?.cantidad || 0}
+                      </Typography>
+                    </TableCell>
+
+                    {/* Part Time */}
+                    <TableCell sx={{ textAlign: 'center', minWidth: '100px' }}>
+                      <Typography variant="h5" sx={{ 
+                        fontWeight: 'bold', 
+                        color: 'info.main',
+                        fontSize: '1rem'
+                      }}>
+                        {fila.jornadas[3]?.cantidad || 0}
+                      </Typography>
+                    </TableCell>
+
+                    {/* Dota Actual */}
+                    <TableCell sx={{ 
+                      textAlign: 'center', 
+                      minWidth: '120px',
+                      backgroundColor: 'rgba(25, 118, 210, 0.05)'
+                    }}>
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: 'bold', 
+                        color: '#1976d2',
+                        fontSize: '1.2rem'
+                      }}>
+                        {fila.dotaActual}
+                      </Typography>
+                    </TableCell>
+
+                    {/* Meta */}
+                    <TableCell sx={{ 
+                      textAlign: 'center', 
+                      minWidth: '120px',
+                      backgroundColor: 'rgba(245, 124, 0, 0.05)'
+                    }}>
+                      {editandoMeta && editandoMeta.campania.id === fila.campania.id ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                          <TextField
+                            type="number"
+                            value={nuevaMeta}
+                            onChange={(e) => setNuevaMeta(e.target.value)}
+                            size="small"
+                            sx={{ width: '80px' }}
+                            autoFocus
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleGuardarMeta(fila);
+                              } else if (e.key === 'Escape') {
+                                handleCancelarEdicion();
+                              }
+                            }}
+                          />
+                          <Tooltip title="Guardar">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleGuardarMeta(fila)}
+                              color="primary"
+                            >
+                              <SaveIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Cancelar">
+                            <IconButton 
+                              size="small" 
+                              onClick={handleCancelarEdicion}
+                              color="inherit"
+                            >
+                              <CloseIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                          <Typography variant="h6" sx={{ 
+                            fontWeight: 'bold',
+                            color: '#f57c00',
+                            fontSize: '1.2rem'
+                          }}>
+                            {fila.meta}
+                          </Typography>
+                          <Tooltip title="Editar meta">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleIniciarEdicion(fila)}
+                              color="primary"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </TableCell>
+
+                    {/* Cumplimiento */}
+                    <TableCell sx={{ 
+                      textAlign: 'center', 
+                      minWidth: '140px',
+                      backgroundColor: 'rgba(76, 175, 80, 0.05)'
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        {getCumplimientoIcon(fila.cumplimiento)}
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 'bold',
+                          color: getCumplimientoColor(fila.cumplimiento),
+                          fontSize: '1.2rem'
+                        }}>
+                          {fila.cumplimiento}%
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Box>
+
     </Box>
   );
 };
