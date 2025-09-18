@@ -22,6 +22,7 @@ const capacitacionesRoutes = require('./routes/capacitaciones.routes');
 const nominaRoutes = require('./routes/nomina.routes');
 const bonosRoutes = require('./routes/bonos.routes');
 const organigramaRoutes = require('./routes/organigrama.routes');
+const dotacionRoutes = require('./routes/dotacion.routes');
 
 // Importar utilidades de red
 const { printNetworkInfo, getMainIP } = require('./utils/networkUtils');
@@ -88,7 +89,8 @@ app.get('/', (req, res) => {
       tardanzas: '/api/tardanzas',
       permisos: '/api/permisos',
       capacitaciones: '/api/capacitaciones',
-      organigrama: '/api/organigrama'
+      organigrama: '/api/organigrama',
+      dotacion: '/api/dotacion'
     }
   });
 });
@@ -119,6 +121,7 @@ app.use('/api/nomina', require('./routes/nomina.routes'));
 app.use('/api/capacitaciones', capacitacionesRoutes);
 app.use('/api/bonos', bonosRoutes);
 app.use('/api/organigrama', organigramaRoutes);
+app.use('/api/dotacion', dotacionRoutes);
 app.use('/api/acceso', require('./routes/acceso.routes'));
 
 // Middleware de manejo de errores

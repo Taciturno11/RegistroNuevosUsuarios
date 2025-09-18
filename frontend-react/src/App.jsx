@@ -26,6 +26,7 @@ import DashboardJefa from './pages/DashboardJefa';
 import VerificarTablas from './components/VerificarTablas';
 import Organigrama from './pages/Organigrama';
 import OrganigramaFullscreen from './pages/OrganigramaFullscreen';
+import Dotacion from './pages/Dotacion';
 import './App.css';
 
 // Tema personalizado que mantiene la estética del proyecto original
@@ -268,6 +269,11 @@ const AppContent = () => {
             </ProtectedRoute>
           } />
           
+          <Route path="/dotacion" element={
+            <ProtectedRoute requireVista="Dotación">
+              <Dotacion />
+            </ProtectedRoute>
+          } />
           
           {/* Ruta temporal para verificar tablas */}
           <Route path="/verificar-tablas" element={<VerificarTablas />} />

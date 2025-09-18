@@ -34,7 +34,8 @@ import {
   AccountBalance as AccountBalanceIcon,
   School as SchoolIcon,
   AttachMoney as AttachMoneyIcon,
-  AccountTree as AccountTreeIcon
+  AccountTree as AccountTreeIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -362,6 +363,39 @@ const Sidebar = () => {
                   <TableChartIcon />
                 </ListItemIcon>
                 {open && <ListItemText primary="Reporte de Tardanzas" sx={{ color: '#dc2626', fontWeight: 600 }} />}
+              </ListItemButton>
+            </ListItem>
+          </>
+        )}
+
+        {/* Dotación */}
+        {tieneVista('Dotación') && (
+          <>
+            <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
+            <ListItem disablePadding>
+              <ListItemButton
+                onClick={() => handleNavigation('/dotacion')}
+                selected={location.pathname === '/dotacion'}
+                sx={{
+                  mx: 1,
+                  borderRadius: 1,
+                  backgroundColor: '#f0f9ff', // Fondo azul muy claro
+                  border: '1px solid #bae6fd', // Borde azul claro
+                  '&:hover': {
+                    backgroundColor: '#e0f2fe',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: '#bae6fd',
+                    '&:hover': {
+                      backgroundColor: '#7dd3fc',
+                    },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: '#0369a1', minWidth: open ? 40 : 'auto' }}>
+                  <PeopleIcon />
+                </ListItemIcon>
+                {open && <ListItemText primary="Dotación" sx={{ color: '#0369a1', fontWeight: 600 }} />}
               </ListItemButton>
             </ListItem>
           </>
