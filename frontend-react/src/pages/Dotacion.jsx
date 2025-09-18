@@ -167,7 +167,7 @@ const Dotacion = () => {
         <IconButton onClick={() => navigate('/')} sx={{ mr: 2 }}>
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
           Dotación por Campaña
         </Typography>
       </Box>
@@ -188,7 +188,7 @@ const Dotacion = () => {
       {resumen && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={3}>
-            <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+            <Card sx={{ bgcolor: '#2c3e50', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <PeopleIcon sx={{ mr: 1 }} />
@@ -201,7 +201,7 @@ const Dotacion = () => {
             </Card>
           </Grid>
           <Grid item xs={12} sm={3}>
-            <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
+            <Card sx={{ bgcolor: '#27ae60', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <CheckIcon sx={{ mr: 1 }} />
@@ -214,7 +214,7 @@ const Dotacion = () => {
             </Card>
           </Grid>
           <Grid item xs={12} sm={3}>
-            <Card sx={{ bgcolor: 'warning.main', color: 'white' }}>
+            <Card sx={{ bgcolor: '#f39c12', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <AssessmentIcon sx={{ mr: 1 }} />
@@ -227,7 +227,7 @@ const Dotacion = () => {
             </Card>
           </Grid>
           <Grid item xs={12} sm={3}>
-            <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
+            <Card sx={{ bgcolor: '#e74c3c', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <CloseIcon sx={{ mr: 1 }} />
@@ -248,7 +248,7 @@ const Dotacion = () => {
           <TableContainer>
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: 'primary.main' }}>
+                <TableRow sx={{ bgcolor: '#2c3e50' }}>
                   <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem', minWidth: '180px' }}>
                     Campaña
                   </TableCell>
@@ -266,7 +266,7 @@ const Dotacion = () => {
                     fontWeight: 'bold', 
                     textAlign: 'center', 
                     minWidth: '120px',
-                    backgroundColor: 'rgba(25, 118, 210, 0.1)'
+                    backgroundColor: 'rgba(52, 152, 219, 0.15)'
                   }}>
                     Dota Actual
                   </TableCell>
@@ -275,7 +275,7 @@ const Dotacion = () => {
                     fontWeight: 'bold', 
                     textAlign: 'center', 
                     minWidth: '120px',
-                    backgroundColor: 'rgba(245, 124, 0, 0.1)'
+                    backgroundColor: 'rgba(230, 126, 34, 0.15)'
                   }}>
                     Meta
                   </TableCell>
@@ -284,7 +284,7 @@ const Dotacion = () => {
                     fontWeight: 'bold', 
                     textAlign: 'center', 
                     minWidth: '140px',
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)'
+                    backgroundColor: 'rgba(46, 204, 113, 0.15)'
                   }}>
                     Cumplimiento
                   </TableCell>
@@ -343,11 +343,11 @@ const Dotacion = () => {
                     <TableCell sx={{ 
                       textAlign: 'center', 
                       minWidth: '120px',
-                      backgroundColor: 'rgba(25, 118, 210, 0.05)'
+                      backgroundColor: 'rgba(52, 152, 219, 0.03)'
                     }}>
                       <Typography variant="h6" sx={{ 
                         fontWeight: 'bold', 
-                        color: '#1976d2',
+                        color: '#3498db',
                         fontSize: '1.2rem'
                       }}>
                         {fila.dotaActual}
@@ -358,7 +358,7 @@ const Dotacion = () => {
                     <TableCell sx={{ 
                       textAlign: 'center', 
                       minWidth: '120px',
-                      backgroundColor: 'rgba(245, 124, 0, 0.05)'
+                      backgroundColor: 'rgba(230, 126, 34, 0.03)'
                     }}>
                       {editandoMeta && editandoMeta.campania.id === fila.campania.id ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
@@ -400,7 +400,7 @@ const Dotacion = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                           <Typography variant="h6" sx={{ 
                             fontWeight: 'bold',
-                            color: '#f57c00',
+                            color: '#e67e22',
                             fontSize: '1.2rem'
                           }}>
                             {fila.meta}
@@ -410,8 +410,9 @@ const Dotacion = () => {
                               size="small" 
                               onClick={() => handleIniciarEdicion(fila)}
                               color="primary"
+                              sx={{ p: 0.5 }}
                             >
-                              <EditIcon />
+                              <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                         </Box>
@@ -422,7 +423,7 @@ const Dotacion = () => {
                     <TableCell sx={{ 
                       textAlign: 'center', 
                       minWidth: '140px',
-                      backgroundColor: 'rgba(76, 175, 80, 0.05)'
+                      backgroundColor: 'rgba(46, 204, 113, 0.03)'
                     }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                         {getCumplimientoIcon(fila.cumplimiento)}
@@ -431,7 +432,7 @@ const Dotacion = () => {
                           color: getCumplimientoColor(fila.cumplimiento),
                           fontSize: '1.2rem'
                         }}>
-                          {fila.cumplimiento}%
+                          {Math.round(parseFloat(fila.cumplimiento))}%
                         </Typography>
                       </Box>
                     </TableCell>
