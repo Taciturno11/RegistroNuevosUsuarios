@@ -1,19 +1,19 @@
 const { executeQuery, sql } = require('../config/database');
 
 // ========================================
-// DOTACIÓN - CONTROLADOR
+// DOTACIÓN - CONTROLADOR (SOLO AGENTES)
 // ========================================
 
-// Obtener datos de dotación por campaña y jornada
+// Obtener datos de dotación por campaña y jornada (solo agentes - CargoID=1)
 exports.getDotacion = async (req, res) => {
   try {
-    console.log('📊 Obteniendo datos de dotación...');
+    console.log('📊 Obteniendo datos de dotación (solo agentes)...');
 
     // Obtener campañas específicas
     const campaniasQuery = `
       SELECT CampañaID, NombreCampaña 
       FROM PRI.Campanias 
-      WHERE CampañaID IN (1, 15, 24, 19, 2)
+      WHERE CampañaID IN (1, 15, 24, 19, 2, 4, 14)
       ORDER BY 
         CASE CampañaID 
           WHEN 1 THEN 1
@@ -21,6 +21,8 @@ exports.getDotacion = async (req, res) => {
           WHEN 24 THEN 3
           WHEN 19 THEN 4
           WHEN 2 THEN 5
+          WHEN 4 THEN 6
+          WHEN 14 THEN 7
         END
     `;
 
@@ -38,7 +40,7 @@ exports.getDotacion = async (req, res) => {
     const jornadasResult = await executeQuery(jornadasQuery);
     const jornadas = jornadasResult.recordset;
 
-    // Obtener dotación actual por campaña y jornada
+    // Obtener dotación actual por campaña y jornada (solo agentes)
     const dotacionQuery = `
       SELECT 
         e.CampañaID,
@@ -50,7 +52,8 @@ exports.getDotacion = async (req, res) => {
       INNER JOIN PRI.Campanias c ON e.CampañaID = c.CampañaID
       INNER JOIN PRI.Jornada j ON e.JornadaID = j.JornadaID
       WHERE e.EstadoEmpleado = 'Activo'
-        AND e.CampañaID IN (1, 15, 24, 19, 2)
+        AND e.CargoID = 1
+        AND e.CampañaID IN (1, 15, 24, 19, 2, 4, 14)
         AND e.JornadaID IN (1, 2, 3)
       GROUP BY e.CampañaID, c.NombreCampaña, e.JornadaID, j.NombreJornada
       ORDER BY 
@@ -60,6 +63,8 @@ exports.getDotacion = async (req, res) => {
           WHEN 24 THEN 3
           WHEN 19 THEN 4
           WHEN 2 THEN 5
+          WHEN 4 THEN 6
+          WHEN 14 THEN 7
         END,
         e.JornadaID
     `;
@@ -210,17 +215,16 @@ exports.guardarMeta = async (req, res) => {
   }
 };
 
-// Obtener resumen de dotación
+// Obtener resumen de dotación (solo agentes)
 exports.getResumenDotacion = async (req, res) => {
   try {
     const resumenQuery = `
       SELECT 
-        COUNT(*) as TotalEmpleados,
-        COUNT(CASE WHEN EstadoEmpleado = 'Activo' THEN 1 END) as EmpleadosActivos,
-        COUNT(CASE WHEN EstadoEmpleado = 'Inactivo' THEN 1 END) as EmpleadosInactivos,
-        COUNT(CASE WHEN EstadoEmpleado = 'Cesado' THEN 1 END) as EmpleadosCesados
+        COUNT(CASE WHEN EstadoEmpleado = 'Activo' THEN 1 END) as TotalEmpleados,
+        COUNT(CASE WHEN EstadoEmpleado = 'Activo' AND CampañaID IN (1, 15, 24, 19, 2, 4, 14) THEN 1 END) as EmpleadosActivos,
+        COUNT(CASE WHEN EstadoEmpleado = 'Cese' AND CampañaID IN (1, 15, 24, 19, 2, 4, 14) THEN 1 END) as EmpleadosCesados
       FROM PRI.Empleados
-      WHERE CampañaID IN (1, 15, 24, 19, 2)
+      WHERE CargoID = 1
     `;
 
     const resumenResult = await executeQuery(resumenQuery);

@@ -168,7 +168,7 @@ const Dotacion = () => {
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2c3e50' }}>
-          Dotación por Campaña
+          Dotación de Agentes por Campaña
         </Typography>
       </Box>
 
@@ -187,53 +187,40 @@ const Dotacion = () => {
       {/* Resumen */}
       {resumen && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={4}>
             <Card sx={{ bgcolor: '#2c3e50', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <PeopleIcon sx={{ mr: 1 }} />
                   <Box>
                     <Typography variant="h6">{resumen.TotalEmpleados}</Typography>
-                    <Typography variant="body2">Total Empleados</Typography>
+                    <Typography variant="body2">Total Agentes</Typography>
                   </Box>
                 </Box>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={4}>
             <Card sx={{ bgcolor: '#27ae60', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <CheckIcon sx={{ mr: 1 }} />
                   <Box>
                     <Typography variant="h6">{resumen.EmpleadosActivos}</Typography>
-                    <Typography variant="body2">Activos</Typography>
+                    <Typography variant="body2">Agentes Activos</Typography>
                   </Box>
                 </Box>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={3}>
-            <Card sx={{ bgcolor: '#f39c12', color: 'white' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <AssessmentIcon sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="h6">{resumen.EmpleadosInactivos}</Typography>
-                    <Typography variant="body2">Inactivos</Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={4}>
             <Card sx={{ bgcolor: '#e74c3c', color: 'white' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <CloseIcon sx={{ mr: 1 }} />
                   <Box>
                     <Typography variant="h6">{resumen.EmpleadosCesados}</Typography>
-                    <Typography variant="body2">Cesados</Typography>
+                    <Typography variant="body2">Agentes Cesados</Typography>
                   </Box>
                 </Box>
               </CardContent>
