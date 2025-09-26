@@ -1,6 +1,24 @@
 const { executeQuery, sql } = require('../config/database');
 const { formatearFechaLocal } = require('../utils/dateUtils');
 
+// Función helper para parsear fechas locales correctamente
+const parseFechaLocal = (fechaString) => {
+  if (!fechaString) return null;
+  
+  // Si ya es un objeto Date, devolverlo
+  if (fechaString instanceof Date) return fechaString;
+  
+  // Si es string "YYYY-MM-DD", crear Date en horario local a mediodía
+  if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+    const [year, month, day] = fechaString.split('-').map(Number);
+    // Crear fecha en horario local a mediodía (12:00 PM)
+    return new Date(year, month - 1, day, 12, 0, 0);
+  }
+  
+  // Para otros formatos, usar new Date() normal
+  return new Date(fechaString);
+};
+
 // Obtener todos los empleados con información completa
 exports.getAllEmpleados = async (req, res) => {
   try {
@@ -233,12 +251,17 @@ exports.createEmpleado = async (req, res) => {
       )
     `;
 
+    // Parsear fecha de contratación correctamente
+    const fechaContratacionParsed = parseFechaLocal(fechaContratacion) || new Date();
+    
+    console.log(`🔍 Fecha de contratación - Original: ${fechaContratacion}, Parseada: ${fechaContratacionParsed}`);
+
     const params = [
       { name: 'DNI', type: sql.VarChar, value: dni },
       { name: 'Nombres', type: sql.VarChar, value: nombres },
       { name: 'ApellidoPaterno', type: sql.VarChar, value: apellidoPaterno },
       { name: 'ApellidoMaterno', type: sql.VarChar, value: apellidoMaterno || null },
-      { name: 'FechaContratacion', type: sql.Date, value: fechaContratacion || new Date() },
+      { name: 'FechaContratacion', type: sql.Date, value: fechaContratacionParsed },
       { name: 'JornadaID', type: sql.Int, value: jornadaID || 1 }, // Valor por defecto: 1
       { name: 'CampañaID', type: sql.Int, value: campañaID || 1 }, // Valor por defecto: 1
       { name: 'CargoID', type: sql.Int, value: cargoID || 1 }, // Valor por defecto: 1
@@ -302,7 +325,15 @@ exports.updateEmpleado = async (req, res) => {
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) {
         updateFields.push(`${field} = @${field}`);
-        params.push({ name: field, type: getFieldType(field), value: updateData[field] });
+        
+        // Manejar fechas correctamente
+        let value = updateData[field];
+        if (field === 'FechaContratacion') {
+          value = parseFechaLocal(updateData[field]);
+          console.log(`🔍 Actualizando FechaContratacion - Original: ${updateData[field]}, Parseada: ${value}`);
+        }
+        
+        params.push({ name: field, type: getFieldType(field), value: value });
       }
     });
 
