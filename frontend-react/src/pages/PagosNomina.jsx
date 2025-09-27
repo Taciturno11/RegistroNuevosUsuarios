@@ -392,9 +392,23 @@ const PagosNomina = () => {
     const areas = {};
     let totalGeneral = 0;
     
+    // Función para calcular el total correcto de un registro (Sueldo Base + Bonos)
+    const calcularTotalCorrecto = (registro) => {
+      const sueldoBase = parseFloat(registro.SueldoBase || 0);
+      const totalBonos = Object.keys(registro).reduce((sum, key) => {
+        if (key.toLowerCase().includes('bono') && typeof registro[key] === 'number') {
+          return sum + parseFloat(registro[key] || 0);
+        }
+        return sum;
+      }, 0);
+      return sueldoBase + totalBonos;
+    };
+
     // Agrupar por área y campaña
     reporteNomina.forEach(registro => {
       const area = obtenerAreaPorCampaña(registro.NombreCampaña);
+      const totalCorrecto = calcularTotalCorrecto(registro);
+      
       if (!areas[area]) {
         areas[area] = {
           total: 0,
@@ -404,10 +418,10 @@ const PagosNomina = () => {
         };
       }
       
-      areas[area].total += parseFloat(registro.TotalPagar || 0);
+      areas[area].total += totalCorrecto;
       areas[area].empleados += 1;
       areas[area].registros.push(registro); // Agregar registro al área
-      totalGeneral += parseFloat(registro.TotalPagar || 0);
+      totalGeneral += totalCorrecto;
       
       // Agrupar por campaña
       if (!areas[area].campañas[registro.NombreCampaña]) {
@@ -417,7 +431,7 @@ const PagosNomina = () => {
           registros: []
         };
       }
-      areas[area].campañas[registro.NombreCampaña].total += parseFloat(registro.TotalPagar || 0);
+      areas[area].campañas[registro.NombreCampaña].total += totalCorrecto;
       areas[area].campañas[registro.NombreCampaña].empleados += 1;
       areas[area].campañas[registro.NombreCampaña].registros.push(registro);
     });
@@ -452,7 +466,12 @@ const PagosNomina = () => {
     
     if (columnasBonos.length === 0) return null;
     
-    const totalArea = registrosArea.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+    // Calcular total correcto del área (Sueldo Base + Bonos)
+    const totalSueldoBaseArea = registrosArea.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+    const totalBonosArea = columnasBonos.reduce((sum, columnaBono) => {
+      return sum + registrosArea.reduce((sumReg, r) => sumReg + (r[columnaBono] || 0), 0);
+    }, 0);
+    const totalArea = totalSueldoBaseArea + totalBonosArea;
     
     // Calcular totales de bonos para esta área y ordenarlos de mayor a menor
     const bonosConTotales = columnasBonos.map(columnaBono => {
@@ -501,7 +520,12 @@ const PagosNomina = () => {
     
     if (columnasBonos.length === 0) return null;
     
-    const totalCampaña = registrosCampaña.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+    // Calcular total correcto de la campaña (Sueldo Base + Bonos)
+    const totalSueldoBaseCampaña = registrosCampaña.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+    const totalBonosCampaña = columnasBonos.reduce((sum, columnaBono) => {
+      return sum + registrosCampaña.reduce((sumReg, r) => sumReg + (r[columnaBono] || 0), 0);
+    }, 0);
+    const totalCampaña = totalSueldoBaseCampaña + totalBonosCampaña;
     
     // Calcular totales de bonos para esta campaña y ordenarlos de mayor a menor
     const bonosConTotales = columnasBonos.map(columnaBono => {
@@ -1318,12 +1342,29 @@ const PagosNomina = () => {
             </Grid>
                          <Grid item xs={12} md={3}>
                <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                 <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
-                   S/ {reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                 </Typography>
-                 <Typography variant="body2" color="text.secondary">
-                   Total a Pagar
-                 </Typography>
+                 {(() => {
+                   const totalSueldoBase = reporteNomina.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+                   const primerRegistro = reporteNomina[0];
+                   const columnasBonos = Object.keys(primerRegistro).filter(columna => 
+                     columna.toLowerCase().includes('bono') && 
+                     typeof primerRegistro[columna] === 'number'
+                   );
+                   const totalBonos = columnasBonos.reduce((sum, columnaBono) => {
+                     return sum + reporteNomina.reduce((sumReg, r) => sumReg + (r[columnaBono] || 0), 0);
+                   }, 0);
+                   const totalCalculado = totalSueldoBase + totalBonos;
+                   
+                   return (
+                     <>
+                       <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold' }}>
+                         S/ {totalCalculado.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                       </Typography>
+                       <Typography variant="body2" color="text.secondary">
+                         Total a Pagar (Calculado)
+                       </Typography>
+                     </>
+                   );
+                 })()}
                </Box>
              </Grid>
             <Grid item xs={12} md={3}>
@@ -1361,7 +1402,12 @@ const PagosNomina = () => {
              
              if (columnasBonos.length === 0) return null;
              
-             const totalAPagar = reporteNomina.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+             // Calcular total correcto (Sueldo Base + Bonos) en lugar de usar TotalPagar de BD
+             const totalSueldoBaseTemp = reporteNomina.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+             const totalBonosTemp = columnasBonos.reduce((sum, columnaBono) => {
+               return sum + reporteNomina.reduce((sumReg, r) => sumReg + (r[columnaBono] || 0), 0);
+             }, 0);
+             const totalAPagar = totalSueldoBaseTemp + totalBonosTemp;
              
              // Calcular totales de bonos y ordenarlos de mayor a menor
              const bonosConTotales = columnasBonos.map(columnaBono => {
@@ -1375,6 +1421,7 @@ const PagosNomina = () => {
              
              // Calcular total de sueldo base
              const totalSueldoBase = reporteNomina.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+             
              
              // Agregar sueldo base como primer elemento
              const sueldoBaseKPI = {
@@ -1426,7 +1473,16 @@ const PagosNomina = () => {
                            <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
                              S/ {kpi.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                           <Typography 
+                             variant="body2" 
+                             color="text.secondary" 
+                             sx={{ 
+                               mb: 1,
+                               whiteSpace: 'pre-line',
+                               textAlign: 'center',
+                               lineHeight: isMovilidadManual ? 1.2 : 'normal' // Ajustar altura de línea para movilidad manual
+                             }}
+                           >
                              {nombreLegible}
                            </Typography>
                            <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
@@ -1562,7 +1618,16 @@ const PagosNomina = () => {
                                   <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
                                     S/ {kpi.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </Typography>
-                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  <Typography 
+                                    variant="body2" 
+                                    color="text.secondary" 
+                                    sx={{ 
+                                      mb: 1,
+                                      whiteSpace: 'pre-line',
+                                      textAlign: 'center',
+                                      lineHeight: isMovilidadManual ? 1.2 : 'normal' // Ajustar altura de línea para movilidad manual
+                                    }}
+                                  >
                                     {nombreLegible}
                                   </Typography>
                                   <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
@@ -1675,7 +1740,16 @@ const PagosNomina = () => {
                                         <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
                                           S/ {kpi.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        <Typography 
+                                          variant="body2" 
+                                          color="text.secondary" 
+                                          sx={{ 
+                                            mb: 1,
+                                            whiteSpace: 'pre-line',
+                                            textAlign: 'center',
+                                            lineHeight: isMovilidadManual ? 1.2 : 'normal' // Ajustar altura de línea para movilidad manual
+                                          }}
+                                        >
                                           {nombreLegible}
                                         </Typography>
                                         <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
