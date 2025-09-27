@@ -11,7 +11,7 @@ const getBackendURL = () => {
 // Crear instancia específica de Axios para el proyecto
 const api = axios.create({
   baseURL: getBackendURL(),
-  timeout: 10000,
+  timeout: 60000, // 60 segundos para reportes de nómina
 });
 
 console.log('🌐 AuthContext - URL del backend configurada:', getBackendURL());

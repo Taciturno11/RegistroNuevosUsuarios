@@ -36,7 +36,6 @@ import {
   Search as SearchIcon,
   Download as DownloadIcon,
   Visibility as VisibilityIcon,
-  Edit as EditIcon,
   Close as CloseIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
@@ -52,7 +51,7 @@ import {
   ArcElement,
   BarElement
 } from 'chart.js';
-import { Doughnut, Bar, Line } from 'react-chartjs-2';
+import { Doughnut, Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 // Registrar componentes de Chart.js
@@ -103,6 +102,7 @@ const PagosNomina = () => {
   const [aniosDisponibles, setAniosDisponibles] = useState([]);
   const [reporteNomina, setReporteNomina] = useState([]);
   const [modalBonos, setModalBonos] = useState({ open: false, empleado: null });
+  const [diagnostico, setDiagnostico] = useState(null);
   
   // Estados para la nueva sección "Pagos por Área"
   const [areasExpandidas, setAreasExpandidas] = useState({});
@@ -172,14 +172,28 @@ const PagosNomina = () => {
     }
   }, [api]);
 
-  // Cargar años disponibles al montar el componente
-  useEffect(() => {
-    cargarAniosDisponibles();
-    restaurarEstadoPersistente();
-  }, [cargarAniosDisponibles]);
+  // Función para ejecutar diagnóstico del sistema
+  const ejecutarDiagnostico = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/nomina/diagnostico');
+      
+      if (response.data.success) {
+        setDiagnostico(response.data.data);
+        setSuccess('Diagnóstico completado exitosamente');
+      } else {
+        setError('Error ejecutando diagnóstico');
+      }
+    } catch (error) {
+      console.error('Error en diagnóstico:', error);
+      setError('Error ejecutando diagnóstico del sistema');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Función para restaurar estado persistente desde localStorage
-  const restaurarEstadoPersistente = () => {
+  const restaurarEstadoPersistente = useCallback(() => {
     try {
       // Restaurar filtros
       const filtrosGuardados = localStorage.getItem('pagosNomina_filtros');
@@ -211,10 +225,16 @@ const PagosNomina = () => {
       // Si hay error, limpiar localStorage corrupto
       limpiarEstadoPersistente();
     }
-  };
+  }, []);
+
+  // Cargar años disponibles al montar el componente
+  useEffect(() => {
+    cargarAniosDisponibles();
+    restaurarEstadoPersistente();
+  }, [cargarAniosDisponibles, restaurarEstadoPersistente]);
 
   // Función para guardar estado en localStorage
-  const guardarEstadoPersistente = () => {
+  const guardarEstadoPersistente = useCallback(() => {
     try {
       // Guardar filtros
       localStorage.setItem('pagosNomina_filtros', JSON.stringify(filtros));
@@ -232,7 +252,7 @@ const PagosNomina = () => {
     } catch (error) {
       console.error('Error guardando estado persistente:', error);
     }
-  };
+  }, [filtros, reporteNomina, areasExpandidas, campañasExpandidas]);
 
   // Función para limpiar estado persistente
   const limpiarEstadoPersistente = () => {
@@ -245,7 +265,7 @@ const PagosNomina = () => {
   // Guardar estado cada vez que cambien los datos importantes
   useEffect(() => {
     guardarEstadoPersistente();
-  }, [filtros, reporteNomina, areasExpandidas, campañasExpandidas]);
+  }, [filtros, reporteNomina, areasExpandidas, campañasExpandidas, guardarEstadoPersistente]);
 
   // Función para calcular días correctamente
   const calcularDias = (registro) => {
@@ -379,12 +399,14 @@ const PagosNomina = () => {
         areas[area] = {
           total: 0,
           empleados: 0,
-          campañas: {}
+          campañas: {},
+          registros: [] // Agregar registros del área
         };
       }
       
       areas[area].total += parseFloat(registro.TotalPagar || 0);
       areas[area].empleados += 1;
+      areas[area].registros.push(registro); // Agregar registro al área
       totalGeneral += parseFloat(registro.TotalPagar || 0);
       
       // Agrupar por campaña
@@ -411,6 +433,102 @@ const PagosNomina = () => {
     
     return { areas, totalGeneral };
   }, [reporteNomina, areasCampañas]);
+
+  // Función para calcular bonos por área específica
+  const calcularBonosPorArea = useCallback((area) => {
+    if (!reporteNomina || reporteNomina.length === 0) return null;
+    
+    const pagosPorAreas = calcularPagosPorAreas();
+    if (!pagosPorAreas.areas[area] || !pagosPorAreas.areas[area].registros) return null;
+    
+    const registrosArea = pagosPorAreas.areas[area].registros;
+    if (registrosArea.length === 0) return null;
+    
+    const primerRegistro = registrosArea[0];
+    const columnasBonos = Object.keys(primerRegistro).filter(columna => 
+      columna.toLowerCase().includes('bono') && 
+      typeof primerRegistro[columna] === 'number'
+    );
+    
+    if (columnasBonos.length === 0) return null;
+    
+    const totalArea = registrosArea.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+    
+    // Calcular totales de bonos para esta área y ordenarlos de mayor a menor
+    const bonosConTotales = columnasBonos.map(columnaBono => {
+      const totalBono = registrosArea.reduce((sum, r) => sum + (r[columnaBono] || 0), 0);
+      return {
+        columna: columnaBono,
+        total: totalBono,
+        porcentaje: totalArea > 0 ? ((totalBono / totalArea) * 100) : 0
+      };
+    });
+    
+    // Calcular total de sueldo base para esta área
+    const totalSueldoBase = registrosArea.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+    
+    // Agregar sueldo base como primer elemento
+    const sueldoBaseKPI = {
+      columna: 'SueldoBase',
+      total: totalSueldoBase,
+      porcentaje: totalArea > 0 ? ((totalSueldoBase / totalArea) * 100) : 0
+    };
+    
+    // Combinar sueldo base con bonos y ordenar de mayor a menor por total
+    const todosLosKPIs = [sueldoBaseKPI, ...bonosConTotales];
+    todosLosKPIs.sort((a, b) => b.total - a.total);
+    
+    return todosLosKPIs;
+  }, [reporteNomina, calcularPagosPorAreas]);
+
+  // Función para calcular bonos por campaña específica
+  const calcularBonosPorCampaña = useCallback((area, campaña) => {
+    if (!reporteNomina || reporteNomina.length === 0) return null;
+    
+    const pagosPorAreas = calcularPagosPorAreas();
+    if (!pagosPorAreas.areas[area] || 
+        !pagosPorAreas.areas[area].campañas[campaña] || 
+        !pagosPorAreas.areas[area].campañas[campaña].registros) return null;
+    
+    const registrosCampaña = pagosPorAreas.areas[area].campañas[campaña].registros;
+    if (registrosCampaña.length === 0) return null;
+    
+    const primerRegistro = registrosCampaña[0];
+    const columnasBonos = Object.keys(primerRegistro).filter(columna => 
+      columna.toLowerCase().includes('bono') && 
+      typeof primerRegistro[columna] === 'number'
+    );
+    
+    if (columnasBonos.length === 0) return null;
+    
+    const totalCampaña = registrosCampaña.reduce((sum, r) => sum + (r.TotalPagar || 0), 0);
+    
+    // Calcular totales de bonos para esta campaña y ordenarlos de mayor a menor
+    const bonosConTotales = columnasBonos.map(columnaBono => {
+      const totalBono = registrosCampaña.reduce((sum, r) => sum + (r[columnaBono] || 0), 0);
+      return {
+        columna: columnaBono,
+        total: totalBono,
+        porcentaje: totalCampaña > 0 ? ((totalBono / totalCampaña) * 100) : 0
+      };
+    });
+    
+    // Calcular total de sueldo base para esta campaña
+    const totalSueldoBase = registrosCampaña.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+    
+    // Agregar sueldo base como primer elemento
+    const sueldoBaseKPI = {
+      columna: 'SueldoBase',
+      total: totalSueldoBase,
+      porcentaje: totalCampaña > 0 ? ((totalSueldoBase / totalCampaña) * 100) : 0
+    };
+    
+    // Combinar sueldo base con bonos y ordenar de mayor a menor por total
+    const todosLosKPIs = [sueldoBaseKPI, ...bonosConTotales];
+    todosLosKPIs.sort((a, b) => b.total - a.total);
+    
+    return todosLosKPIs;
+  }, [reporteNomina, calcularPagosPorAreas]);
 
   // Función para alternar expansión de área (funciona como acordeón)
   const toggleArea = (area) => {
@@ -470,11 +588,21 @@ const PagosNomina = () => {
     setError('');
     setSuccess('');
     
+    const startTime = Date.now();
+    console.log(`🚀 Iniciando generación de reporte - ${filtros.anio}/${filtros.mes}`);
+    
     try {
-      const response = await api.get(`/nomina/generar-reporte?anio=${filtros.anio}&mes=${filtros.mes}`);
+      // Crear una instancia de axios con timeout específico para nómina
+      const response = await api.get(`/nomina/generar-reporte?anio=${filtros.anio}&mes=${filtros.mes}`, {
+        timeout: 120000 // 2 minutos para reportes de nómina
+      });
+      
+      const endTime = Date.now();
+      const totalTime = (endTime - startTime) / 1000;
       
       if (response.data.success) {
         console.log('📊 Datos recibidos del backend:', response.data.data.registros);
+        console.log(`⏱️ Tiempo total de procesamiento: ${totalTime.toFixed(2)} segundos`);
         
         // Mapear los datos para asegurar que se muestren correctamente
         const registrosMapeados = response.data.data.registros.map(registro => {
@@ -519,13 +647,29 @@ const PagosNomina = () => {
         });
         
         setReporteNomina(registrosMapeados);
-        setSuccess(`Reporte generado exitosamente - ${response.data.data.totalRegistros} registros encontrados`);
+        setSuccess(`Reporte generado exitosamente - ${response.data.data.totalRegistros} registros encontrados en ${totalTime.toFixed(2)} segundos`);
       } else {
         setError(response.data.message || 'Error generando reporte');
       }
     } catch (error) {
-      console.error('Error generando reporte:', error);
-      setError(error.response?.data?.message || 'Error de conexión');
+      const endTime = Date.now();
+      const totalTime = (endTime - startTime) / 1000;
+      
+      console.error('❌ Error generando reporte:', error);
+      console.error(`⏱️ Tiempo transcurrido antes del error: ${totalTime.toFixed(2)} segundos`);
+      
+      // Manejar diferentes tipos de errores
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        setError(`El reporte está tardando más de lo esperado (${totalTime.toFixed(2)}s). Esto puede deberse a la cantidad de datos. Por favor, intente nuevamente o contacte al administrador.`);
+      } else if (error.response?.status === 408) {
+        setError('El servidor está tardando en procesar la solicitud. Por favor, intente nuevamente.');
+      } else if (error.response?.status === 503) {
+        setError('Error de conexión con la base de datos. Verifique la conectividad del servidor.');
+      } else if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('Error de conexión. Verifique su conexión a internet y que el servidor esté funcionando.');
+      }
     } finally {
       setLoading(false);
     }
@@ -801,15 +945,7 @@ const PagosNomina = () => {
     }
   };
 
-  // Ver detalle del registro
-  const verDetalle = (registro) => {
-    abrirModalBonos(registro);
-  };
 
-  // Abrir modal de bonos
-  const abrirModalBonos = (empleado) => {
-    setModalBonos({ open: true, empleado });
-  };
 
   // Función para generar datos del gráfico de distribución por áreas
   const generarDatosGraficoAreas = useCallback(() => {
@@ -820,7 +956,6 @@ const PagosNomina = () => {
     
     const areas = Object.keys(pagosPorAreas.areas).filter(area => area !== 'OTROS');
     const totales = areas.map(area => pagosPorAreas.areas[area].total);
-    const porcentajes = areas.map(area => pagosPorAreas.areas[area].porcentaje);
     
     return {
       labels: areas,
@@ -931,11 +1066,6 @@ const PagosNomina = () => {
     setPopoverDescuento({ open: false, anchorEl: null });
   };
 
-  // Editar registro
-  const editarRegistro = (registro) => {
-    setSuccess(`Editando registro de ${registro.Nombres} ${registro.ApellidoPaterno}`);
-    // Aquí iría la lógica para editar
-  };
 
   return (
     <Box>
@@ -1019,9 +1149,13 @@ const PagosNomina = () => {
                 startIcon={loading ? <CircularProgress size={20} /> : <SearchIcon />}
                 onClick={generarReporte}
                 disabled={loading}
-                sx={{ backgroundColor: '#16a34a', '&:hover': { backgroundColor: '#15803d' } }}
+                sx={{ 
+                  backgroundColor: '#16a34a', 
+                  '&:hover': { backgroundColor: '#15803d' },
+                  minWidth: '180px'
+                }}
               >
-                {loading ? 'Generando...' : 'Generar Reporte'}
+                {loading ? 'Generando Reporte...' : 'Generar Reporte'}
               </Button>
               
                              <Button
@@ -1048,6 +1182,23 @@ const PagosNomina = () => {
                   📊 Descargar Excel
                 </Button>
               )}
+              
+              <Button
+                variant="outlined"
+                startIcon={<InfoIcon />}
+                onClick={ejecutarDiagnostico}
+                disabled={loading}
+                sx={{ 
+                  borderColor: '#3b82f6',
+                  color: '#3b82f6',
+                  '&:hover': { 
+                    borderColor: '#2563eb',
+                    backgroundColor: '#eff6ff'
+                  }
+                }}
+              >
+                🔍 Diagnóstico
+              </Button>
             </Box>
           </Grid>
         </Grid>
@@ -1064,6 +1215,86 @@ const PagosNomina = () => {
         <Alert severity="success" sx={{ mb: 3 }}>
           {success}
         </Alert>
+      )}
+
+      {/* Indicador de progreso para reportes largos */}
+      {loading && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <CircularProgress size={20} />
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Generando reporte de nómina...
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Este proceso puede tardar varios segundos dependiendo de la cantidad de datos. 
+                Por favor, espere mientras se procesa la información.
+              </Typography>
+            </Box>
+          </Box>
+        </Alert>
+      )}
+
+      {/* Diagnóstico del Sistema */}
+      {diagnostico && (
+        <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f0f9ff', border: '1px solid #bae6fd' }}>
+          <Typography variant="h6" sx={{ mb: 2, color: '#0369a1' }}>
+            🔍 Diagnóstico del Sistema de Nómina
+          </Typography>
+          
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={3}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                <Typography variant="h6" color={diagnostico.conexionBD === 'OK' ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
+                  {diagnostico.conexionBD}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Conexión BD
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={3}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                <Typography variant="h6" color={diagnostico.storedProcedureExiste ? 'success.main' : 'error.main'} sx={{ fontWeight: 'bold' }}>
+                  {diagnostico.storedProcedureExiste ? 'OK' : 'ERROR'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Stored Procedure
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={3}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold' }}>
+                  {diagnostico.empleadosActivos}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Empleados Activos
+                </Typography>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} md={3}>
+              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                <Typography variant="h6" color="info.main" sx={{ fontWeight: 'bold' }}>
+                  {diagnostico.registrosAsistenciaUltimoMes}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Registros Asistencia
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+          
+          <Box sx={{ mt: 2, p: 2, backgroundColor: 'white', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Tiempo de ejecución:</strong> {diagnostico.tiempoEjecucion.toFixed(2)} segundos | 
+              <strong> Timestamp:</strong> {new Date(diagnostico.timestamp).toLocaleString()}
+            </Typography>
+          </Box>
+        </Paper>
       )}
 
       {/* Estadísticas del Reporte */}
@@ -1142,27 +1373,48 @@ const PagosNomina = () => {
                };
              });
              
-             // Ordenar de mayor a menor por total
-             bonosConTotales.sort((a, b) => b.total - a.total);
+             // Calcular total de sueldo base
+             const totalSueldoBase = reporteNomina.reduce((sum, r) => sum + (r.SueldoBase || 0), 0);
+             
+             // Agregar sueldo base como primer elemento
+             const sueldoBaseKPI = {
+               columna: 'SueldoBase',
+               total: totalSueldoBase,
+               porcentaje: totalAPagar > 0 ? ((totalSueldoBase / totalAPagar) * 100) : 0
+             };
+             
+             // Combinar sueldo base con bonos y ordenar de mayor a menor por total
+             const todosLosKPIs = [sueldoBaseKPI, ...bonosConTotales];
+             todosLosKPIs.sort((a, b) => b.total - a.total);
              
              return (
                <>
                  <Typography variant="h6" sx={{ mb: 2, color: '#16a34a', mt: 3 }}>
-                   💰 Análisis de Bonos (Ordenados por Valor)
+                   💰 Análisis de Sueldo Base y Bonos (Ordenados por Valor)
                  </Typography>
                  <Grid container spacing={2}>
-                   {bonosConTotales.map((bono, index) => {
+                   {todosLosKPIs.map((kpi, index) => {
                      // Mapear nombres de columnas a nombres legibles
-                     const nombreLegible = bono.columna
-                       .replace(/([A-Z])/g, ' $1') // Agregar espacio antes de mayúsculas
-                       .replace(/^./, str => str.toUpperCase()) // Primera letra mayúscula
-                       .trim();
+                     const nombreLegible = kpi.columna === 'SueldoBase' 
+                       ? 'Sueldo Base'
+                       : kpi.columna.toLowerCase().includes('movilidad') && kpi.columna.toLowerCase().includes('manual')
+                         ? 'Bono Movilidad\nManual' // Mostrar en dos líneas
+                         : kpi.columna
+                           .replace(/([A-Z])/g, ' $1') // Agregar espacio antes de mayúsculas
+                           .replace(/^./, str => str.toUpperCase()) // Primera letra mayúscula
+                           .trim();
+                     
+                     // Configuración optimizada para que todos los KPIs quepan en una línea
+                     const isMovilidadManual = kpi.columna.toLowerCase().includes('movilidad') && kpi.columna.toLowerCase().includes('manual');
+                     const gridSize = isMovilidadManual 
+                       ? { xs: 12, sm: 2, md: 1.5, lg: 1.5, xl: 1.5 }  // Ultra estrecho para movilidad manual
+                       : { xs: 12, sm: 4, md: 2.3, lg: 2.3, xl: 2.3 }; // Más espacio para los demás KPIs
                      
                      return (
-                       <Grid item xs={12} sm={6} md={4} lg={3} key={bono.columna}>
+                       <Grid item {...gridSize} key={kpi.columna}>
                          <Box sx={{ 
                            textAlign: 'center', 
-                           p: 2, 
+                           p: isMovilidadManual ? 0.8 : 1.5, // Padding ultra reducido para movilidad manual
                            backgroundColor: 'white', 
                            borderRadius: 2,
                            border: '1px solid #e0e0e0',
@@ -1172,13 +1424,13 @@ const PagosNomina = () => {
                            justifyContent: 'center'
                          }}>
                            <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
-                             S/ {bono.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                             S/ {kpi.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                            </Typography>
                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                              {nombreLegible}
                            </Typography>
                            <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                             {bono.porcentaje.toFixed(1)}% del total
+                             {kpi.porcentaje.toFixed(1)}% del total
                            </Typography>
                          </Box>
                        </Grid>
@@ -1265,6 +1517,66 @@ const PagosNomina = () => {
               
               return (
                 <Box key={area} sx={{ mt: 3, p: 3, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                  {/* Análisis de Bonos por Área */}
+                  {(() => {
+                    const bonosArea = calcularBonosPorArea(area);
+                    if (!bonosArea || bonosArea.length === 0) return null;
+                    
+                    return (
+                      <Box sx={{ mb: 4 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, textAlign: 'center', color: colorArea }}>
+                          💰 Análisis de Sueldo Base y Bonos - {area}
+                        </Typography>
+                        <Grid container spacing={2}>
+                          {bonosArea.map((kpi, index) => {
+                            // Mapear nombres de columnas a nombres legibles
+                            const nombreLegible = kpi.columna === 'SueldoBase' 
+                              ? 'Sueldo Base'
+                              : kpi.columna.toLowerCase().includes('movilidad') && kpi.columna.toLowerCase().includes('manual')
+                                ? 'Bono Movilidad\nManual' // Mostrar en dos líneas
+                                : kpi.columna
+                                  .replace(/([A-Z])/g, ' $1') // Agregar espacio antes de mayúsculas
+                                  .replace(/^./, str => str.toUpperCase()) // Primera letra mayúscula
+                                  .trim();
+                            
+                            // Configuración optimizada para que todos los KPIs quepan en una línea
+                            const isMovilidadManual = kpi.columna.toLowerCase().includes('movilidad') && kpi.columna.toLowerCase().includes('manual');
+                            const gridSize = isMovilidadManual 
+                              ? { xs: 12, sm: 2, md: 1.5, lg: 1.5, xl: 1.5 }  // Ultra estrecho para movilidad manual
+                              : { xs: 12, sm: 4, md: 2.3, lg: 2.3, xl: 2.3 }; // Más espacio para los demás KPIs
+                            
+                            return (
+                              <Grid item {...gridSize} key={kpi.columna}>
+                                <Box sx={{ 
+                                  textAlign: 'center', 
+                                  p: isMovilidadManual ? 0.8 : 1.5, // Padding ultra reducido para movilidad manual
+                                  backgroundColor: 'white', 
+                                  borderRadius: 2,
+                                  border: '1px solid #e0e0e0',
+                                  height: '100%',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}>
+                                  <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                    S/ {kpi.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    {nombreLegible}
+                                  </Typography>
+                                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                                    {kpi.porcentaje.toFixed(1)}% del área
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            );
+                          })}
+                        </Grid>
+                      </Box>
+                    );
+                  })()}
+
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, textAlign: 'center', color: colorArea }}>
                     📋 Campañas de {area}
                   </Typography>
@@ -1318,6 +1630,66 @@ const PagosNomina = () => {
                     
                     return (
                       <Box key={`${area}-${campaña}`} sx={{ mt: 3, pt: 3, borderTop: '2px solid #e5e7eb' }}>
+                        {/* Análisis de Bonos por Campaña */}
+                        {(() => {
+                          const bonosCampaña = calcularBonosPorCampaña(area, campaña);
+                          if (!bonosCampaña || bonosCampaña.length === 0) return null;
+                          
+                          return (
+                            <Box sx={{ mb: 4 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, textAlign: 'center', color: colorArea }}>
+                                💰 Análisis de Sueldo Base y Bonos - {campaña}
+                              </Typography>
+                              <Grid container spacing={2}>
+                                {bonosCampaña.map((kpi, index) => {
+                                  // Mapear nombres de columnas a nombres legibles
+                                  const nombreLegible = kpi.columna === 'SueldoBase' 
+                                    ? 'Sueldo Base'
+                                    : kpi.columna.toLowerCase().includes('movilidad') && kpi.columna.toLowerCase().includes('manual')
+                                      ? 'Bono Movilidad\nManual' // Mostrar en dos líneas
+                                      : kpi.columna
+                                        .replace(/([A-Z])/g, ' $1') // Agregar espacio antes de mayúsculas
+                                        .replace(/^./, str => str.toUpperCase()) // Primera letra mayúscula
+                                        .trim();
+                                  
+                                  // Configuración optimizada para que todos los KPIs quepan en una línea
+                                  const isMovilidadManual = kpi.columna.toLowerCase().includes('movilidad') && kpi.columna.toLowerCase().includes('manual');
+                                  const gridSize = isMovilidadManual 
+                                    ? { xs: 12, sm: 2, md: 1.5, lg: 1.5, xl: 1.5 }  // Ultra estrecho para movilidad manual
+                                    : { xs: 12, sm: 4, md: 2.3, lg: 2.3, xl: 2.3 }; // Más espacio para los demás KPIs
+                                  
+                                  return (
+                                    <Grid item {...gridSize} key={kpi.columna}>
+                                      <Box sx={{ 
+                                        textAlign: 'center', 
+                                        p: isMovilidadManual ? 0.8 : 1.5, // Padding ultra reducido para movilidad manual
+                                        backgroundColor: 'white', 
+                                        borderRadius: 2,
+                                        border: '1px solid #e0e0e0',
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                      }}>
+                                        <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                          S/ {kpi.total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                          {nombreLegible}
+                                        </Typography>
+                                        <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                                          {kpi.porcentaje.toFixed(1)}% de la campaña
+                                        </Typography>
+                                      </Box>
+                                    </Grid>
+                                  );
+                                })}
+                              </Grid>
+                            </Box>
+                          );
+                        })()}
+
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, textAlign: 'center', color: colorArea }}>
                           👥 Empleados de {campaña}
                         </Typography>

@@ -5,7 +5,8 @@ const { requireRole } = require('../middleware/auth.middleware');
 const {
   generarReporteNomina,
   getAniosDisponibles,
-  getTodasLasCampanias
+  getTodasLasCampanias,
+  diagnosticoSistema
 } = require('../controllers/nomina.controller');
 
 // Todas las rutas requieren autenticación
@@ -22,5 +23,8 @@ router.get('/anios-disponibles', getAniosDisponibles);
 
 // Obtener todas las campañas disponibles en la base de datos
 router.get('/todas-las-campanias', getTodasLasCampanias);
+
+// Endpoint de diagnóstico del sistema
+router.get('/diagnostico', diagnosticoSistema);
 
 module.exports = router;
