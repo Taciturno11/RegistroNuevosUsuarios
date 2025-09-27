@@ -103,6 +103,7 @@ const Sidebar = () => {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(true);
   const [adminMenuOpen, setAdminMenuOpen] = useState(true);
+  const [pagosMenuOpen, setPagosMenuOpen] = useState(false);
 
   // Solo dos roles: admin y agente
   const isAdmin = user?.role === 'admin';
@@ -148,6 +149,10 @@ const Sidebar = () => {
     console.log('📍 Navegando a /dashboard...');
     handleNavigation('/dashboard');
     setAdminMenuOpen(!adminMenuOpen);
+  };
+
+  const togglePagosMenu = () => {
+    setPagosMenuOpen(!pagosMenuOpen);
   };
 
   // Si estamos en la vista de capacitaciones, no renderizar el sidebar
@@ -440,8 +445,7 @@ const Sidebar = () => {
             <Divider sx={{ my: 1, borderColor: '#f3f4f6' }} />
             <ListItem disablePadding>
               <ListItemButton
-                onClick={() => handleNavigation('/pagos-nomina')}
-                selected={location.pathname === '/pagos-nomina'}
+                onClick={togglePagosMenu}
                 sx={{
                   mx: 1,
                   borderRadius: 1,
@@ -450,20 +454,77 @@ const Sidebar = () => {
                   '&:hover': {
                     backgroundColor: '#dcfce7',
                   },
-                  '&.Mui-selected': {
-                    backgroundColor: '#bbf7d0',
-                    '&:hover': {
-                      backgroundColor: '#86efac',
-                    },
-                  },
                 }}
               >
                 <ListItemIcon sx={{ color: '#16a34a', minWidth: open ? 40 : 'auto' }}>
                   <AccountBalanceIcon />
                 </ListItemIcon>
-                {open && <ListItemText primary="Pagos de Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />}
+                {open && (
+                  <>
+                    <ListItemText primary="Pagos de Nómina" sx={{ color: '#16a34a', fontWeight: 600 }} />
+                    {pagosMenuOpen ? <ExpandLess /> : <ExpandMore />}
+                  </>
+                )}
               </ListItemButton>
             </ListItem>
+
+            <Collapse in={pagosMenuOpen && open} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {/* Reporte de Pagos */}
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleNavigation('/pagos-nomina')}
+                    selected={location.pathname === '/pagos-nomina'}
+                    sx={{
+                      pl: 4,
+                      mx: 1,
+                      borderRadius: 1,
+                      '&.Mui-selected': {
+                        backgroundColor: '#bbf7d0',
+                        '&:hover': {
+                          backgroundColor: '#86efac',
+                        },
+                      },
+                      '&:hover': {
+                        backgroundColor: '#dcfce7',
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: '#16a34a', minWidth: 40 }}>
+                      <AccountBalanceIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Reporte de Pagos" sx={{ color: '#16a34a' }} />
+                  </ListItemButton>
+                </ListItem>
+
+                {/* Alertas */}
+                <ListItem disablePadding>
+                  <ListItemButton
+                    onClick={() => handleNavigation('/alertas-nomina')}
+                    selected={location.pathname === '/alertas-nomina'}
+                    sx={{
+                      pl: 4,
+                      mx: 1,
+                      borderRadius: 1,
+                      '&.Mui-selected': {
+                        backgroundColor: '#fef2f2',
+                        '&:hover': {
+                          backgroundColor: '#fecaca',
+                        },
+                      },
+                      '&:hover': {
+                        backgroundColor: '#fef2f2',
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: '#dc2626', minWidth: 40 }}>
+                      <SecurityIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Alertas" sx={{ color: '#dc2626' }} />
+                  </ListItemButton>
+                </ListItem>
+              </List>
+            </Collapse>
           </>
         )}
 

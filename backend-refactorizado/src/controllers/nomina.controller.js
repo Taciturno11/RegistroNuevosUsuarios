@@ -108,6 +108,67 @@ exports.getAniosDisponibles = async (req, res) => {
   }
 };
 
+// Obtener empleados con sueldo base 0 (no están en la tabla SueldoBase)
+exports.getEmpleadosSinSueldoBase = async (req, res) => {
+  try {
+    console.log('🔍 Buscando empleados sin sueldo base...');
+    
+    const startTime = Date.now();
+    
+    // Consulta SQL para encontrar empleados activos sin registro en SueldoBase
+    const query = `
+      SELECT
+        E.DNI,
+        E.Nombres,
+        E.ApellidoPaterno,
+        E.ApellidoMaterno,
+        E.EstadoEmpleado,
+        C.NombreCampaña,
+        CG.NombreCargo,
+        E.FechaContratacion,
+        E.SupervisorDNI,
+        E.CoordinadorDNI,
+        E.JefeDNI
+      FROM
+        [PRI].[Empleados] AS E
+      LEFT JOIN
+        [PRI].[SueldoBase] AS S ON E.DNI = S.EmpleadoDNI
+      LEFT JOIN
+        [PRI].[Campanias] AS C ON E.CampañaID = C.CampañaID
+      LEFT JOIN
+        [PRI].[Cargos] AS CG ON E.CargoID = CG.CargoID
+      WHERE
+        E.EstadoEmpleado = 'Activo'
+        AND S.EmpleadoDNI IS NULL
+      ORDER BY E.Nombres, E.ApellidoPaterno
+    `;
+    
+    const result = await executeQuery(query);
+    const endTime = Date.now();
+    const executionTime = endTime - startTime;
+    
+    console.log(`✅ Consulta completada - ${result.recordset.length} empleados sin sueldo base encontrados en ${executionTime}ms`);
+    
+    res.json({
+      success: true,
+      data: result.recordset,
+      metadata: {
+        total: result.recordset.length,
+        executionTime: executionTime,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo empleados sin sueldo base:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo empleados sin sueldo base',
+      error: error.message
+    });
+  }
+};
+
 // Endpoint de diagnóstico para verificar el estado del sistema
 exports.diagnosticoSistema = async (req, res) => {
   try {

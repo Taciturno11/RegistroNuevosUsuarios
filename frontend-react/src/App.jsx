@@ -21,6 +21,7 @@ import EjecutarSP from './pages/EjecutarSP';
 import ProtectedRoute from './components/ProtectedRoute';
 import ControlMaestro from './pages/ControlMaestro';
 import PagosNomina from './pages/PagosNomina';
+import AlertasNomina from './pages/AlertasNomina';
 import CapacitacionesFullscreen from './pages/CapacitacionesFullscreen';
 import DashboardJefa from './pages/DashboardJefa';
 import VerificarTablas from './components/VerificarTablas';
@@ -260,6 +261,12 @@ const AppContent = () => {
           <Route path="/pagos-nomina" element={
             <ProtectedRoute requireVista="Pagos de Nómina">
               <PagosNomina />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/alertas-nomina" element={
+            <ProtectedRoute requireVista="Pagos de Nómina">
+              <AlertasNomina />
             </ProtectedRoute>
           } />
           

@@ -6,7 +6,8 @@ const {
   generarReporteNomina,
   getAniosDisponibles,
   getTodasLasCampanias,
-  diagnosticoSistema
+  diagnosticoSistema,
+  getEmpleadosSinSueldoBase
 } = require('../controllers/nomina.controller');
 
 // Todas las rutas requieren autenticación
@@ -26,5 +27,8 @@ router.get('/todas-las-campanias', getTodasLasCampanias);
 
 // Endpoint de diagnóstico del sistema
 router.get('/diagnostico', diagnosticoSistema);
+
+// Obtener empleados sin sueldo base
+router.get('/empleados-sin-sueldo-base', getEmpleadosSinSueldoBase);
 
 module.exports = router;
