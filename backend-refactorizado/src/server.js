@@ -21,6 +21,7 @@ const permisosRoutes = require('./routes/permisos.routes');
 const capacitacionesRoutes = require('./routes/capacitaciones.routes');
 const nominaRoutes = require('./routes/nomina.routes');
 const bonosRoutes = require('./routes/bonos.routes');
+const sueldosRoutes = require('./routes/sueldos.routes');
 const organigramaRoutes = require('./routes/organigrama.routes');
 const dotacionRoutes = require('./routes/dotacion.routes');
 
@@ -120,6 +121,7 @@ app.use('/api/tardanzas', require('./routes/tardanzas.routes'));
 app.use('/api/nomina', require('./routes/nomina.routes'));
 app.use('/api/capacitaciones', capacitacionesRoutes);
 app.use('/api/bonos', bonosRoutes);
+app.use('/api/sueldos', sueldosRoutes);
 app.use('/api/organigrama', organigramaRoutes);
 app.use('/api/dotacion', dotacionRoutes);
 app.use('/api/acceso', require('./routes/acceso.routes'));
@@ -160,7 +162,9 @@ app.use('*', (req, res) => {
       '/api/capacitaciones',
       '/api/nomina',
       '/api/bonos',
-      '/api/organigrama'
+      '/api/sueldos',
+      '/api/organigrama',
+      '/api/dotacion'
     ],
     timestamp: new Date().toISOString()
   });
