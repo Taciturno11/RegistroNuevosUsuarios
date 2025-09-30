@@ -589,7 +589,7 @@ const Bonos = () => {
                 </Typography>
                 
                 <Grid container spacing={3}>
-                  {/* Bonos Este Mes */}
+                  {/* Bonos del Mes */}
                   <Grid item xs={12} sm={6} md={2}>
                     <Box sx={{ textAlign: 'center', p: 1.8, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
                       <Typography variant="h4" color="warning.main" sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
@@ -597,18 +597,6 @@ const Bonos = () => {
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Bonos del Mes
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  
-                  {/* Total Este Mes */}
-                  <Grid item xs={12} sm={6} md={2}>
-                    <Box sx={{ textAlign: 'center', p: 1.8, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                      <Typography variant="h4" color="success.main" sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
-                        S/ {estadisticas.totalEsteMes.toFixed(2)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Total del Mes
                       </Typography>
                     </Box>
                   </Grid>
@@ -625,8 +613,22 @@ const Bonos = () => {
                     </Box>
                   </Grid>
                   
-                  {/* Sueldo Total */}
-                  <Grid item xs={12} sm={6} md={2}>
+                  {/* KPIs dinámicos por tipo de bono */}
+                  {Object.entries(estadisticas.bonosPorTipo).map(([tipoBono, monto], index) => (
+                    <Grid item xs={12} sm={6} md={2} key={tipoBono}>
+                      <Box sx={{ textAlign: 'center', p: 1.8, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+                        <Typography variant="h4" color="secondary.main" sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
+                          S/ {monto.toFixed(2)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                          {tipoBono}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                  
+                  {/* Sueldo Total - Movido al final */}
+                  <Grid item xs={12} sm={6} md={2} sx={{ ml: 'auto' }}>
                     <Box sx={{ textAlign: 'center', p: 1.8, backgroundColor: 'white', borderRadius: 2, border: '1px solid #e0e0e0' }}>
                       <Typography variant="h4" color="info.main" sx={{ fontWeight: 'bold', fontSize: '1.8rem' }}>
                         S/ {estadisticas.sueldoTotal.toFixed(2)}
@@ -657,7 +659,7 @@ const Bonos = () => {
                     />
                   </Grid>
                   <Grid item xs={12} md={3}>
-                    <FormControl fullWidth>
+                    <FormControl sx={{ width: '13rem' }}>
                       <InputLabel>Tipo de Bono</InputLabel>
                       <Select
                         value={formData.tipoBono}
@@ -673,6 +675,7 @@ const Bonos = () => {
                     </FormControl>
                   </Grid>
                   <Grid item xs={12} md={3}>
+                  <FormControl sx={{ width: '10rem' }}>
                     <TextField
                       fullWidth
                       label="Monto (S/)"
@@ -681,6 +684,7 @@ const Bonos = () => {
                       onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
                       inputProps={{ min: 0, step: 0.01 }}
                     />
+                  </FormControl>
                   </Grid>
                   <Grid item xs={12} md={3}>
                     <Button
@@ -697,20 +701,22 @@ const Bonos = () => {
                 </Grid>
               </Paper>
 
-              {/* Filtro de Mes y Año */}
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#f97316' }}>
-                  🔍 Filtrar por Mes y Año
-                </Typography>
-                
-                <Grid container spacing={3} alignItems="center">
-                  <Grid item xs={12} md={4}>
-                    <FormControl fullWidth>
+              {/* Tabla de Bonos */}
+              <Paper sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6" sx={{ color: '#f97316' }}>
+                    📋 Historial de Bonos - {meses.find(m => m.value === mesFiltro)?.label} {añoFiltro}
+                  </Typography>
+                  
+                  {/* Filtros en el mismo contenedor */}
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <FormControl sx={{ minWidth: 120 }}>
                       <InputLabel>Mes</InputLabel>
                       <Select
                         value={mesFiltro}
                         onChange={(e) => setMesFiltro(e.target.value)}
                         label="Mes"
+                        size="small"
                       >
                         {meses.map((mes) => (
                           <MenuItem key={mes.value} value={mes.value}>
@@ -719,14 +725,14 @@ const Bonos = () => {
                         ))}
                       </Select>
                     </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <FormControl fullWidth>
+                    
+                    <FormControl sx={{ minWidth: 100 }}>
                       <InputLabel>Año</InputLabel>
                       <Select
                         value={añoFiltro}
                         onChange={(e) => setAñoFiltro(e.target.value)}
                         label="Año"
+                        size="small"
                       >
                         {años.map((año) => (
                           <MenuItem key={año} value={año}>
@@ -735,25 +741,14 @@ const Bonos = () => {
                         ))}
                       </Select>
                     </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8fafc', borderRadius: 2, border: '1px solid #e0e0e0' }}>
-                      <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
+                    
+                    <Box sx={{ textAlign: 'center', p: 1.5, backgroundColor: '#f8fafc', borderRadius: 1, border: '1px solid #e0e0e0', minWidth: 80 }}>
+                      <Typography variant="body2" color="primary.main" sx={{ fontWeight: 'bold' }}>
                         {bonosFiltrados.length} bonos
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        encontrados
-                      </Typography>
                     </Box>
-                  </Grid>
-                </Grid>
-              </Paper>
-
-              {/* Tabla de Bonos */}
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 3, color: '#f97316' }}>
-                  📋 Historial de Bonos - {meses.find(m => m.value === mesFiltro)?.label} {añoFiltro}
-                </Typography>
+                  </Box>
+                </Box>
                 
                 {bonosFiltrados.length > 0 ? (
                   <TableContainer>
