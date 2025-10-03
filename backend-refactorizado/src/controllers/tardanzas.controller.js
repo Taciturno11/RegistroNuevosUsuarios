@@ -55,55 +55,72 @@ exports.getReporteTardanzas = async (req, res) => {
       paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
     }
 
-    // Consulta principal para tardanzas con JOINs para filtros
+    // Consulta principal para tardanzas - SOLO PRIMERA MARCACIÓN DEL DÍA
     const query = `
+      WITH PrimeraMarcacion AS (
+          -- Obtener solo la primera marcación de cada empleado por día
+          SELECT 
+              r.Fecha,
+              r.DNI,
+              r.Nombres,
+              r.ApellidoPaterno,
+              r.HorarioEntrada,
+              r.MarcacionReal,
+              r.Estado,
+              -- Ordenar por hora de marcación (más temprana primero)
+              ROW_NUMBER() OVER (
+                  PARTITION BY r.DNI, r.Fecha 
+                  ORDER BY CAST(r.MarcacionReal AS TIME)
+              ) as OrdenMarcacion
+          FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+          WHERE r.Fecha BETWEEN @fechaInicio AND @fechaFin
+      )
       SELECT 
-          r.Fecha,
-          r.DNI,
-          r.Nombres + ' ' + r.ApellidoPaterno as NombreCompleto,
-          r.Nombres,
-          r.ApellidoPaterno,
+          pm.Fecha,
+          pm.DNI,
+          pm.Nombres + ' ' + pm.ApellidoPaterno as NombreCompleto,
+          pm.Nombres,
+          pm.ApellidoPaterno,
           UPPER(c.NombreCampaña) as Campaña,
           UPPER(cg.NombreCargo) as Cargo,
-          CONVERT(VARCHAR(8), r.HorarioEntrada, 108) as HorarioEntrada,
-          CONVERT(VARCHAR(8), r.MarcacionReal, 108) as MarcacionReal,
-          r.Estado,
+          CONVERT(VARCHAR(8), pm.HorarioEntrada, 108) as HorarioEntrada,
+          CONVERT(VARCHAR(8), pm.MarcacionReal, 108) as MarcacionReal,
+          pm.Estado,
           -- Calcular minutos de tardanza
           CASE 
-              WHEN r.MarcacionReal > r.HorarioEntrada 
-              THEN DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)
+              WHEN pm.MarcacionReal > pm.HorarioEntrada 
+              THEN DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)
               ELSE 0
           END as MinutosTardanza,
           -- Calcular tiempo de tardanza en formato HH:MM
           CASE 
-              WHEN r.MarcacionReal > r.HorarioEntrada 
-              THEN RIGHT('0' + CAST(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) / 60 AS VARCHAR(2)), 2) + ':' + 
-                   RIGHT('0' + CAST(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) % 60 AS VARCHAR(2)), 2)
+              WHEN pm.MarcacionReal > pm.HorarioEntrada 
+              THEN RIGHT('0' + CAST(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) / 60 AS VARCHAR(2)), 2) + ':' + 
+                   RIGHT('0' + CAST(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) % 60 AS VARCHAR(2)), 2)
               ELSE '00:00'
           END as TiempoTardanza,
           -- Clasificar nivel de tardanza
           CASE 
-              WHEN DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) <= 5 THEN 'Leve'
-              WHEN DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) <= 15 THEN 'Moderada'
-              WHEN DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) <= 30 THEN 'Grave'
+              WHEN DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) <= 5 THEN 'Leve'
+              WHEN DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) <= 15 THEN 'Moderada'
+              WHEN DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) <= 30 THEN 'Grave'
               ELSE 'Muy Grave'
           END as NivelTardanza
-      FROM 
-          [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+      FROM PrimeraMarcacion pm
       INNER JOIN 
-          [Partner].[PRI].[Empleados] e ON r.DNI = e.DNI
+          [Partner].[PRI].[Empleados] e ON pm.DNI = e.DNI
       INNER JOIN 
           [Partner].[PRI].[Campanias] c ON e.CampañaID = c.CampañaID  
       INNER JOIN 
           [Partner].[PRI].[Cargos] cg ON e.CargoID = cg.CargoID
       WHERE 
-          r.Fecha BETWEEN @fechaInicio AND @fechaFin
-          AND r.Estado = 'T'
-          AND r.MarcacionReal > r.HorarioEntrada
-          AND DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) > 0
+          pm.OrdenMarcacion = 1  -- Solo la primera marcación del día
+          AND pm.Estado = 'T'
+          AND pm.MarcacionReal > pm.HorarioEntrada
+          AND DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) > 0
           ${filtrosAdicionales}
       ORDER BY 
-          r.Fecha DESC, MinutosTardanza DESC, r.ApellidoPaterno, r.Nombres
+          pm.Fecha DESC, MinutosTardanza DESC, pm.ApellidoPaterno, pm.Nombres
     `;
 
     // Parsear fechas correctamente para evitar problemas de zona horaria
@@ -263,45 +280,62 @@ exports.getReporteResumido = async (req, res) => {
       paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
     }
 
-    // Consulta para reporte resumido por empleado
+    // Consulta para reporte resumido por empleado - SOLO PRIMERA MARCACIÓN DEL DÍA
     const query = `
+      WITH PrimeraMarcacion AS (
+          -- Obtener solo la primera marcación de cada empleado por día
+          SELECT 
+              r.Fecha,
+              r.DNI,
+              r.Nombres,
+              r.ApellidoPaterno,
+              r.HorarioEntrada,
+              r.MarcacionReal,
+              r.Estado,
+              -- Ordenar por hora de marcación (más temprana primero)
+              ROW_NUMBER() OVER (
+                  PARTITION BY r.DNI, r.Fecha 
+                  ORDER BY CAST(r.MarcacionReal AS TIME)
+              ) as OrdenMarcacion
+          FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+          WHERE r.Fecha BETWEEN @fechaInicio AND @fechaFin
+      )
       SELECT 
-          r.DNI,
-          r.Nombres + ' ' + r.ApellidoPaterno as NombreCompleto,
+          pm.DNI,
+          pm.Nombres + ' ' + pm.ApellidoPaterno as NombreCompleto,
           UPPER(c.NombreCampaña) as Campaña,
           UPPER(cg.NombreCargo) as Cargo,
           COUNT(*) as TotalTardanzas,
-          SUM(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)) as TotalMinutosTardanza,
-          AVG(CAST(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) AS FLOAT)) as PromedioMinutosTardanza,
-          MIN(r.Fecha) as PrimeraTardanza,
-          MAX(r.Fecha) as UltimaTardanza,
+          SUM(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)) as TotalMinutosTardanza,
+          AVG(CAST(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) AS FLOAT)) as PromedioMinutosTardanza,
+          MIN(pm.Fecha) as PrimeraTardanza,
+          MAX(pm.Fecha) as UltimaTardanza,
           -- Clasificar por nivel de problema (considerando cantidad Y gravedad)
           CASE 
               -- Crítico: Muchas tardanzas O muchos minutos acumulados
-              WHEN COUNT(*) >= 10 OR SUM(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)) >= 240 THEN 'Crítico'
+              WHEN COUNT(*) >= 10 OR SUM(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)) >= 240 THEN 'Crítico'
               -- Alto: Varias tardanzas O bastantes minutos acumulados
-              WHEN COUNT(*) >= 5 OR SUM(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)) >= 120 THEN 'Alto'
+              WHEN COUNT(*) >= 5 OR SUM(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)) >= 120 THEN 'Alto'
               -- Moderado: Algunas tardanzas O algunos minutos acumulados
-              WHEN COUNT(*) >= 3 OR SUM(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)) >= 60 THEN 'Moderado'
+              WHEN COUNT(*) >= 3 OR SUM(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)) >= 60 THEN 'Moderado'
               -- Bajo: Pocas tardanzas Y pocos minutos
               ELSE 'Bajo'
           END as NivelProblema
-      FROM 
-          [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+      FROM PrimeraMarcacion pm
       INNER JOIN 
-          [Partner].[PRI].[Empleados] e ON r.DNI = e.DNI
+          [Partner].[PRI].[Empleados] e ON pm.DNI = e.DNI
       INNER JOIN 
           [Partner].[PRI].[Campanias] c ON e.CampañaID = c.CampañaID  
       INNER JOIN 
           [Partner].[PRI].[Cargos] cg ON e.CargoID = cg.CargoID
       WHERE 
-          r.Fecha BETWEEN @fechaInicio AND @fechaFin
-          AND r.Estado = 'T'
-          AND r.MarcacionReal > r.HorarioEntrada
-          AND DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) > 0
+          pm.OrdenMarcacion = 1  -- Solo la primera marcación del día
+          AND pm.Estado = 'T'
+          AND pm.MarcacionReal > pm.HorarioEntrada
+          AND DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) > 0
           ${filtrosAdicionales}
       GROUP BY 
-          r.DNI, r.Nombres, r.ApellidoPaterno, c.NombreCampaña, cg.NombreCargo
+          pm.DNI, pm.Nombres, pm.ApellidoPaterno, c.NombreCampaña, cg.NombreCargo
       ORDER BY 
           TotalTardanzas DESC, TotalMinutosTardanza DESC
     `;
@@ -370,24 +404,39 @@ exports.getEstadisticasTardanzas = async (req, res) => {
     }
 
     const query = `
+      WITH PrimeraMarcacion AS (
+          -- Obtener solo la primera marcación de cada empleado por día
+          SELECT 
+              r.Fecha,
+              r.DNI,
+              r.HorarioEntrada,
+              r.MarcacionReal,
+              r.Estado,
+              -- Ordenar por hora de marcación (más temprana primero)
+              ROW_NUMBER() OVER (
+                  PARTITION BY r.DNI, r.Fecha 
+                  ORDER BY CAST(r.MarcacionReal AS TIME)
+              ) as OrdenMarcacion
+          FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+          WHERE r.Fecha BETWEEN @fechaInicio AND @fechaFin
+      )
       SELECT 
           COUNT(*) as TotalTardanzas,
-          COUNT(DISTINCT r.DNI) as EmpleadosConTardanzas,
-          AVG(CAST(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal) AS FLOAT)) as PromedioMinutos,
-          MAX(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)) as MaximoMinutos,
-          MIN(DATEDIFF(MINUTE, r.HorarioEntrada, r.MarcacionReal)) as MinimoMinutos,
+          COUNT(DISTINCT pm.DNI) as EmpleadosConTardanzas,
+          AVG(CAST(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal) AS FLOAT)) as PromedioMinutos,
+          MAX(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)) as MaximoMinutos,
+          MIN(DATEDIFF(MINUTE, pm.HorarioEntrada, pm.MarcacionReal)) as MinimoMinutos,
           -- Tardanzas por día de la semana
-          SUM(CASE WHEN DATEPART(WEEKDAY, r.Fecha) = 2 THEN 1 ELSE 0 END) as TardanzasLunes,
-          SUM(CASE WHEN DATEPART(WEEKDAY, r.Fecha) = 3 THEN 1 ELSE 0 END) as TardanzasMartes,
-          SUM(CASE WHEN DATEPART(WEEKDAY, r.Fecha) = 4 THEN 1 ELSE 0 END) as TardanzasMiercoles,
-          SUM(CASE WHEN DATEPART(WEEKDAY, r.Fecha) = 5 THEN 1 ELSE 0 END) as TardanzasJueves,
-          SUM(CASE WHEN DATEPART(WEEKDAY, r.Fecha) = 6 THEN 1 ELSE 0 END) as TardanzasViernes
-      FROM 
-          [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+          SUM(CASE WHEN DATEPART(WEEKDAY, pm.Fecha) = 2 THEN 1 ELSE 0 END) as TardanzasLunes,
+          SUM(CASE WHEN DATEPART(WEEKDAY, pm.Fecha) = 3 THEN 1 ELSE 0 END) as TardanzasMartes,
+          SUM(CASE WHEN DATEPART(WEEKDAY, pm.Fecha) = 4 THEN 1 ELSE 0 END) as TardanzasMiercoles,
+          SUM(CASE WHEN DATEPART(WEEKDAY, pm.Fecha) = 5 THEN 1 ELSE 0 END) as TardanzasJueves,
+          SUM(CASE WHEN DATEPART(WEEKDAY, pm.Fecha) = 6 THEN 1 ELSE 0 END) as TardanzasViernes
+      FROM PrimeraMarcacion pm
       WHERE 
-          r.Fecha BETWEEN @fechaInicio AND @fechaFin
-          AND r.Estado = 'T'
-          AND r.MarcacionReal > r.HorarioEntrada
+          pm.OrdenMarcacion = 1  -- Solo la primera marcación del día
+          AND pm.Estado = 'T'
+          AND pm.MarcacionReal > pm.HorarioEntrada
     `;
 
     // Parsear fechas correctamente para evitar problemas de zona horaria
