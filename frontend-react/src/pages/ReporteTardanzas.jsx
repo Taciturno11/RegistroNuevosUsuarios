@@ -1027,10 +1027,21 @@ const ReporteTardanzas = () => {
                     backgroundColor: '#7f1d1d',
                     color: 'white',
                     fontWeight: 600,
-                    minWidth: 120
+                    minWidth: 120,
+                    textAlign: 'center'
                   }}>
                     {vistaAgrupada ? 'Empleados' : 'Campaña'}
                   </TableCell>
+                  {!vistaAgrupada && (
+                  <TableCell sx={{ 
+                    backgroundColor: '#7f1d1d',
+                    color: 'white',
+                    fontWeight: 600,
+                    minWidth: 100
+                  }}>
+                    Cargo
+                  </TableCell>
+                  )}
                   <TableCell sx={{ 
                     backgroundColor: '#7f1d1d',
                     color: 'white',
@@ -1264,7 +1275,7 @@ const ReporteTardanzas = () => {
                                           {empleado.NombreCompleto}
                                         </Typography>
                                       </TableCell>
-                                      <TableCell>
+                                      <TableCell sx={{ textAlign: 'center' }}>
                                         <Typography variant="body2" sx={{ color: '#6b7280' }}>
                                           {empleado.Cargo}
                                         </Typography>
