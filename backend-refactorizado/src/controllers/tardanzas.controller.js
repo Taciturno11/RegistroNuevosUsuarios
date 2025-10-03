@@ -1,5 +1,23 @@
 const { executeQuery, sql } = require('../config/database');
 
+// Función helper para parsear fechas locales correctamente
+const parseFechaLocal = (fechaString) => {
+  if (!fechaString) return null;
+  
+  // Si ya es un objeto Date, devolverlo
+  if (fechaString instanceof Date) return fechaString;
+  
+  // Si es string "YYYY-MM-DD", crear Date en horario local a mediodía
+  if (typeof fechaString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+    const [year, month, day] = fechaString.split('-').map(Number);
+    // Crear fecha en horario local a mediodía (12:00 PM)
+    return new Date(year, month - 1, day, 12, 0, 0);
+  }
+  
+  // Para otros formatos, usar new Date() normal
+  return new Date(fechaString);
+};
+
 // ========================================
 // REPORTE DE TARDANZAS
 // ========================================
@@ -30,6 +48,11 @@ exports.getReporteTardanzas = async (req, res) => {
     if (cargo && cargo !== 'todos') {
       filtrosAdicionales += ' AND cg.CargoID = @cargoID';
       paramsAdicionales.push({ name: 'cargoID', type: sql.Int, value: parseInt(cargo) });
+    }
+    
+    if (supervisor && supervisor !== 'todos') {
+      filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
+      paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
     }
 
     // Consulta principal para tardanzas con JOINs para filtros
@@ -83,14 +106,15 @@ exports.getReporteTardanzas = async (req, res) => {
           r.Fecha DESC, MinutosTardanza DESC, r.ApellidoPaterno, r.Nombres
     `;
 
-    if (supervisor && supervisor !== 'todos') {
-      filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
-      paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
-    }
+    // Parsear fechas correctamente para evitar problemas de zona horaria
+    const fechaInicioParsed = parseFechaLocal(fechaInicio);
+    const fechaFinParsed = parseFechaLocal(fechaFin);
+    
+    console.log(`🔍 Fechas parseadas - Original: ${fechaInicio} → ${fechaFin}, Parseadas: ${fechaInicioParsed} → ${fechaFinParsed}`);
 
     const params = [
-      { name: 'fechaInicio', type: sql.Date, value: fechaInicio },
-      { name: 'fechaFin', type: sql.Date, value: fechaFin },
+      { name: 'fechaInicio', type: sql.Date, value: fechaInicioParsed },
+      { name: 'fechaFin', type: sql.Date, value: fechaFinParsed },
       ...paramsAdicionales
     ];
 
@@ -102,6 +126,36 @@ exports.getReporteTardanzas = async (req, res) => {
     console.log('  - Filtros adicionales SQL:', filtrosAdicionales);
     console.log('📋 Parámetros:', params);
     console.log('📋 Consulta SQL:', query);
+    
+    // Verificar si hay datos en la tabla para las fechas especificadas
+    const verificarQuery = `
+      SELECT COUNT(*) as TotalRegistros
+      FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+      WHERE r.Fecha BETWEEN @fechaInicio AND @fechaFin
+    `;
+    
+    console.log('🔍 Verificando existencia de datos...');
+    const verificarResult = await executeQuery(verificarQuery, [
+      { name: 'fechaInicio', type: sql.Date, value: fechaInicioParsed },
+      { name: 'fechaFin', type: sql.Date, value: fechaFinParsed }
+    ]);
+    
+    console.log(`📊 Total de registros en rango de fechas: ${verificarResult.recordset[0].TotalRegistros}`);
+    
+    // Verificar registros con Estado = 'T' (Tardanzas)
+    const verificarTardanzasQuery = `
+      SELECT COUNT(*) as TotalTardanzas
+      FROM [Partner].[dbo].[ReporteDeAsistenciaGuardado] r
+      WHERE r.Fecha BETWEEN @fechaInicio AND @fechaFin
+      AND r.Estado = 'T'
+    `;
+    
+    const verificarTardanzasResult = await executeQuery(verificarTardanzasQuery, [
+      { name: 'fechaInicio', type: sql.Date, value: fechaInicioParsed },
+      { name: 'fechaFin', type: sql.Date, value: fechaFinParsed }
+    ]);
+    
+    console.log(`📊 Total de registros con Estado = 'T': ${verificarTardanzasResult.recordset[0].TotalTardanzas}`);
     
     const result = await executeQuery(query, params);
     
@@ -252,9 +306,15 @@ exports.getReporteResumido = async (req, res) => {
           TotalTardanzas DESC, TotalMinutosTardanza DESC
     `;
 
+    // Parsear fechas correctamente para evitar problemas de zona horaria
+    const fechaInicioParsed = parseFechaLocal(fechaInicio);
+    const fechaFinParsed = parseFechaLocal(fechaFin);
+    
+    console.log(`🔍 Fechas parseadas (Resumido) - Original: ${fechaInicio} → ${fechaFin}, Parseadas: ${fechaInicioParsed} → ${fechaFinParsed}`);
+
     const params = [
-      { name: 'fechaInicio', type: sql.Date, value: fechaInicio },
-      { name: 'fechaFin', type: sql.Date, value: fechaFin },
+      { name: 'fechaInicio', type: sql.Date, value: fechaInicioParsed },
+      { name: 'fechaFin', type: sql.Date, value: fechaFinParsed },
       ...paramsAdicionales
     ];
 
@@ -330,9 +390,15 @@ exports.getEstadisticasTardanzas = async (req, res) => {
           AND r.MarcacionReal > r.HorarioEntrada
     `;
 
+    // Parsear fechas correctamente para evitar problemas de zona horaria
+    const fechaInicioParsed = parseFechaLocal(fechaInicio);
+    const fechaFinParsed = parseFechaLocal(fechaFin);
+    
+    console.log(`🔍 Fechas parseadas (Estadísticas) - Original: ${fechaInicio} → ${fechaFin}, Parseadas: ${fechaInicioParsed} → ${fechaFinParsed}`);
+
     const params = [
-      { name: 'fechaInicio', type: sql.Date, value: fechaInicio },
-      { name: 'fechaFin', type: sql.Date, value: fechaFin }
+      { name: 'fechaInicio', type: sql.Date, value: fechaInicioParsed },
+      { name: 'fechaFin', type: sql.Date, value: fechaFinParsed }
     ];
 
     const result = await executeQuery(query, params);

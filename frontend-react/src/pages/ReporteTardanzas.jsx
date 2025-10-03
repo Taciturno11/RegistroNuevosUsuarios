@@ -71,6 +71,11 @@ const ReporteTardanzas = () => {
   const [empleadoExpandido, setEmpleadoExpandido] = useState(null);
   const [detallesTardanzas, setDetallesTardanzas] = useState({});
   
+  // Estados para agrupación por campañas
+  const [areasExpandidas, setAreasExpandidas] = useState({});
+  const [campañasExpandidas, setCampañasExpandidas] = useState({});
+  const [vistaAgrupada, setVistaAgrupada] = useState(false);
+  
   // Estados para filtros
   const [fechaInicio, setFechaInicio] = useState(() => {
     const fecha = new Date();
@@ -89,6 +94,59 @@ const ReporteTardanzas = () => {
   const [campaniasDisponibles, setCampaniasDisponibles] = useState([]);
   const [cargosDisponibles, setCargosDisponibles] = useState([]);
   const [supervisoresDisponibles, setSupervisoresDisponibles] = useState([]);
+  
+  // Estructura de áreas y campañas
+  const [areasCampañas] = useState({
+    'OUTBOUND': [
+      'MIGRACION',
+      'PORTABILIDAD PREPAGO', 
+      'RENOVACION',
+      'HOGAR',
+      'REGULARIZACION',
+      'PORTABILIDAD POSPAGO',
+      'PREPAGO DIGITAL',
+      'BACKOFFICE'
+    ],
+    'INBOUND': [
+      'UNIFICADO',
+      'AUDITORIA',
+      'CROSSELLING',
+      'BACK SEGUIMIENTO',
+      'REDES SOCIALES',
+      'BACK TRANSFERENCIAS',
+      'CLIENTES ESPECIALES',
+      'LIVE CHAT',
+      'RELLAMADO',
+      'BACK OFRECIMENTO',
+      'NPS FCR',
+      'RETENCIONES'
+    ],
+    'STAFF': [
+      'ESTRUCTURA',
+      'CALIDAD',
+      'CAPACITACION',
+      'ANALISTAS'
+    ]
+  });
+
+  // Función para convertir minutos a tiempo con formato
+  const minutosAHoras = (minutos) => {
+    if (!minutos || minutos === 0) return '0m';
+    
+    const horas = Math.floor(minutos / 60);
+    const minutosRestantes = minutos % 60;
+    
+    // Si es menor a 1 hora, mostrar solo minutos
+    if (horas === 0) {
+      return `${minutos}m`;
+    }
+    
+    // Si es 1 hora o más, mostrar horas y minutos
+    if (minutosRestantes === 0) {
+      return `${horas}h`;
+    }
+    return `${horas}h ${minutosRestantes}m`;
+  };
 
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
@@ -325,6 +383,161 @@ const ReporteTardanzas = () => {
     setError('');
     // Limpiar también el localStorage
     limpiarEstadoPersistente();
+  };
+
+  // Función para calcular tardanzas por áreas y campañas
+  const calcularTardanzasPorAreas = useCallback(() => {
+    if (!reporteData?.empleados || reporteData.empleados.length === 0) return {};
+    
+    // Función para obtener área por campaña (más flexible)
+    const obtenerAreaPorCampaña = (campaña) => {
+      // Primero intentar coincidencia exacta
+      for (const [area, campañas] of Object.entries(areasCampañas)) {
+        if (campañas.includes(campaña)) {
+          return area;
+        }
+      }
+      
+      // Si no hay coincidencia exacta, intentar coincidencia parcial (ignorar mayúsculas/minúsculas)
+      const campañaNormalizada = campaña.toLowerCase().trim();
+      for (const [area, campañas] of Object.entries(areasCampañas)) {
+        const coincidencia = campañas.find(c => c.toLowerCase().trim() === campañaNormalizada);
+        if (coincidencia) {
+          return area;
+        }
+      }
+      
+      // Si aún no hay coincidencia, intentar coincidencia parcial por palabras clave
+      for (const [area, campañas] of Object.entries(areasCampañas)) {
+        const coincidencia = campañas.find(c => {
+          const palabrasCampaña = c.toLowerCase().split(' ');
+          const palabrasDato = campañaNormalizada.split(' ');
+          return palabrasCampaña.some(palabra => palabrasDato.includes(palabra)) || 
+                 palabrasDato.some(palabra => palabrasCampaña.includes(palabra));
+        });
+        if (coincidencia) {
+          return area;
+        }
+      }
+      
+      return 'OTROS';
+    };
+    
+    const areas = {};
+    let totalGeneralTardanzas = 0;
+    let totalGeneralMinutos = 0;
+    let totalGeneralEmpleados = 0;
+    
+    // Agrupar por área y campaña
+    reporteData.empleados.forEach(empleado => {
+      const area = obtenerAreaPorCampaña(empleado.Campaña);
+      
+      if (!areas[area]) {
+        areas[area] = {
+          totalTardanzas: 0,
+          totalMinutos: 0,
+          totalEmpleados: 0,
+          promedioTardanzas: 0,
+          promedioMinutos: 0,
+          nivelProblema: 'Bajo',
+          campañas: {}
+        };
+      }
+      
+      areas[area].totalTardanzas += empleado.TotalTardanzas;
+      areas[area].totalMinutos += empleado.TotalMinutosTardanza;
+      areas[area].totalEmpleados += 1;
+      totalGeneralTardanzas += empleado.TotalTardanzas;
+      totalGeneralMinutos += empleado.TotalMinutosTardanza;
+      totalGeneralEmpleados += 1;
+      
+      // Agrupar por campaña
+      if (!areas[area].campañas[empleado.Campaña]) {
+        areas[area].campañas[empleado.Campaña] = {
+          totalTardanzas: 0,
+          totalMinutos: 0,
+          totalEmpleados: 0,
+          promedioTardanzas: 0,
+          promedioMinutos: 0,
+          nivelProblema: 'Bajo'
+        };
+      }
+      areas[area].campañas[empleado.Campaña].totalTardanzas += empleado.TotalTardanzas;
+      areas[area].campañas[empleado.Campaña].totalMinutos += empleado.TotalMinutosTardanza;
+      areas[area].campañas[empleado.Campaña].totalEmpleados += 1;
+    });
+    
+    // Calcular promedios y niveles de problema
+    Object.keys(areas).forEach(area => {
+      if (areas[area].totalEmpleados > 0) {
+        areas[area].promedioTardanzas = (areas[area].totalTardanzas / areas[area].totalEmpleados).toFixed(1);
+        areas[area].promedioMinutos = (areas[area].totalMinutos / areas[area].totalEmpleados).toFixed(1);
+      }
+      
+      // Clasificar nivel de problema del área
+      if (areas[area].totalTardanzas >= 50 || areas[area].totalMinutos >= 1200) {
+        areas[area].nivelProblema = 'Crítico';
+      } else if (areas[area].totalTardanzas >= 25 || areas[area].totalMinutos >= 600) {
+        areas[area].nivelProblema = 'Alto';
+      } else if (areas[area].totalTardanzas >= 15 || areas[area].totalMinutos >= 300) {
+        areas[area].nivelProblema = 'Moderado';
+      } else {
+        areas[area].nivelProblema = 'Bajo';
+      }
+      
+      // Calcular promedios y niveles para cada campaña
+      Object.keys(areas[area].campañas).forEach(campaña => {
+        const datosCampaña = areas[area].campañas[campaña];
+        if (datosCampaña.totalEmpleados > 0) {
+          datosCampaña.promedioTardanzas = (datosCampaña.totalTardanzas / datosCampaña.totalEmpleados).toFixed(1);
+          datosCampaña.promedioMinutos = (datosCampaña.totalMinutos / datosCampaña.totalEmpleados).toFixed(1);
+        }
+        
+        // Clasificar nivel de problema de la campaña
+        if (datosCampaña.totalTardanzas >= 20 || datosCampaña.totalMinutos >= 480) {
+          datosCampaña.nivelProblema = 'Crítico';
+        } else if (datosCampaña.totalTardanzas >= 10 || datosCampaña.totalMinutos >= 240) {
+          datosCampaña.nivelProblema = 'Alto';
+        } else if (datosCampaña.totalTardanzas >= 5 || datosCampaña.totalMinutos >= 120) {
+          datosCampaña.nivelProblema = 'Moderado';
+        } else {
+          datosCampaña.nivelProblema = 'Bajo';
+        }
+      });
+    });
+    
+    console.log('🔍 DEBUG: Áreas generadas:', Object.keys(areas));
+    console.log('🔍 DEBUG: Detalles de áreas:', areas);
+    
+    return { areas, totalGeneralTardanzas, totalGeneralMinutos, totalGeneralEmpleados };
+  }, [reporteData, areasCampañas]);
+
+  // Función para alternar expansión de área
+  const toggleArea = (area) => {
+    setAreasExpandidas(prev => ({
+      ...prev,
+      [area]: !prev[area]
+    }));
+  };
+
+  // Función para alternar expansión de campaña
+  const toggleCampaña = (area, campaña) => {
+    const key = `${area}-${campaña}`;
+    setCampañasExpandidas(prev => {
+      // Si la campaña ya está expandida, la cerramos
+      if (prev[key]) {
+        return { [key]: false };
+      }
+      // Si no está expandida, cerramos todas las campañas del mismo área y expandimos solo esta
+      const newState = {};
+      Object.keys(prev).forEach(existingKey => {
+        if (existingKey.startsWith(`${area}-`)) {
+          newState[existingKey] = false; // Cerrar todas las campañas del área
+        }
+      });
+      newState[key] = true; // Expandir solo la campaña seleccionada
+      return newState;
+    });
   };
 
   // Función para obtener detalles de tardanzas de un empleado específico
@@ -677,7 +890,7 @@ const ReporteTardanzas = () => {
                 </Select>
               </FormControl>
             </Grid>
-
+            
             <Grid item xs={2.5}>
               <FormControl fullWidth size="small">
                 <InputLabel>Supervisor</InputLabel>
@@ -696,7 +909,7 @@ const ReporteTardanzas = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={3}>
+            <Grid item xs={1.5}>
               <Button
                 variant="contained"
                 onClick={handleFiltroChange}
@@ -714,6 +927,37 @@ const ReporteTardanzas = () => {
               >
                 {loading ? 'Generando...' : 'Generar Reporte'}
               </Button>
+            </Grid>
+            
+            <Grid item xs={1.5}>
+              {reporteData && reporteData.empleados.length > 0 && (
+                <Button
+                  variant={vistaAgrupada ? "contained" : "outlined"}
+                  onClick={() => {
+                    setVistaAgrupada(!vistaAgrupada);
+                    if (!vistaAgrupada) {
+                      // Limpiar expansiones cuando se activa la vista agrupada
+                      setEmpleadoExpandido(null);
+                      setDetallesTardanzas({});
+                    }
+                  }}
+                  startIcon={<TrendingUpIcon />}
+                  fullWidth
+                  sx={{
+                    borderColor: '#059669',
+                    color: vistaAgrupada ? 'white' : '#059669',
+                    backgroundColor: vistaAgrupada ? '#059669' : 'transparent',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: '#047857',
+                      backgroundColor: vistaAgrupada ? '#047857' : '#ecfdf5'
+                    }
+                  }}
+                >
+                  {vistaAgrupada ? '👥 Por Empleados' : '🏢 Por Áreas'}
+                </Button>
+              )}
             </Grid>
           </Grid>
         </Box>
@@ -767,9 +1011,9 @@ const ReporteTardanzas = () => {
                     backgroundColor: '#7f1d1d',
                     color: 'white',
                     fontWeight: 600,
-                    minWidth: 80
+                    minWidth: vistaAgrupada ? 150 : 80
                   }}>
-                    DNI
+                    {vistaAgrupada ? 'Área/Campaña' : 'DNI'}
                   </TableCell>
                   <TableCell sx={{ 
                     backgroundColor: '#7f1d1d',
@@ -777,7 +1021,7 @@ const ReporteTardanzas = () => {
                     fontWeight: 600,
                     minWidth: 200
                   }}>
-                    Empleado
+                    {vistaAgrupada ? 'Descripción' : 'Empleado'}
                   </TableCell>
                   <TableCell sx={{ 
                     backgroundColor: '#7f1d1d',
@@ -785,15 +1029,7 @@ const ReporteTardanzas = () => {
                     fontWeight: 600,
                     minWidth: 120
                   }}>
-                    Campaña
-                  </TableCell>
-                  <TableCell sx={{ 
-                    backgroundColor: '#7f1d1d',
-                    color: 'white',
-                    fontWeight: 600,
-                    minWidth: 100
-                  }}>
-                    Cargo
+                    {vistaAgrupada ? 'Empleados' : 'Campaña'}
                   </TableCell>
                   <TableCell sx={{ 
                     backgroundColor: '#7f1d1d',
@@ -811,8 +1047,9 @@ const ReporteTardanzas = () => {
                     minWidth: 120,
                     textAlign: 'center'
                   }}>
-                    Total Minutos
+             Total Tiempo
                   </TableCell>
+                  {!vistaAgrupada && (
                   <TableCell sx={{ 
                     backgroundColor: '#7f1d1d',
                     color: 'white',
@@ -822,6 +1059,7 @@ const ReporteTardanzas = () => {
                   }}>
                     Promedio
                   </TableCell>
+                  )}
                   <TableCell sx={{ 
                     backgroundColor: '#7f1d1d',
                     color: 'white',
@@ -834,7 +1072,296 @@ const ReporteTardanzas = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {datosPaginados.map((empleado, index) => {
+                {vistaAgrupada ? (
+                  // Vista agrupada por áreas
+                  (() => {
+                    const tardanzasPorAreas = calcularTardanzasPorAreas();
+                    if (!tardanzasPorAreas.areas || Object.keys(tardanzasPorAreas.areas).length === 0) return null;
+                    
+                    return Object.keys(tardanzasPorAreas.areas).map((area) => {
+                      const datosArea = tardanzasPorAreas.areas[area];
+                      const isAreaExpanded = areasExpandidas[area];
+                      
+                      // Colores por área
+                      const colorArea = area === 'OUTBOUND' ? '#dc2626' : 
+                                       area === 'INBOUND' ? '#059669' : 
+                                       area === 'STAFF' ? '#7c3aed' : '#6b7280';
+                      
+                      return (
+                        <React.Fragment key={area}>
+                          {/* Fila principal del área */}
+                          <TableRow 
+                            hover
+                            sx={{ 
+                              cursor: 'pointer',
+                              backgroundColor: isAreaExpanded ? '#fef2f2' : 'transparent',
+                              '&:hover': { 
+                                backgroundColor: isAreaExpanded ? '#fee2e2' : '#f8fafc' 
+                              },
+                              '& td': {
+                                borderBottom: '2px solid #e5e7eb',
+                                py: 2
+                              }
+                            }}
+                            onClick={() => toggleArea(area)}
+                          >
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isAreaExpanded ? (
+                                  <ExpandLessIcon sx={{ color: colorArea, fontSize: 24 }} />
+                                ) : (
+                                  <ExpandMoreIcon sx={{ color: '#6b7280', fontSize: 24 }} />
+                                )}
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="h6" sx={{ fontWeight: 700, color: colorArea, fontSize: '1.1rem' }}>
+                                {area}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body1" sx={{ fontWeight: 600, color: '#374151' }}>
+                                 {area === 'OUTBOUND' ? 'Ventas ' : area === 'INBOUND' ? 'Atención al Cliente' : 'Personal Interno'}
+                              </Typography>
+                            </TableCell>
+                     <TableCell>
+                       <Typography variant="h6" sx={{ fontWeight: 700, color: '#059669', textAlign: 'center' }}>
+                         {datosArea.totalEmpleados}
+                       </Typography>
+                     </TableCell>
+                            <TableCell sx={{ textAlign: 'center' }}>
+                              <Chip
+                                label={datosArea.totalTardanzas}
+                                color="error"
+                                size="medium"
+                                sx={{ fontWeight: 700, fontSize: '1rem' }}
+                              />
+                            </TableCell>
+                     <TableCell sx={{ textAlign: 'center', fontWeight: 700, color: '#dc2626', fontSize: '1.1rem' }}>
+                       {minutosAHoras(datosArea.totalMinutos)}
+                     </TableCell>
+                            <TableCell sx={{ textAlign: 'center' }}>
+                              <Chip 
+                                label={datosArea.nivelProblema} 
+                                color={datosArea.nivelProblema === 'Crítico' ? 'error' : 
+                                       datosArea.nivelProblema === 'Alto' ? 'warning' : 
+                                       datosArea.nivelProblema === 'Moderado' ? 'info' : 'success'}
+                                size="medium"
+                                sx={{ fontWeight: 600 }}
+                              />
+                            </TableCell>
+                          </TableRow>
+
+                          {/* Filas expandidas con campañas */}
+                          {isAreaExpanded && Object.keys(datosArea.campañas).map((campaña) => {
+                            const datosCampaña = datosArea.campañas[campaña];
+                            const isCampañaExpanded = campañasExpandidas[`${area}-${campaña}`];
+                            
+                            return (
+                              <React.Fragment key={`${area}-${campaña}`}>
+                                {/* Fila de campaña */}
+                                <TableRow 
+                                  hover
+                                  sx={{ 
+                                    cursor: 'pointer',
+                                    backgroundColor: isCampañaExpanded ? '#fef2f2' : '#f9fafb',
+                                    '&:hover': { 
+                                      backgroundColor: isCampañaExpanded ? '#fee2e2' : '#f3f4f6' 
+                                    },
+                                    '& td': {
+                                      borderBottom: '1px solid #e5e7eb',
+                                      py: 1.5,
+                                      pl: 4
+                                    }
+                                  }}
+                                  onClick={() => toggleCampaña(area, campaña)}
+                                >
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      {isCampañaExpanded ? (
+                                        <ExpandLessIcon sx={{ color: colorArea, fontSize: 20 }} />
+                                      ) : (
+                                        <ExpandMoreIcon sx={{ color: '#6b7280', fontSize: 20 }} />
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: colorArea, fontSize: '1rem' }}>
+                                      {campaña}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#6b7280' }}>
+                                      Campaña de {area}
+                                    </Typography>
+                                  </TableCell>
+                           <TableCell>
+                             <Typography variant="h6" sx={{ fontWeight: 600, color: '#059669', textAlign: 'center' }}>
+                               {datosCampaña.totalEmpleados}
+                             </Typography>
+                           </TableCell>
+                                  <TableCell sx={{ textAlign: 'center' }}>
+                                    <Chip
+                                      label={datosCampaña.totalTardanzas}
+                                      color="error"
+                                      size="small"
+                                      sx={{ fontWeight: 600 }}
+                                    />
+                                  </TableCell>
+                           <TableCell sx={{ textAlign: 'center', fontWeight: 600, color: '#dc2626' }}>
+                             {minutosAHoras(datosCampaña.totalMinutos)}
+                           </TableCell>
+                                  <TableCell sx={{ textAlign: 'center' }}>
+                                    <Chip 
+                                      label={datosCampaña.nivelProblema} 
+                                      color={datosCampaña.nivelProblema === 'Crítico' ? 'error' : 
+                                             datosCampaña.nivelProblema === 'Alto' ? 'warning' : 
+                                             datosCampaña.nivelProblema === 'Moderado' ? 'info' : 'success'}
+                                      size="small"
+                                      sx={{ fontWeight: 500 }}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+
+                                {/* Filas expandidas con empleados de la campaña */}
+                                {isCampañaExpanded && reporteData.empleados
+                                  .filter(emp => emp.Campaña === campaña)
+                                  .map((empleado) => (
+                                    <React.Fragment key={`${area}-${campaña}-${empleado.DNI}`}>
+                                    <TableRow
+                                      hover
+                                      sx={{ 
+                                        backgroundColor: '#fafafa',
+                                        cursor: empleado.TotalTardanzas > 0 ? 'pointer' : 'default',
+                                        '&:hover': { 
+                                          backgroundColor: empleado.TotalTardanzas > 0 ? '#f5f5f5' : '#fafafa'
+                                        },
+                                        '& td': {
+                                          borderBottom: '1px solid #e5e7eb',
+                                          py: 1,
+                                          pl: 6,
+                                          fontSize: '0.875rem'
+                                        }
+                                      }}
+                                      onClick={() => empleado.TotalTardanzas > 0 && handleToggleEmpleado(empleado.DNI)}
+                                    >
+                                      <TableCell>
+                                        {empleado.TotalTardanzas > 0 && (
+                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {empleadoExpandido === empleado.DNI ? (
+                                              <ExpandLessIcon sx={{ color: '#dc2626', fontSize: 16 }} />
+                                            ) : (
+                                              <ExpandMoreIcon sx={{ color: '#6b7280', fontSize: 16 }} />
+                                            )}
+                                          </Box>
+                                        )}
+                                      </TableCell>
+                                      <TableCell sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                                        {empleado.DNI}
+                                      </TableCell>
+                                      <TableCell>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                          {empleado.NombreCompleto}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Typography variant="body2" sx={{ color: '#6b7280' }}>
+                                          {empleado.Cargo}
+                                        </Typography>
+                                      </TableCell>
+                                      <TableCell sx={{ textAlign: 'center' }}>
+                                        <Chip
+                                          label={empleado.TotalTardanzas}
+                                          color="error"
+                                          size="small"
+                                          sx={{ fontWeight: 600 }}
+                                        />
+                                      </TableCell>
+                                      <TableCell sx={{ textAlign: 'center', fontWeight: 600, color: '#dc2626' }}>
+                                        {minutosAHoras(empleado.TotalMinutosTardanza)}
+                                      </TableCell>
+                                      <TableCell sx={{ textAlign: 'center' }}>
+                                        <Chip 
+                                          label={empleado.NivelProblema} 
+                                          color={empleado.NivelProblema === 'Crítico' ? 'error' : 
+                                                 empleado.NivelProblema === 'Alto' ? 'warning' : 
+                                                 empleado.NivelProblema === 'Moderado' ? 'info' : 'success'}
+                                          size="small"
+                                          sx={{ fontWeight: 500 }}
+                                        />
+                                      </TableCell>
+                                    </TableRow>
+                                    
+                                    {/* Fila expandida con detalles de tardanzas para empleados con tardanzas */}
+                                    {empleado.TotalTardanzas > 0 && empleadoExpandido === empleado.DNI && (
+                                      <TableRow>
+                                        <TableCell colSpan={vistaAgrupada ? 7 : 8} sx={{ backgroundColor: '#fef2f2', p: 0, border: 'none' }}>
+                                          <Box sx={{ p: 2, pl: 8 }}>
+                                            <Typography variant="subtitle2" sx={{ mb: 1, color: '#7f1d1d', fontWeight: 600 }}>
+                                              📋 Historial detallado de tardanzas para {empleado.NombreCompleto}:
+                                            </Typography>
+                                            
+                                            {detallesTardanzas[empleado.DNI] && detallesTardanzas[empleado.DNI].length > 0 ? (
+                                              <Table size="small" sx={{ backgroundColor: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+                                                <TableHead>
+                                                  <TableRow>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', backgroundColor: '#fee2e2' }}>Fecha</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', backgroundColor: '#fee2e2' }}>Horario</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', backgroundColor: '#fee2e2' }}>Marcación</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', backgroundColor: '#fee2e2' }}>Minutos</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', backgroundColor: '#fee2e2' }}>Tiempo</TableCell>
+                                                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', backgroundColor: '#fee2e2' }}>Nivel</TableCell>
+                                                  </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                  {detallesTardanzas[empleado.DNI].map((detalle, detIndex) => (
+                                                    <TableRow key={`${detalle.DNI}-${detalle.Fecha}-${detIndex}`}>
+                                                      <TableCell sx={{ fontSize: '0.875rem' }}>{formatearFecha(detalle.Fecha)}</TableCell>
+                                                      <TableCell sx={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{detalle.HorarioEntrada}</TableCell>
+                                                      <TableCell sx={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{detalle.MarcacionReal}</TableCell>
+                                                      <TableCell sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#dc2626' }}>
+                                                        {detalle.MinutosTardanza}
+                                                      </TableCell>
+                                                      <TableCell sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#dc2626' }}>
+                                                        {minutosAHoras(detalle.MinutosTardanza)}
+                                                      </TableCell>
+                                                      <TableCell>
+                                                        <Chip 
+                                                          label={detalle.NivelTardanza} 
+                                                          color={getNivelColor(detalle.NivelTardanza)}
+                                                          size="small"
+                                                          sx={{ fontSize: '0.75rem' }}
+                                                        />
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))}
+                                                </TableBody>
+                                              </Table>
+                                            ) : (
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <CircularProgress size={20} />
+                                                <Typography variant="body2" color="text.secondary">
+                                                  Cargando detalles...
+                                                </Typography>
+                                              </Box>
+                                            )}
+                                          </Box>
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                    </React.Fragment>
+                                  ))
+                                }
+                              </React.Fragment>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    });
+                  })()
+                ) : (
+                  // Vista normal por empleados
+                  datosPaginados.map((empleado, index) => {
                   const isExpanded = empleadoExpandido === empleado.DNI;
                   const detalles = detallesTardanzas[empleado.DNI] || [];
                   
@@ -884,7 +1411,7 @@ const ReporteTardanzas = () => {
                           />
                         </TableCell>
                         <TableCell sx={{ textAlign: 'center', fontWeight: 600, color: '#dc2626' }}>
-                          {empleado.TotalMinutosTardanza}
+                          {minutosAHoras(empleado.TotalMinutosTardanza)}
                         </TableCell>
                         <TableCell sx={{ textAlign: 'center', fontSize: '0.85rem' }}>
                           {empleado.PromedioMinutosTardanza.toFixed(1)} min
@@ -932,7 +1459,7 @@ const ReporteTardanzas = () => {
                                           {detalle.MinutosTardanza}
                                         </TableCell>
                                         <TableCell sx={{ fontSize: '0.875rem', fontWeight: 500, color: '#dc2626' }}>
-                                          {detalle.TiempoTardanza}
+                                          {minutosAHoras(detalle.MinutosTardanza)}
                                         </TableCell>
                                         <TableCell>
                                           <Chip 
@@ -960,7 +1487,8 @@ const ReporteTardanzas = () => {
                       )}
                     </React.Fragment>
                   );
-                })}
+                  })
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -1090,6 +1618,7 @@ const ReporteTardanzas = () => {
           </Box>
         </Paper>
       )}
+
 
       {/* Mensaje cuando no hay datos */}
       {!loading && reporteData && reporteData.empleados.length === 0 && (
