@@ -287,6 +287,26 @@ exports.expandirNodo = async (req, res) => {
           { name: 'estado', type: sql.VarChar, value: estado }
         ]
       );
+
+      // Fallback: si no hay supervisores, buscar agentes directos que dependan del coordinador
+      if (subordinados.recordset.length === 0) {
+        console.log('⚠️ No se encontraron supervisores para el coordinador, buscando agentes directos');
+        subordinados = await executeQuery(
+          `SELECT e.DNI, e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.CargoID, e.CampañaID,
+                  e.FechaContratacion, e.EstadoEmpleado, c.NombreCargo, camp.NombreCampaña
+           FROM PRI.Empleados e
+           LEFT JOIN PRI.Cargos c ON c.CargoID = e.CargoID
+           LEFT JOIN PRI.Campanias camp ON camp.CampañaID = e.CampañaID
+           WHERE e.CoordinadorDNI = @dni
+           AND e.EstadoEmpleado = @estado
+           AND (c.NombreCargo LIKE '%agente%' OR c.NombreCargo LIKE '%operador%' OR c.NombreCargo LIKE '%asesor%')`,
+          [
+            { name: 'dni', type: sql.VarChar, value: dni },
+            { name: 'estado', type: sql.VarChar, value: estado }
+          ]
+        );
+        console.log(`📊 Agentes directos encontrados para coordinador ${dni}:`, subordinados.recordset.length);
+      }
     } else if (nivelEmpleado === 3) {
       // Supervisor: buscar agentes (SupervisorDNI) - SOLO agentes
       console.log('🔍 Buscando agentes para supervisor');
