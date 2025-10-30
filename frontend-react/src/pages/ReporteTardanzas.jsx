@@ -22,7 +22,8 @@ import {
   Card,
   CardContent,
   Chip,
-  TextField
+  TextField,
+  Checkbox
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -87,7 +88,7 @@ const ReporteTardanzas = () => {
     return fecha.toISOString().split('T')[0];
   });
   const [campania, setCampania] = useState('todas');
-  const [cargo, setCargo] = useState('todos');
+  const [cargo, setCargo] = useState([]);
   const [supervisor, setSupervisor] = useState('todos');
   
   // Estados para opciones de filtros
@@ -183,7 +184,7 @@ const ReporteTardanzas = () => {
         setFechaInicio(filtrosRestaurados.fechaInicio);
         setFechaFin(filtrosRestaurados.fechaFin);
         setCampania(filtrosRestaurados.campania);
-        setCargo(filtrosRestaurados.cargo);
+        setCargo(filtrosRestaurados.cargo || []);
         setSupervisor(filtrosRestaurados.supervisor || 'todos');
       }
 
@@ -300,9 +301,16 @@ const ReporteTardanzas = () => {
         url += `&campania=${campania}`;
       }
       
-      if (cargo && cargo !== 'todos') {
-        url += `&cargo=${cargo}`;
+
+
+      if (cargo.length > 0) {
+        const cargosQuery = cargo.map(cargoId => `cargo=${encodeURIComponent(cargoId)}`).join('&');
+        url += `&${cargosQuery}`;
       }
+
+
+
+
       
       if (supervisor && supervisor !== 'todos') {
         url += `&supervisor=${supervisor}`;
@@ -377,7 +385,7 @@ const ReporteTardanzas = () => {
       return fecha.toISOString().split('T')[0];
     });
     setCampania('todas');
-    setCargo('todos');
+    setCargo([]);
     setPaginaActual(1);
     setReporteData(null);
     setError('');
@@ -549,8 +557,9 @@ const ReporteTardanzas = () => {
         url += `&campania=${campania}`;
       }
       
-      if (cargo && cargo !== 'todos') {
-        url += `&cargo=${cargo}`;
+      if (cargo.length > 0) {
+        const cargosQuery = cargo.map(cargoId => `cargo=${encodeURIComponent(cargoId)}`).join('&');
+        url += `&${cargosQuery}`;
       }
       
       if (supervisor && supervisor !== 'todos') {
@@ -831,7 +840,7 @@ const ReporteTardanzas = () => {
         {/* Filtros */}
         <Box sx={{ p: 2 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={2}>
+            <Grid item xs={1.5}>
               <TextField
                 label="Fecha Inicio"
                 type="date"
@@ -843,7 +852,7 @@ const ReporteTardanzas = () => {
               />
             </Grid>
             
-            <Grid item xs={2}>
+            <Grid item xs={1.5}>
               <TextField
                 label="Fecha Fin"
                 type="date"
@@ -855,7 +864,7 @@ const ReporteTardanzas = () => {
               />
             </Grid>
 
-            <Grid item xs={2}>
+            <Grid item xs={1.5}>
               <FormControl fullWidth size="small">
                 <InputLabel>Campaña</InputLabel>
                 <Select
@@ -873,17 +882,33 @@ const ReporteTardanzas = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={2}>
-              <FormControl fullWidth size="small">
+            <Grid item xs={2.5}>
+              <FormControl 
+              fullWidth 
+              size="small"
+              sx={{minWidth: 180}}  
+                >
                 <InputLabel>Cargo</InputLabel>
                 <Select
+                  multiple
                   value={cargo}
                   onChange={(e) => setCargo(e.target.value)}
                   label="Cargo"
+                  renderValue={(selected) => {
+                    if (selected.length === 0) {
+                      return <em>Todos los Cargos</em>;
+                    }
+                    const selectedNames = cargosDisponibles
+                      .filter(c => selected.includes(c.CargoID))
+                      .map(c => c.NombreCargo);
+                    return selectedNames.join(', ');
+                  }}
                 >
-                  <MenuItem value="todos">Todos los Cargos</MenuItem>
+
+                  
                   {cargosDisponibles.map((c) => (
                     <MenuItem key={c.CargoID} value={c.CargoID}>
+                      <Checkbox checked={cargo.indexOf(c.CargoID) > -1} />
                       {c.NombreCargo}
                     </MenuItem>
                   ))}
@@ -891,7 +916,7 @@ const ReporteTardanzas = () => {
               </FormControl>
             </Grid>
             
-            <Grid item xs={2.5}>
+            <Grid item xs={2}>
               <FormControl fullWidth size="small">
                 <InputLabel>Supervisor</InputLabel>
                 <Select

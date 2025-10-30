@@ -45,11 +45,40 @@ exports.getReporteTardanzas = async (req, res) => {
       paramsAdicionales.push({ name: 'campaniaID', type: sql.Int, value: parseInt(campania) });
     }
     
-    if (cargo && cargo !== 'todos') {
-      filtrosAdicionales += ' AND cg.CargoID = @cargoID';
-      paramsAdicionales.push({ name: 'cargoID', type: sql.Int, value: parseInt(cargo) });
+
+    // Manejo de filtro de Cargo (para uno o múltiples)
+    if (cargo) {
+      let cargosAFiltrar = [];
+
+      if (Array.isArray(cargo)) {
+        // Si ya es un array (múltiples cargos seleccionados)
+        cargosAFiltrar = cargo;
+      } else if (typeof cargo === 'string' && cargo !== 'todos') {
+        // Si es un solo string (un cargo seleccionado)
+        cargosAFiltrar = [cargo];
+      }
+
+      if (cargosAFiltrar.length > 0) {
+        // 1. Creamos los parámetros dinámicos para la consulta IN
+        // (Ej: @cargoID_0, @cargoID_1, @cargoID_2)
+        const cargoParams = cargosAFiltrar.map((id, index) => `@cargoID_${index}`).join(',');
+        
+        // 2. Añadimos la cláusula IN a la consulta SQL
+        filtrosAdicionales += ` AND cg.CargoID IN (${cargoParams})`;
+
+        // 3. Añadimos cada ID de cargo a la lista de parámetros
+        cargosAFiltrar.forEach((id, index) => {
+          paramsAdicionales.push({ 
+            name: `cargoID_${index}`, 
+            type: sql.Int, 
+            value: parseInt(id) 
+          });
+        });
+      }
     }
-    
+
+
+
     if (supervisor && supervisor !== 'todos') {
       filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
       paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
@@ -270,11 +299,43 @@ exports.getReporteResumido = async (req, res) => {
       paramsAdicionales.push({ name: 'campaniaID', type: sql.Int, value: parseInt(campania) });
     }
     
-    if (cargo && cargo !== 'todos') {
-      filtrosAdicionales += ' AND cg.CargoID = @cargoID';
-      paramsAdicionales.push({ name: 'cargoID', type: sql.Int, value: parseInt(cargo) });
+
+
+    // Manejo de filtro de Cargo (para uno o múltiples)
+    if (cargo) {
+      let cargosAFiltrar = [];
+
+      if (Array.isArray(cargo)) {
+        // Si ya es un array (múltiples cargos seleccionados)
+        cargosAFiltrar = cargo;
+      } else if (typeof cargo === 'string' && cargo !== 'todos') {
+        // Si es un solo string (un cargo seleccionado)
+        cargosAFiltrar = [cargo];
+      }
+
+      if (cargosAFiltrar.length > 0) {
+        // 1. Creamos los parámetros dinámicos para la consulta IN
+        // (Ej: @cargoID_0, @cargoID_1, @cargoID_2)
+        const cargoParams = cargosAFiltrar.map((id, index) => `@cargoID_${index}`).join(',');
+        
+        // 2. Añadimos la cláusula IN a la consulta SQL
+        filtrosAdicionales += ` AND cg.CargoID IN (${cargoParams})`;
+
+        // 3. Añadimos cada ID de cargo a la lista de parámetros
+        cargosAFiltrar.forEach((id, index) => {
+          paramsAdicionales.push({ 
+            name: `cargoID_${index}`, 
+            type: sql.Int, 
+            value: parseInt(id) 
+          });
+        });
+      }
     }
     
+
+
+
+
     if (supervisor && supervisor !== 'todos') {
       filtrosAdicionales += ' AND e.SupervisorDNI = @supervisorDNI';
       paramsAdicionales.push({ name: 'supervisorDNI', type: sql.VarChar, value: supervisor });
