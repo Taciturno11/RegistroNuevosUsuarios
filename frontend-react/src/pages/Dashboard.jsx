@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -15,14 +16,26 @@ import {
   IconButton,
   Chip,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
+  Dialog, // <-- Corregido (sin duplicar)
+  DialogTitle, // <-- Corregido (sin duplicar)
+  DialogContent, // <-- Corregido (sin duplicar)
   DialogActions,
   FormControl,
-  InputLabel
+  InputLabel,
+  CircularProgress,
+  // --- Imports del Modal ---
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Avatar
 } from '@mui/material';
+
 import {
+  // Money <--- ESTO ESTABA DANDO ERROR, LO QUITÉ
   Search as SearchIcon,
   Clear as ClearIcon,
   Edit as EditIcon,
@@ -43,7 +56,12 @@ import {
   Circle as CircleIcon,
   Laptop as LaptopIcon,
   Event as CalendarMonthIcon,
-  MonetizationOn as MoneyBagIcon
+  MonetizationOn as MoneyBagIcon,
+  // --- Imports del Modal ---
+  ExpandMore as ExpandMoreIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
+  GroupWork as GroupWorkIcon
 } from '@mui/icons-material';
 import '../App.css';
 
@@ -77,6 +95,161 @@ const Dashboard = () => {
     fechaInicio: '',
     fechaFin: ''
   });
+
+//-----------------------CONECTAMOS AL OTRO FRONT (pagina capacitadores)---------------------------------
+
+  // Estados para el resumen de capacitadores
+  const [statsCapa, setStatsCapa] = useState({ enCurso: 0, finalizadas: 0 });
+  const [loadingCapa, setLoadingCapa] = useState(true);
+  const [errorCapa, setErrorCapa] = useState('');
+
+  // Para guardar las listas completas (¡NUEVO!)
+  const [listasCapa, setListasCapa] = useState({ enCurso: [], finalizadas: [] });
+
+  // Para manejar el modal (¡NUEVO!)
+  const [modalState, setModalState] = useState({ open: false, title: '', capacitations: [] });
+  
+  // Para guardar los postulantes de la capa seleccionada (¡NUEVO!)
+  const [detalleState, setDetalleState] = useState({
+    loading: false,
+    error: '',
+    data: [],
+    expandedKey: null // Para saber qué acordeón está abierto
+  });
+
+
+// --- 2. AÑADE ESTE useEffect PARA LLAMAR A LA API :3003 ---
+  useEffect(() => {
+    const cargarDatosCapa = async () => {
+      try {
+        setLoadingCapa(true);
+        setErrorCapa('');
+        
+        // Esta es la URL de tu backend de capacitadores
+        const urlBase = 'http://10.182.18.70:3003/api/capacitaciones/resumen-jefe';
+
+        // 1. Petición para "En curso"
+        // (Pedimos la data filtrada por estado en el backend)
+        const enCursoPromise = axios.get(`${urlBase}?estado=En%20curso`);
+
+        // 2. Petición para "Finalizado"
+        const finalizadoPromise = axios.get(`${urlBase}?estado=Finalizado`);
+
+        // Ejecutamos ambas peticiones al mismo tiempo
+        const [enCursoRes, finalizadoRes] = await Promise.all([enCursoPromise, finalizadoPromise]);
+
+        // El total de "En curso" es directo
+        const totalEnCurso = enCursoRes.data.total || 0;
+        const listaEnCurso = enCursoRes.data.data || [];
+
+        // --- 3. Filtramos las "Finalizadas" por fecha ---
+        const hoy = new Date();
+        const limiteInferior = new Date();
+        limiteInferior.setDate(hoy.getDate() - 5); // 5 días atrás
+        limiteInferior.setHours(0, 0, 0, 0); // Para comparar desde el inicio del día
+
+        const finalizadasRecientes = finalizadoRes.data.data.filter(capa => {
+          // Parseamos la fecha 'YYYY-MM-DD' correctamente
+          const [y, m, d] = capa.finOjt.split('-').map(Number);
+          const fechaFin = new Date(y, m - 1, d); // Fecha en zona horaria local
+
+          // Comparamos: (Fecha Fin >= 5 días atrás) Y (Fecha Fin <= Hoy)
+          return fechaFin >= limiteInferior && fechaFin <= hoy;
+        });
+        
+        setStatsCapa({
+          enCurso: totalEnCurso,
+          finalizadas: finalizadasRecientes.length
+        });
+        // --- AÑADE ESTA LÍNEA ---
+        setListasCapa({
+          enCurso: listaEnCurso, // <-- La lista completa de "enCursoRes"
+          finalizadas: finalizadasRecientes // <-- La lista completa filtrada
+        });
+        // --- FIN DE LÍNEA AÑADIDA ---
+
+
+
+
+
+      } catch (error) {
+        console.error('Error al traer datos de capacitadores:', error);
+        setErrorCapa('No se pudo cargar el resumen.');
+      } finally {
+        setLoadingCapa(false);
+      }
+    };
+
+    cargarDatosCapa();
+  }, []); // El array vacío [] hace que se ejecute solo una vez
+
+
+// --- AÑADE ESTAS 3 FUNCIONES ---
+
+  const handleOpenModal = (title, capacitations) => {
+    // Abre el modal con la lista de capacitaciones (en curso o finalizadas)
+    setModalState({ open: true, title, capacitations });
+  };
+
+  const handleCloseModal = () => {
+    // Cierra el modal y limpia todo
+    setModalState({ open: false, title: '', capacitations: [] });
+    setDetalleState({ loading: false, error: '', data: [], expandedKey: null });
+  };
+
+  // Se dispara cuando abres un acordeón (una capacitación)
+  const handleAccordionChange = (capa) => async (event, isExpanded) => {
+    const key = capa.id;
+
+    if (!isExpanded || detalleState.expandedKey === key) {
+      if (!isExpanded) {
+        setDetalleState(prev => ({ ...prev, expandedKey: null }));
+      }
+      return;
+    }
+
+    // Muestra "cargando" dentro del acordeón
+    setDetalleState({ loading: true, error: '', data: [], expandedKey: key });
+    
+    try {
+      // Prepara los parámetros para la API
+      const params = new URLSearchParams({
+        campaniaID: capa.campania.split(',')[0], // Limpiamos por si acaso
+        fechaInicio: capa.inicioCapa,
+        dniCapacitador: capa.formadorDNI // Usamos el DNI del formador
+      });
+      
+      // ¡Llamamos al NUEVO endpoint del backend :3003!
+      // (Asegúrate de que tu backend tenga esta ruta)
+      const url = `http://10.182.18.70:3003/api/capacitacion/detalle?${params.toString()}`;
+      const response = await axios.get(url);
+
+      if (response.data.success) {
+        setDetalleState(prev => ({
+          ...prev,
+          loading: false,
+          data: response.data.data
+        }));
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error al traer detalle de capa:', error);
+      setDetalleState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'No se pudieron cargar los postulantes.'
+      }));
+    }
+  };
+
+
+
+
+
+
+
+//-.----------------------------------------------------------------------------------------------------
 
   // Función para obtener fechas por defecto
   const getFechasPorDefecto = () => {
@@ -951,28 +1124,110 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {/* Sección para registrar nuevo empleado */}
-      <Paper sx={{ p: 4, textAlign: 'center' }}>
-        <Typography variant="h5" sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <PersonAddIcon sx={{ mr: 2 }} />
-          ¿Necesitas registrar un nuevo empleado?
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 3, opacity: 0.75 }}>
-          Accede al formulario de registro para agregar nuevos empleados al sistema
-        </Typography>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<PersonAddIcon />}
-          onClick={() => navigate('/registrar-empleado')}
-          sx={{
-            backgroundColor: '#059669',
-            '&:hover': { backgroundColor: '#047857' }
-          }}
-        >
-          Registrar Nuevo Empleado
-        </Button>
-      </Paper>
+
+
+      {/* Sección dividida (Datos Capacitadores y Registrar Empleado) */}
+      <Grid container spacing={4} sx={{ mb: 4 }}>
+
+        {/* ==== CONTENEDOR 1 (IZQUIERDA) - Para Datos de Capacitadores ==== */}
+        <Grid item xs={12} md={7}>
+          <Paper sx={{ 
+            p: 4, 
+            height: '100%', 
+            border: '1px solid #e0e0e0',
+            display: 'flex',
+            flexDirection: 'column',
+   
+             }}>
+            <Typography variant="h5" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+              <LaptopIcon sx={{ mr: 2, color: '#7c3aed' }} /> {/* Icono de Capacitación */}
+              Resumen de Capacitadores
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, opacity: 0.75, minHeight: 40 }}>
+              Datos en vivo del sistema de capacitación.
+            </Typography>
+            
+            {/* Aquí pondremos los datos (ahora mostramos "Cargando...") */}
+
+{/* Aquí mostramos los datos cargados */}
+{/* Aquí mostramos los datos cargados */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              minHeight: 100, 
+              flexGrow: 1
+              }}>
+              {loadingCapa ? (
+                <CircularProgress />
+              ) : errorCapa ? (
+                <Alert severity="error">{errorCapa}</Alert>
+              ) : (
+                <Grid container spacing={2} sx={{ textAlign: 'center', width: '100%' }}>
+                  
+                  {/* --- "En Curso" AHORA ES CLICABLE --- */}
+                  <Grid item xs={6}>  
+                    <Box 
+                      onClick={() => handleOpenModal('Capacitaciones En Curso', listasCapa.enCurso)}
+                      sx={{ cursor: 'pointer', p: 2, '&:hover': { bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 } }}
+                    >
+                      <Typography variant='h3' sx={{color: '#7c3aed', fontWeight: 600 }}>
+                        {statsCapa.enCurso}
+                      </Typography>
+                      <Typography variant='body1' sx={{ color: 'text.secondary' }}>
+                        En Curso
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                  {/* --- "Finalizadas" AHORA ES CLICABLE --- */}
+                  <Grid item xs={6}>  
+                    <Box 
+                      onClick={() => handleOpenModal('Capacitaciones Finalizadas (Últ. 5 días)', listasCapa.finalizadas)}
+                      sx={{ cursor: 'pointer', p: 2, '&:hover': { bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 } }}
+                    >
+                      <Typography variant='h3' sx={{ color: '#7c3aed', fontWeight: 600 }}>
+                        {statsCapa.finalizadas}
+                      </Typography>
+                      <Typography variant='body1' sx={{ color: 'text.secondary' }}>
+                        Finalizadas (Últ. 5 días)
+                      </Typography>
+                    </Box>
+                  </Grid>
+
+                </Grid>
+              )}
+            </Box>
+
+          </Paper>
+        </Grid>
+
+        {/* ==== CONTENEDOR 2 (DERECHA) - Tu tarjeta existente ==== */}
+        <Grid item xs={12} md={5}>
+          <Paper sx={{ p: 4, textAlign: 'center', height: '100%', border: '1px solid #e0e0e0' }}>
+            <Typography variant="h5" sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PersonAddIcon sx={{ mr: 2 }} />
+              ¿Necesitas registrar un nuevo empleado?
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 3, opacity: 0.75, minHeight: 40 }}>
+              Accede al formulario de registro para agregar nuevos empleados al sistema
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<PersonAddIcon />}
+              onClick={() => navigate('/registrar-empleado')}
+              sx={{
+                backgroundColor: '#059669',
+                '&:hover': { backgroundColor: '#047857' }
+              }}
+            >
+              Registrar Nuevo Empleado
+            </Button>
+          </Paper>
+        </Grid>
+
+      </Grid>
 
       {/* Modal para Generar Reporte Asistencia */}
       <Dialog open={showReportModal} onClose={() => setShowReportModal(false)} maxWidth="sm" fullWidth>
@@ -1120,6 +1375,111 @@ const Dashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+{/* ===============================================================
+          AQUÍ PEGA EL NUEVO MODAL DE CAPACITADORES
+      ===============================================================
+      */}
+      <Dialog 
+        open={modalState.open} 
+        onClose={handleCloseModal} 
+        fullWidth 
+        maxWidth="md"
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e0e0e0' }}>
+          <LaptopIcon sx={{ mr: 2, color: '#7c3aed' }} />
+          {modalState.title}
+        </DialogTitle>
+        <DialogContent sx={{ bgcolor: '#f9fafb', p: 2 }}>
+          {modalState.capacitations.length === 0 ? (
+            <Typography sx={{ p: 3, textAlign: 'center' }}>
+              No hay capacitaciones para mostrar en esta categoría.
+            </Typography>
+          ) : (
+            <List sx={{ p: 0 }}>
+              {modalState.capacitations.map((capa) => (
+                <Accordion 
+                  key={capa.id}
+                  expanded={detalleState.expandedKey === capa.id} 
+                  onChange={handleAccordionChange(capa)}
+                  sx={{ mb: 1.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', '&:before': { display: 'none' } }}
+                >
+                  <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ '&.Mui-expanded': { borderBottom: '1px solid #e0e0e0' } }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <GroupWorkIcon color="primary" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={
+                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                          {capa.campania}
+                        </Typography>
+                      }
+                      secondary={`${capa.formador} | Inicio: ${capa.inicioCapa} | Fin: ${capa.finOjt}`}
+                    />
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ bgcolor: 'white', p: 2 }}>
+                    {/* Aquí mostramos el detalle (loading, error, o la lista) */}
+                    {detalleState.loading && detalleState.expandedKey === capa.id && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                        <CircularProgress />
+                      </Box>
+                    )}
+                    {detalleState.error && detalleState.expandedKey === capa.id && (
+                      <Alert severity="error">{detalleState.error}</Alert>
+                    )}
+                    {!detalleState.loading && detalleState.expandedKey === capa.id && (
+                      <>
+                        <Typography variant="h6" sx={{ mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+                          Contratados ({detalleState.data.filter(p => p.estado === 'Contratado').length})
+                        </Typography>
+                        <List dense>
+                          {detalleState.data.filter(p => p.estado === 'Contratado').map(p => (
+                            <ListItem key={p.dni}>
+                              <ListItemIcon>
+                                <CheckIcon sx={{ color: 'green' }} />
+                              </ListItemIcon>
+                              <ListItemText primary={`${p.apellidoPaterno} ${p.nombres}`} />
+                            </ListItem>
+                          ))}
+                        </List>
+
+                        <Typography variant="h6" sx={{ mt: 3, mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
+                          Otros Estados ({detalleState.data.filter(p => p.estado !== 'Contratado').length})
+                        </Typography>
+                        <List dense>
+                          {detalleState.data.filter(p => p.estado !== 'Contratado').map(p => (
+                            <ListItem key={p.dni}>
+                              <ListItemIcon>
+                                <CloseIcon sx={{ color: 'red' }} />
+                              </ListItemIcon>
+                              <ListItemText 
+                                primary={`${p.apellidoPaterno} ${p.nombres}`} 
+                                secondary={`Estado: ${p.estado} ${p.fechaCese ? `(Cese: ${formatearFecha(p.fechaCese)})` : ''}`} 
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, borderTop: '1px solid #e0e0e0' }}>
+          <Button onClick={handleCloseModal}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+      {/* --- FIN DEL CÓDIGO PEGADO --- */}
+
+
+
+
+
     </Box>
   );
 };
