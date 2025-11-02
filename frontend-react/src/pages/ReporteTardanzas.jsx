@@ -153,6 +153,9 @@ const ReporteTardanzas = () => {
   const [paginaActual, setPaginaActual] = useState(1);
   const [elementosPorPagina, setElementosPorPagina] = useState(10);
   const [totalElementos, setTotalElementos] = useState(0);
+  
+  // Estado para ordenamiento de Total Tiempo
+  const [ordenTotalTiempo, setOrdenTotalTiempo] = useState(null); // null, 'asc', 'desc'
 
   // Verificar permisos al montar
   useEffect(() => {
@@ -354,8 +357,19 @@ const ReporteTardanzas = () => {
     
     const inicio = (paginaActual - 1) * elementosPorPagina;
     const fin = inicio + elementosPorPagina;
-    return reporteData.empleados.slice(inicio, fin);
-  }, [reporteData, paginaActual, elementosPorPagina]);
+    let datos = reporteData.empleados.slice(inicio, fin);
+    
+    // Ordenar solo si hay un orden activo
+    if (ordenTotalTiempo) {
+      datos = [...datos].sort((a, b) => {
+        const tiempoA = a.TotalMinutosTardanza || 0;
+        const tiempoB = b.TotalMinutosTardanza || 0;
+        return ordenTotalTiempo === 'desc' ? tiempoB - tiempoA : tiempoA - tiempoB;
+      });
+    }
+    
+    return datos;
+  }, [reporteData, paginaActual, elementosPorPagina, ordenTotalTiempo]);
 
   // Calcular total de páginas
   const totalPaginas = useMemo(() => {
@@ -372,6 +386,17 @@ const ReporteTardanzas = () => {
     setElementosPorPagina(nuevosElementos);
     setPaginaActual(1); // Resetear a la primera página
   }, []);
+  
+  // Manejar clic en encabezado de Total Tiempo para ordenar
+  const handleOrdenarTotalTiempo = useCallback(() => {
+    if (ordenTotalTiempo === null) {
+      setOrdenTotalTiempo('desc'); // Primera vez: mayor a menor
+    } else if (ordenTotalTiempo === 'desc') {
+      setOrdenTotalTiempo('asc'); // Segunda vez: menor a mayor
+    } else {
+      setOrdenTotalTiempo(null); // Tercera vez: sin orden
+    }
+  }, [ordenTotalTiempo]);
 
   // Función para limpiar filtros
   const limpiarFiltros = () => {
@@ -1088,9 +1113,20 @@ const ReporteTardanzas = () => {
                     color: 'white',
                     fontWeight: 600,
                     minWidth: 120,
-                    textAlign: 'center'
-                  }}>
-             Total Tiempo
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    '&:hover': {
+                      backgroundColor: '#991b1b'
+                    }
+                  }}
+                  onClick={handleOrdenarTotalTiempo}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      <span>Total Tiempo</span>
+                      {ordenTotalTiempo === 'desc' && <ExpandMoreIcon sx={{ fontSize: 18 }} />}
+                      {ordenTotalTiempo === 'asc' && <ExpandLessIcon sx={{ fontSize: 18 }} />}
+                    </Box>
                   </TableCell>
                   {!vistaAgrupada && (
                   <TableCell sx={{ 
