@@ -898,16 +898,23 @@ const ReporteTardanzas = () => {
                     if (selected.length === 0) {
                       return <em>Todos los Cargos</em>;
                     }
-                    const selectedNames = cargosDisponibles
-                      .filter(c => selected.includes(c.CargoID))
-                      .map(c => c.NombreCargo);
-                    return selectedNames.join(', ');
+                    if (selected.length === 1) {
+                      const selectedNames = cargosDisponibles
+                        .filter(c => selected.includes(c.CargoID))
+                        .map(c => c.NombreCargo);
+                      return selectedNames[0] || '';
+                    }
+                    return 'Múltiples Cargos';
                   }}
                 >
 
                   
                   {cargosDisponibles.map((c) => (
-                    <MenuItem key={c.CargoID} value={c.CargoID}>
+                    <MenuItem 
+                    key={c.CargoID} 
+                    value={c.CargoID}
+                    sx={{py:0.1, minHeight: '25px'}}
+                    >
                       <Checkbox checked={cargo.indexOf(c.CargoID) > -1} />
                       {c.NombreCargo}
                     </MenuItem>
