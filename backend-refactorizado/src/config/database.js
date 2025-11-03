@@ -13,8 +13,8 @@ const dbConfig = {
     trustServerCertificate: true,                      // Misma configuración
     enableArithAbort: true,
     useUTC: false,                                     // Manejar DATETIME en hora local (evita desfase)
-    requestTimeout: 30000,                             // 30 segundos
-    connectionTimeout: 30000
+    requestTimeout: 40000,                             // 30 segundos
+    connectionTimeout: 40000
   },
   pool: {
     max: 10,                                           // Mismo pool del proyecto actual
