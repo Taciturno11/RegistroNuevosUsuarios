@@ -61,7 +61,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   Check as CheckIcon,
   Close as CloseIcon,
-  GroupWork as GroupWorkIcon
+  GroupWork as GroupWorkIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import '../App.css';
 
@@ -212,16 +213,28 @@ const Dashboard = () => {
     setDetalleState({ loading: true, error: '', data: [], expandedKey: key });
     
     try {
+      // ✅ EXTRAER DNI del ID (formato: "CampañaID_FechaInicio_DNI_Capacitador")
+      // Ejemplo: "19_2025-10-29_75146330" → DNI = "75146330"
+      const dniCapacitador = capa.id.split('_')[2];
+      
+      console.log('🔍 DEBUG - DNI extraído del ID:', dniCapacitador);
+      
       // Prepara los parámetros para la API
       const params = new URLSearchParams({
         campaniaID: capa.campania.split(',')[0], // Limpiamos por si acaso
         fechaInicio: capa.inicioCapa,
-        dniCapacitador: capa.formadorDNI // Usamos el DNI del formador
+        dniCapacitador: dniCapacitador // ✅ Usamos el DNI extraído del ID
+      });
+      
+      console.log('🔍 DEBUG - Parámetros enviados:', {
+        campaniaID: capa.campania.split(',')[0],
+        fechaInicio: capa.inicioCapa,
+        dniCapacitador: dniCapacitador
       });
       
       // ¡Llamamos al NUEVO endpoint del backend :3003!
-      // (Asegúrate de que tu backend tenga esta ruta)
       const url = `http://10.182.18.70:3003/api/capacitacion/detalle?${params.toString()}`;
+      console.log('🔍 DEBUG - URL llamada:', url);
       const response = await axios.get(url);
 
       if (response.data.success) {
@@ -241,6 +254,25 @@ const Dashboard = () => {
         error: 'No se pudieron cargar los postulantes.'
       }));
     }
+  };
+
+  // ⚠️ Función helper para verificar si una campaña finalizada necesita evaluaciones
+  const necesitaEvaluacion = (capa) => {
+    // NUEVA LÓGICA: Usar el flag que viene del backend
+    if (capa.necesitaEvaluacion) {
+      return true; // El backend ya calculó que necesita evaluación
+    }
+    
+    // FALLBACK: Si la campaña está expandida y tenemos datos cargados (lógica anterior)
+    if (detalleState.expandedKey === capa.id && detalleState.data.length > 0) {
+      const tieneContratados = detalleState.data.some(p => p.estado === 'Contratado');
+      const tieneDesaprobados = detalleState.data.some(p => p.estado === 'Desaprobado');
+      
+      // Si NO tiene ninguno de los dos estados, necesita evaluación
+      return !tieneContratados && !tieneDesaprobados;
+    }
+    
+    return false;
   };
 
 
@@ -1186,9 +1218,14 @@ const Dashboard = () => {
                       onClick={() => handleOpenModal('Capacitaciones Finalizadas (Últ. 5 días)', listasCapa.finalizadas)}
                       sx={{ cursor: 'pointer', p: 2, '&:hover': { bgcolor: 'rgba(124, 58, 237, 0.05)', borderRadius: 2 } }}
                     >
-                      <Typography variant='h3' sx={{ color: '#7c3aed', fontWeight: 600 }}>
-                        {statsCapa.finalizadas}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant='h3' sx={{ color: '#7c3aed', fontWeight: 600 }}>
+                          {statsCapa.finalizadas}
+                        </Typography>
+                        {listasCapa.finalizadas.some(c => c.necesitaEvaluacion) && (
+                          <WarningIcon sx={{ color: '#ef4444', fontSize: 32 }} />
+                        )}
+                      </Box>
                       <Typography variant='body1' sx={{ color: 'text.secondary' }}>
                         Finalizadas (Últ. 5 días)
                       </Typography>
@@ -1402,22 +1439,59 @@ const Dashboard = () => {
                   key={capa.id}
                   expanded={detalleState.expandedKey === capa.id} 
                   onChange={handleAccordionChange(capa)}
-                  sx={{ mb: 1.5, boxShadow: '0 1px 3px rgba(0,0,0,0.1)', '&:before': { display: 'none' } }}
+                  sx={{ 
+                    mb: 1.5, 
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)', 
+                    '&:before': { display: 'none' },
+                    // ⚠️ Borde rojo si necesita evaluación
+                    ...(necesitaEvaluacion(capa) && {
+                      border: '2px solid #ef4444',
+                      backgroundColor: '#fef2f2'
+                    })
+                  }}
                 >
                   <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     sx={{ '&.Mui-expanded': { borderBottom: '1px solid #e0e0e0' } }}
                   >
                     <ListItemIcon sx={{ minWidth: 40 }}>
-                      <GroupWorkIcon color="primary" />
+                      {necesitaEvaluacion(capa) ? (
+                        <WarningIcon sx={{ color: '#ef4444', fontSize: 28 }} />
+                      ) : (
+                        <GroupWorkIcon color="primary" />
+                      )}
                     </ListItemIcon>
                     <ListItemText 
                       primary={
-                        <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                          {capa.campania}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {capa.campania}
+                          </Typography>
+                          {necesitaEvaluacion(capa) && (
+                            <Chip 
+                              label="¡Falta evaluación!" 
+                              size="small"
+                              sx={{ 
+                                backgroundColor: '#ef4444', 
+                                color: 'white',
+                                fontWeight: 600,
+                                fontSize: '0.7rem',
+                                height: 22
+                              }} 
+                            />
+                          )}
+                        </Box>
                       }
-                      secondary={`${capa.formador} | Inicio: ${capa.inicioCapa} | Fin: ${capa.finOjt}`}
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Typography variant="body2" component="span">
+                            {`${capa.formador} | Inicio: ${capa.inicioCapa} | Fin: ${capa.finOjt}`}
+                          </Typography>
+                          {necesitaEvaluacion(capa) && (
+                            <WarningIcon sx={{ color: '#ef4444', fontSize: 20, ml: 1 }} />
+                          )}
+                        </Box>
+                      }
                     />
                   </AccordionSummary>
                   <AccordionDetails sx={{ bgcolor: 'white', p: 2 }}>
@@ -1431,38 +1505,114 @@ const Dashboard = () => {
                       <Alert severity="error">{detalleState.error}</Alert>
                     )}
                     {!detalleState.loading && detalleState.expandedKey === capa.id && (
-                      <>
-                        <Typography variant="h6" sx={{ mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
-                          Contratados ({detalleState.data.filter(p => p.estado === 'Contratado').length})
-                        </Typography>
-                        <List dense>
-                          {detalleState.data.filter(p => p.estado === 'Contratado').map(p => (
-                            <ListItem key={p.dni}>
-                              <ListItemIcon>
-                                <CheckIcon sx={{ color: 'green' }} />
-                              </ListItemIcon>
-                              <ListItemText primary={`${p.apellidoPaterno} ${p.nombres}`} />
-                            </ListItem>
-                          ))}
-                        </List>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+                        {/* COLUMNA 1: En Capacitación */}
+                        <Box>
+                          <Typography variant="h6" sx={{ mb: 1, borderBottom: '2px solid #3b82f6', pb: 1, color: '#3b82f6', fontSize: '0.95rem' }}>
+                            📚 En Capacitación ({detalleState.data.filter(p => p.estado === 'Capacitacion').length})
+                          </Typography>
+                          <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
+                            {detalleState.data.filter(p => p.estado === 'Capacitacion').length === 0 ? (
+                              <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: '#999' }}>
+                                Sin registros
+                              </Typography>
+                            ) : (
+                              detalleState.data.filter(p => p.estado === 'Capacitacion').map(p => (
+                                <ListItem key={p.dni} sx={{ py: 0.5 }}>
+                                  <ListItemIcon sx={{ minWidth: 30 }}>
+                                    <ClockIcon sx={{ color: '#3b82f6', fontSize: 18 }} />
+                                  </ListItemIcon>
+                                  <ListItemText 
+                                    primary={`${p.apellidoPaterno} ${p.nombres}`}
+                                    primaryTypographyProps={{ fontSize: '0.85rem' }}
+                                  />
+                                </ListItem>
+                              ))
+                            )}
+                          </List>
+                        </Box>
 
-                        <Typography variant="h6" sx={{ mt: 3, mb: 1, borderBottom: '1px solid #eee', pb: 1 }}>
-                          Otros Estados ({detalleState.data.filter(p => p.estado !== 'Contratado').length})
-                        </Typography>
-                        <List dense>
-                          {detalleState.data.filter(p => p.estado !== 'Contratado').map(p => (
-                            <ListItem key={p.dni}>
-                              <ListItemIcon>
-                                <CloseIcon sx={{ color: 'red' }} />
-                              </ListItemIcon>
-                              <ListItemText 
-                                primary={`${p.apellidoPaterno} ${p.nombres}`} 
-                                secondary={`Estado: ${p.estado} ${p.fechaCese ? `(Cese: ${formatearFecha(p.fechaCese)})` : ''}`} 
-                              />
-                            </ListItem>
-                          ))}
-                        </List>
-                      </>
+                        {/* COLUMNA 2: Desertores */}
+                        <Box>
+                          <Typography variant="h6" sx={{ mb: 1, borderBottom: '2px solid #ef4444', pb: 1, color: '#ef4444', fontSize: '0.95rem' }}>
+                            ❌ Desertores ({detalleState.data.filter(p => p.estado === 'Desertó').length})
+                          </Typography>
+                          <List dense sx={{ maxHeight: 300, overflow: 'auto' }}>
+                            {detalleState.data.filter(p => p.estado === 'Desertó').length === 0 ? (
+                              <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: '#999' }}>
+                                Sin registros
+                              </Typography>
+                            ) : (
+                              detalleState.data.filter(p => p.estado === 'Desertó').map(p => (
+                                <ListItem key={p.dni} sx={{ py: 0.5 }}>
+                                  <ListItemIcon sx={{ minWidth: 30 }}>
+                                    <CloseIcon sx={{ color: '#ef4444', fontSize: 18 }} />
+                                  </ListItemIcon>
+                                  <ListItemText 
+                                    primary={`${p.apellidoPaterno} ${p.nombres}`} 
+                                    secondary={p.fechaCese ? `Cese: ${formatearFecha(p.fechaCese)}` : ''} 
+                                    primaryTypographyProps={{ fontSize: '0.85rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItem>
+                              ))
+                            )}
+                          </List>
+                        </Box>
+
+                        {/* COLUMNA 3: Contratados + Desaprobados */}
+                        <Box>
+                          {/* Contratados */}
+                          <Typography variant="h6" sx={{ mb: 1, borderBottom: '2px solid #10b981', pb: 1, color: '#10b981', fontSize: '0.95rem' }}>
+                            ✅ Contratados ({detalleState.data.filter(p => p.estado === 'Contratado').length})
+                          </Typography>
+                          <List dense sx={{ maxHeight: 140, overflow: 'auto', mb: 2 }}>
+                            {detalleState.data.filter(p => p.estado === 'Contratado').length === 0 ? (
+                              <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: '#999' }}>
+                                Sin registros
+                              </Typography>
+                            ) : (
+                              detalleState.data.filter(p => p.estado === 'Contratado').map(p => (
+                                <ListItem key={p.dni} sx={{ py: 0.5 }}>
+                                  <ListItemIcon sx={{ minWidth: 30 }}>
+                                    <CheckIcon sx={{ color: '#10b981', fontSize: 18 }} />
+                                  </ListItemIcon>
+                                  <ListItemText 
+                                    primary={`${p.apellidoPaterno} ${p.nombres}`}
+                                    primaryTypographyProps={{ fontSize: '0.85rem' }}
+                                  />
+                                </ListItem>
+                              ))
+                            )}
+                          </List>
+
+                          {/* Desaprobados */}
+                          <Typography variant="h6" sx={{ mb: 1, borderBottom: '2px solid #f59e0b', pb: 1, color: '#f59e0b', fontSize: '0.95rem' }}>
+                            ⚠️ Desaprobados ({detalleState.data.filter(p => p.estado === 'Desaprobado').length})
+                          </Typography>
+                          <List dense sx={{ maxHeight: 140, overflow: 'auto' }}>
+                            {detalleState.data.filter(p => p.estado === 'Desaprobado').length === 0 ? (
+                              <Typography variant="body2" sx={{ p: 2, textAlign: 'center', color: '#999' }}>
+                                Sin registros
+                              </Typography>
+                            ) : (
+                              detalleState.data.filter(p => p.estado === 'Desaprobado').map(p => (
+                                <ListItem key={p.dni} sx={{ py: 0.5 }}>
+                                  <ListItemIcon sx={{ minWidth: 30 }}>
+                                    <CloseIcon sx={{ color: '#f59e0b', fontSize: 18 }} />
+                                  </ListItemIcon>
+                                  <ListItemText 
+                                    primary={`${p.apellidoPaterno} ${p.nombres}`} 
+                                    secondary={p.fechaCese ? `Cese: ${formatearFecha(p.fechaCese)}` : ''}
+                                    primaryTypographyProps={{ fontSize: '0.85rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItem>
+                              ))
+                            )}
+                          </List>
+                        </Box>
+                      </Box>
                     )}
                   </AccordionDetails>
                 </Accordion>
